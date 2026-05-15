@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import {
   Home, Users, GraduationCap, UserCog, UsersRound, ClipboardList,
   Utensils, Megaphone, CalendarRange, ArrowRightLeft, LogOut, Menu as MenuIcon, X, ChevronDown, Heart,
+  BookOpen, Sparkles, Building2, Scan, Image as ImageIcon, CalendarDays,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,13 +11,19 @@ import api from "@/lib/api";
 
 const NAV = [
   { to: "/s", icon: Home, label: "Dashboard", end: true },
+  { to: "/s/presenze", icon: Scan, label: "Presenze" },
+  { to: "/s/attivita", icon: ClipboardList, label: "Attività" },
   { to: "/s/alunni", icon: GraduationCap, label: "Alunni" },
   { to: "/s/sezioni", icon: Users, label: "Sezioni" },
-  { to: "/s/attivita", icon: ClipboardList, label: "Attività" },
+  { to: "/s/piano", icon: BookOpen, label: "Piano didattico" },
+  { to: "/s/laboratori", icon: Sparkles, label: "Laboratori" },
+  { to: "/s/comunicazioni", icon: Megaphone, label: "Comunicazioni" },
+  { to: "/s/eventi", icon: CalendarDays, label: "Eventi" },
+  { to: "/s/galleria", icon: ImageIcon, label: "Galleria" },
   { to: "/s/menu", icon: Utensils, label: "Menu" },
-  { to: "/s/news", icon: Megaphone, label: "News" },
-  { to: "/s/maestre", icon: UserCog, label: "Maestre", admin: true },
   { to: "/s/genitori", icon: UsersRound, label: "Genitori" },
+  { to: "/s/maestre", icon: UserCog, label: "Maestre", admin: true },
+  { to: "/s/scuola", icon: Building2, label: "Profilo Scuola", admin: true },
   { to: "/s/anni", icon: CalendarRange, label: "Anni scolastici", admin: true },
   { to: "/s/passaggio-anno", icon: ArrowRightLeft, label: "Passaggio anno", admin: true },
 ];

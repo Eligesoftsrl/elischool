@@ -425,3 +425,388 @@ class TestRoleProtection:
         # admin can
         ra = requests.delete(f"{API}/school-years/{yid}", headers=_h(admin_token))
         assert ra.status_code == 200
+
+
+
+# ============================================================
+# STEP 1h - new entities
+# ============================================================
+
+TINY_PNG = (
+    "data:image/png;base64,"
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVQYV2NgAAIAAAUAAarVyFEAAAAASUVORK5CYII="
+)
+
+
+def _active_year(token):
+    years = requests.get(f"{API}/school-years", headers=_h(token)).json()
+    return next(y for y in years if y["is_active"])
+
+
+def _rooms(token, year_id):
+    return requests.get(f"{API}/classrooms?school_year_id={year_id}", headers=_h(token)).json()
+
+
+# ---------- Lesson Plans ----------
+class TestLessonPlans:
+    def test_list_lesson_plans(self, admin_token):
+        r = requests.get(f"{API}/lesson-plans", headers=_h(admin_token))
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
+        assert len(r.json()) >= 1  # seeded
+
+    def test_list_filter_by_classroom_and_year(self, admin_token):
+        active = _active_year(admin_token)
+        rooms = _rooms(admin_token, active["id"])
+        cid = rooms[0]["id"]
+        r = requests.get(
+            f"{API}/lesson-plans?classroom_id={cid}&school_year_id={active['id']}",
+            headers=_h(admin_token),
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert all(p["classroom_id"] == cid for p in data)
+
+    def test_create_patch_delete(self, teacher_token, admin_token):
+        active = _active_year(admin_token)
+        rooms = _rooms(admin_token, active["id"])
+        cid = rooms[0]["id"]
+        payload = {
+            "classroom_id": cid,
+            "school_year_id": active["id"],
+            "date_from": "2099-01-06",
+            "date_to": "2099-01-10",
+            "title": "TEST_plan",
+            "body": "<p>contenuto</p>",
+        }
+        rc = requests.post(f"{API}/lesson-plans", headers=_h(teacher_token), json=payload)
+        assert rc.status_code == 200
+        pid = rc.json()["id"]
+        # patch
+        payload["title"] = "TEST_plan_upd"
+        rp = requests.patch(f"{API}/lesson-plans/{pid}", headers=_h(teacher_token), json=payload)
+        assert rp.status_code == 200 and rp.json()["title"] == "TEST_plan_upd"
+        # delete
+        rd = requests.delete(f"{API}/lesson-plans/{pid}", headers=_h(teacher_token))
+        assert rd.status_code == 200
+
+    def test_parent_cannot_create_lesson_plan(self, parent_token, admin_token):
+        active = _active_year(admin_token)
+        rooms = _rooms(admin_token, active["id"])
+        r = requests.post(
+            f"{API}/lesson-plans",
+            headers=_h(parent_token),
+            json={
+                "classroom_id": rooms[0]["id"],
+                "school_year_id": active["id"],
+                "date_from": "2099-02-01",
+                "date_to": "2099-02-07",
+                "title": "TEST_parent_no",
+                "body": "x",
+            },
+        )
+        assert r.status_code == 403
+
+
+# ---------- Communications ----------
+class TestCommunications:
+    def test_list_communications_media_no_base64(self, admin_token):
+        r = requests.get(f"{API}/communications", headers=_h(admin_token))
+        assert r.status_code == 200
+        for c in r.json():
+            assert "media" in c
+            for m in c["media"]:
+                assert "data_base64" not in m
+
+    def test_create_patch_delete_communication(self, admin_token):
+        payload = {
+            "title": "TEST_com",
+            "body": "<p>ciao</p>",
+            "type": "avviso",
+            "classroom_id": None,
+            "media_ids": [],
+        }
+        rc = requests.post(f"{API}/communications", headers=_h(admin_token), json=payload)
+        assert rc.status_code == 200
+        cid = rc.json()["id"]
+        payload["title"] = "TEST_com_upd"
+        rp = requests.patch(f"{API}/communications/{cid}", headers=_h(admin_token), json=payload)
+        assert rp.status_code == 200 and rp.json()["title"] == "TEST_com_upd"
+        rd = requests.delete(f"{API}/communications/{cid}", headers=_h(admin_token))
+        assert rd.status_code == 200
+
+    def test_parent_cannot_create_communication(self, parent_token):
+        r = requests.post(
+            f"{API}/communications",
+            headers=_h(parent_token),
+            json={"title": "TEST_no", "body": "x", "type": "avviso", "media_ids": []},
+        )
+        assert r.status_code == 403
+
+
+# ---------- Calendar Events ----------
+class TestCalendarEvents:
+    def test_list_filter_by_date(self, admin_token):
+        r = requests.get(
+            f"{API}/calendar-events?date_from=2025-09-01&date_to=2026-08-31",
+            headers=_h(admin_token),
+        )
+        assert r.status_code == 200
+        evs = r.json()
+        assert len(evs) >= 1
+        for e in evs:
+            assert "2025-09-01" <= e["date"] <= "2026-08-31"
+
+    def test_create_and_teacher_cannot_delete(self, admin_token, teacher_token):
+        payload = {"name": "TEST_event", "date": "2099-03-15", "category": "altro", "notes": ""}
+        rc = requests.post(f"{API}/calendar-events", headers=_h(admin_token), json=payload)
+        assert rc.status_code == 200
+        eid = rc.json()["id"]
+        # teacher cannot delete
+        rd = requests.delete(f"{API}/calendar-events/{eid}", headers=_h(teacher_token))
+        assert rd.status_code == 403, f"teacher delete should be 403, got {rd.status_code}"
+        # admin can
+        ra = requests.delete(f"{API}/calendar-events/{eid}", headers=_h(admin_token))
+        assert ra.status_code == 200
+
+
+# ---------- Extra Labs ----------
+class TestExtraLabs:
+    def test_list_filter_by_classroom(self, admin_token):
+        active = _active_year(admin_token)
+        rooms = _rooms(admin_token, active["id"])
+        cid = rooms[0]["id"]
+        r = requests.get(f"{API}/extra-labs?classroom_id={cid}", headers=_h(admin_token))
+        assert r.status_code == 200
+        for lab in r.json():
+            assert lab["classroom_id"] == cid
+
+    def test_create_patch_delete_lab(self, teacher_token, admin_token):
+        active = _active_year(admin_token)
+        rooms = _rooms(admin_token, active["id"])
+        cid = rooms[0]["id"]
+        payload = {
+            "classroom_id": cid,
+            "day_of_week": "venerdì",
+            "title": "TEST_lab",
+            "teacher_name": "Maestra Test",
+        }
+        rc = requests.post(f"{API}/extra-labs", headers=_h(teacher_token), json=payload)
+        assert rc.status_code == 200
+        lid = rc.json()["id"]
+        payload["title"] = "TEST_lab_upd"
+        rp = requests.patch(f"{API}/extra-labs/{lid}", headers=_h(teacher_token), json=payload)
+        assert rp.status_code == 200 and rp.json()["title"] == "TEST_lab_upd"
+        rd = requests.delete(f"{API}/extra-labs/{lid}", headers=_h(teacher_token))
+        assert rd.status_code == 200
+
+
+# ---------- School Profile ----------
+class TestSchoolProfile:
+    def test_get_seeded_profile(self, admin_token):
+        r = requests.get(f"{API}/school-profile", headers=_h(admin_token))
+        assert r.status_code == 200
+        d = r.json()
+        assert d.get("name") == "L'Albero della Vita"
+        assert "Scafati" in (d.get("address") or "")
+
+    def test_teacher_cannot_update_profile(self, teacher_token):
+        r = requests.put(
+            f"{API}/school-profile",
+            headers=_h(teacher_token),
+            json={"name": "hacked"},
+        )
+        assert r.status_code == 403
+
+    def test_admin_can_update_profile(self, admin_token):
+        # read current
+        cur = requests.get(f"{API}/school-profile", headers=_h(admin_token)).json()
+        # update with marker, then restore
+        new_payload = {**{k: v for k, v in cur.items() if k not in ("_id", "id", "updated_at")},
+                       "phone": "0818566418-TEST"}
+        ru = requests.put(f"{API}/school-profile", headers=_h(admin_token), json=new_payload)
+        assert ru.status_code == 200
+        assert ru.json()["phone"] == "0818566418-TEST"
+        # restore
+        new_payload["phone"] = cur.get("phone", "0818566418")
+        requests.put(f"{API}/school-profile", headers=_h(admin_token), json=new_payload)
+
+    def test_public_school_profile_no_auth(self):
+        r = requests.get(f"{API}/public/school-profile")
+        assert r.status_code == 200
+        d = r.json()
+        assert d.get("name") == "L'Albero della Vita"
+
+
+# ---------- Media ----------
+class TestMedia:
+    def test_admin_upload_and_list_excludes_base64(self, admin_token):
+        active = _active_year(admin_token)
+        rooms = _rooms(admin_token, active["id"])
+        cid = rooms[0]["id"]
+        rc = requests.post(
+            f"{API}/media",
+            headers=_h(admin_token),
+            json={
+                "filename": "TEST_img.png",
+                "content_type": "image/png",
+                "data_base64": TINY_PNG,
+                "caption": "TEST_cap",
+                "classroom_id": cid,
+            },
+        )
+        assert rc.status_code == 200
+        mid = rc.json()["id"]
+        # list excludes data_base64
+        rl = requests.get(f"{API}/media", headers=_h(admin_token))
+        assert rl.status_code == 200
+        found = next((m for m in rl.json() if m["id"] == mid), None)
+        assert found is not None
+        assert "data_base64" not in found
+        # single returns full doc
+        rg = requests.get(f"{API}/media/{mid}", headers=_h(admin_token))
+        assert rg.status_code == 200
+        assert rg.json().get("data_base64", "").startswith("data:image/png;base64,")
+        # delete
+        rd = requests.delete(f"{API}/media/{mid}", headers=_h(admin_token))
+        assert rd.status_code == 200
+
+    def test_parent_cannot_upload(self, parent_token):
+        r = requests.post(
+            f"{API}/media",
+            headers=_h(parent_token),
+            json={
+                "filename": "p.png",
+                "content_type": "image/png",
+                "data_base64": TINY_PNG,
+            },
+        )
+        assert r.status_code == 403
+
+    def test_parent_sees_only_own_classroom_media(self, admin_token, parent_token):
+        active = _active_year(admin_token)
+        rooms = _rooms(admin_token, active["id"])
+        # parent's child classroom
+        kids = requests.get(f"{API}/parent/me/children", headers=_h(parent_token)).json()
+        own_cid = kids[0]["classroom"]["id"]
+        other_cid = next(r["id"] for r in rooms if r["id"] != own_cid)
+        # upload one in own, one in other
+        m_own = requests.post(
+            f"{API}/media", headers=_h(admin_token),
+            json={"filename": "TEST_own.png", "content_type": "image/png",
+                  "data_base64": TINY_PNG, "classroom_id": own_cid},
+        ).json()["id"]
+        m_other = requests.post(
+            f"{API}/media", headers=_h(admin_token),
+            json={"filename": "TEST_other.png", "content_type": "image/png",
+                  "data_base64": TINY_PNG, "classroom_id": other_cid},
+        ).json()["id"]
+        # parent list
+        rl = requests.get(f"{API}/media", headers=_h(parent_token))
+        assert rl.status_code == 200
+        ids = {m["id"] for m in rl.json()}
+        assert m_own in ids
+        assert m_other not in ids, "parent should NOT see media from unrelated classroom"
+        # cleanup
+        requests.delete(f"{API}/media/{m_own}", headers=_h(admin_token))
+        requests.delete(f"{API}/media/{m_other}", headers=_h(admin_token))
+
+
+# ---------- Barcodes / Attendance ----------
+class TestAttendance:
+    def test_barcode_generate_upsert(self, admin_token):
+        students = requests.get(f"{API}/students", headers=_h(admin_token)).json()
+        sid = students[2]["id"]
+        r1 = requests.post(f"{API}/barcodes", headers=_h(admin_token), json={"student_id": sid})
+        assert r1.status_code == 200
+        c1 = r1.json()["code"]
+        # call again - upsert same student (single doc per student)
+        r2 = requests.post(f"{API}/barcodes", headers=_h(admin_token), json={"student_id": sid})
+        assert r2.status_code == 200
+        # only one barcode per student
+        all_b = requests.get(f"{API}/barcodes", headers=_h(admin_token)).json()
+        count = sum(1 for b in all_b if b["student_id"] == sid)
+        assert count == 1, f"expected 1 barcode per student, got {count}"
+        # the latest code should be in the list
+        latest = r2.json()["code"]
+        assert any(b["student_id"] == sid and b["code"] == latest for b in all_b)
+
+    def test_attendance_in_with_valid_barcode(self, admin_token):
+        barcodes = requests.get(f"{API}/barcodes", headers=_h(admin_token)).json()
+        assert barcodes, "no barcodes available"
+        b = barcodes[0]
+        r = requests.post(
+            f"{API}/attendance",
+            headers=_h(admin_token),
+            json={"barcode": b["code"], "action": "in"},
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["ok"] is True
+        assert data["student"]["id"] == b["student_id"]
+        assert data["entry"]["action"] == "in"
+
+    def test_attendance_invalid_barcode_404(self, admin_token):
+        r = requests.post(
+            f"{API}/attendance",
+            headers=_h(admin_token),
+            json={"barcode": "INVALID-XYZ-9999", "action": "in"},
+        )
+        assert r.status_code == 404
+
+    def test_attendance_out_by_student_id(self, admin_token):
+        students = requests.get(f"{API}/students", headers=_h(admin_token)).json()
+        sid = students[1]["id"]
+        r = requests.post(
+            f"{API}/attendance",
+            headers=_h(admin_token),
+            json={"student_id": sid, "action": "out"},
+        )
+        assert r.status_code == 200
+        assert r.json()["entry"]["action"] == "out"
+
+    def test_attendance_list_filter(self, admin_token):
+        from datetime import date as _date
+        today = _date.today().isoformat()
+        active = _active_year(admin_token)
+        rooms = _rooms(admin_token, active["id"])
+        cid = rooms[0]["id"]
+        r = requests.get(
+            f"{API}/attendance?date_str={today}&classroom_id={cid}&school_year_id={active['id']}",
+            headers=_h(admin_token),
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert isinstance(data, list)
+        for entry in data:
+            assert entry["date"] == today
+
+
+# ---------- Parent-facing new ----------
+class TestParentNewEndpoints:
+    def test_parent_lesson_plans(self, parent_token):
+        r = requests.get(f"{API}/parent/me/lesson-plans", headers=_h(parent_token))
+        assert r.status_code == 200
+        data = r.json()
+        assert isinstance(data, list)
+        # parent's child is in Coccinelle which has 1 seeded plan
+        assert len(data) >= 1
+
+    def test_parent_lesson_plans_scoped_to_own_classroom(self, parent_token, admin_token):
+        kids = requests.get(f"{API}/parent/me/children", headers=_h(parent_token)).json()
+        own_cid = kids[0]["classroom"]["id"]
+        r = requests.get(f"{API}/parent/me/lesson-plans", headers=_h(parent_token))
+        for p in r.json():
+            assert p["classroom_id"] == own_cid, "parent saw plan from another classroom"
+
+    def test_parent_communications_with_media(self, parent_token):
+        r = requests.get(f"{API}/parent/me/communications", headers=_h(parent_token))
+        assert r.status_code == 200
+        for c in r.json():
+            assert "media" in c
+
+    def test_parent_extra_labs(self, parent_token):
+        r = requests.get(f"{API}/parent/me/extra-labs", headers=_h(parent_token))
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
+        assert len(r.json()) >= 1

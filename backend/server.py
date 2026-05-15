@@ -955,6 +955,428 @@ async def refresh_report(sid: str, date_str: Optional[str] = None, user=Depends(
     return await ai_daily_report(sid, d, user)
 
 
+# ============================================================
+# NEW: STEP 1h — Lesson Plans, Communications, Events, Extra Labs,
+# School Profile, Media (foto), Attendance (barcode check-in/out)
+# ============================================================
+
+# --- Models ---
+class LessonPlanIn(BaseModel):
+    classroom_id: str
+    school_year_id: Optional[str] = None
+    date_from: str  # YYYY-MM-DD
+    date_to: str
+    title: str
+    body: str  # html allowed
+
+
+class CommunicationIn(BaseModel):
+    title: str
+    body: str
+    type: Literal["comunicazione_classe", "evento_attivita", "avviso"] = "comunicazione_classe"
+    classroom_id: Optional[str] = None  # None = tutta la scuola
+    publish_date: Optional[str] = None
+    media_ids: List[str] = []
+
+
+class CalendarEventIn(BaseModel):
+    name: str
+    date: str  # YYYY-MM-DD
+    end_date: Optional[str] = None
+    notes: Optional[str] = ""
+    category: Literal["festivita", "chiusura", "gita", "festa", "riunione", "altro"] = "altro"
+
+
+class ExtraLabIn(BaseModel):
+    classroom_id: str
+    day_of_week: Literal["lunedì", "martedì", "mercoledì", "giovedì", "venerdì"]
+    title: str  # es. "Musicoterapia"
+    teacher_name: Optional[str] = ""
+
+
+class SchoolProfileIn(BaseModel):
+    name: str
+    email: Optional[str] = ""
+    phone: Optional[str] = ""
+    mobile: Optional[str] = ""
+    whatsapp: Optional[str] = ""
+    address: Optional[str] = ""
+    vat: Optional[str] = ""
+    website: Optional[str] = ""
+    facebook: Optional[str] = ""
+    instagram: Optional[str] = ""
+    logo_base64: Optional[str] = ""  # data URL
+
+
+class MediaIn(BaseModel):
+    filename: str
+    content_type: str
+    data_base64: str  # data URL (e.g., "data:image/jpeg;base64,...")
+    caption: Optional[str] = ""
+    classroom_id: Optional[str] = None
+    student_id: Optional[str] = None
+    communication_id: Optional[str] = None
+
+
+class AttendanceCheckIn(BaseModel):
+    student_id: Optional[str] = None
+    barcode: Optional[str] = None
+    action: Literal["in", "out"] = "in"
+    note: Optional[str] = ""
+
+
+class BarcodeGenIn(BaseModel):
+    student_id: str
+    code: Optional[str] = None  # if not provided, auto-generate
+
+
+# --- LESSON PLANS ---
+@api.get("/lesson-plans")
+async def list_lesson_plans(
+    classroom_id: Optional[str] = None,
+    school_year_id: Optional[str] = None,
+    user=Depends(get_current_user),
+):
+    q = {}
+    if classroom_id:
+        q["classroom_id"] = classroom_id
+    if school_year_id:
+        q["school_year_id"] = school_year_id
+    docs = await db.lesson_plans.find(q, {"_id": 0}).sort("date_from", -1).to_list(500)
+    return docs
+
+
+@api.post("/lesson-plans")
+async def create_lesson_plan(payload: LessonPlanIn, user=Depends(require_role("admin", "teacher"))):
+    doc = payload.model_dump()
+    doc["id"] = gen_id()
+    doc["created_at"] = now_iso()
+    doc["created_by"] = user["id"]
+    if not doc.get("school_year_id"):
+        active = await db.school_years.find_one({"is_active": True}, {"_id": 0})
+        if active:
+            doc["school_year_id"] = active["id"]
+    await db.lesson_plans.insert_one(doc)
+    return clean_doc(doc)
+
+
+@api.patch("/lesson-plans/{pid}")
+async def update_lesson_plan(pid: str, payload: LessonPlanIn, user=Depends(require_role("admin", "teacher"))):
+    await db.lesson_plans.update_one({"id": pid}, {"$set": payload.model_dump()})
+    return await db.lesson_plans.find_one({"id": pid}, {"_id": 0})
+
+
+@api.delete("/lesson-plans/{pid}")
+async def delete_lesson_plan(pid: str, user=Depends(require_role("admin", "teacher"))):
+    await db.lesson_plans.delete_one({"id": pid})
+    return {"ok": True}
+
+
+# --- COMMUNICATIONS (rich news) ---
+@api.get("/communications")
+async def list_communications(classroom_id: Optional[str] = None, user=Depends(get_current_user)):
+    q = {}
+    if classroom_id:
+        q["$or"] = [{"classroom_id": classroom_id}, {"classroom_id": None}]
+    docs = await db.communications.find(q, {"_id": 0}).sort("publish_date", -1).to_list(500)
+    # enrich with media
+    for d in docs:
+        if d.get("media_ids"):
+            media = await db.media.find({"id": {"$in": d["media_ids"]}}, {"_id": 0, "data_base64": 0}).to_list(50)
+            d["media"] = media
+        else:
+            d["media"] = []
+    return docs
+
+
+@api.post("/communications")
+async def create_communication(payload: CommunicationIn, user=Depends(require_role("admin", "teacher"))):
+    doc = payload.model_dump()
+    doc["id"] = gen_id()
+    doc["publish_date"] = doc.get("publish_date") or now_iso()
+    doc["created_at"] = now_iso()
+    doc["author_name"] = user.get("name", "")
+    await db.communications.insert_one(doc)
+    return clean_doc(doc)
+
+
+@api.patch("/communications/{cid}")
+async def update_communication(cid: str, payload: CommunicationIn, user=Depends(require_role("admin", "teacher"))):
+    await db.communications.update_one({"id": cid}, {"$set": payload.model_dump()})
+    return await db.communications.find_one({"id": cid}, {"_id": 0})
+
+
+@api.delete("/communications/{cid}")
+async def delete_communication(cid: str, user=Depends(require_role("admin", "teacher"))):
+    await db.communications.delete_one({"id": cid})
+    return {"ok": True}
+
+
+# --- CALENDAR EVENTS ---
+@api.get("/calendar-events")
+async def list_events(date_from: Optional[str] = None, date_to: Optional[str] = None, user=Depends(get_current_user)):
+    q = {}
+    if date_from or date_to:
+        q["date"] = {}
+        if date_from:
+            q["date"]["$gte"] = date_from
+        if date_to:
+            q["date"]["$lte"] = date_to
+    docs = await db.calendar_events.find(q, {"_id": 0}).sort("date", 1).to_list(500)
+    return docs
+
+
+@api.post("/calendar-events")
+async def create_event(payload: CalendarEventIn, user=Depends(require_role("admin", "teacher"))):
+    doc = payload.model_dump()
+    doc["id"] = gen_id()
+    doc["created_at"] = now_iso()
+    await db.calendar_events.insert_one(doc)
+    return clean_doc(doc)
+
+
+@api.patch("/calendar-events/{eid}")
+async def update_event(eid: str, payload: CalendarEventIn, user=Depends(require_role("admin", "teacher"))):
+    await db.calendar_events.update_one({"id": eid}, {"$set": payload.model_dump()})
+    return await db.calendar_events.find_one({"id": eid}, {"_id": 0})
+
+
+@api.delete("/calendar-events/{eid}")
+async def delete_event(eid: str, user=Depends(require_role("admin"))):
+    await db.calendar_events.delete_one({"id": eid})
+    return {"ok": True}
+
+
+# --- EXTRA LABS (palinsesto laboratori) ---
+@api.get("/extra-labs")
+async def list_extra_labs(classroom_id: Optional[str] = None, user=Depends(get_current_user)):
+    q = {}
+    if classroom_id:
+        q["classroom_id"] = classroom_id
+    docs = await db.extra_labs.find(q, {"_id": 0}).to_list(500)
+    return docs
+
+
+@api.post("/extra-labs")
+async def create_extra_lab(payload: ExtraLabIn, user=Depends(require_role("admin", "teacher"))):
+    doc = payload.model_dump()
+    doc["id"] = gen_id()
+    doc["created_at"] = now_iso()
+    await db.extra_labs.insert_one(doc)
+    return clean_doc(doc)
+
+
+@api.patch("/extra-labs/{lid}")
+async def update_extra_lab(lid: str, payload: ExtraLabIn, user=Depends(require_role("admin", "teacher"))):
+    await db.extra_labs.update_one({"id": lid}, {"$set": payload.model_dump()})
+    return await db.extra_labs.find_one({"id": lid}, {"_id": 0})
+
+
+@api.delete("/extra-labs/{lid}")
+async def delete_extra_lab(lid: str, user=Depends(require_role("admin", "teacher"))):
+    await db.extra_labs.delete_one({"id": lid})
+    return {"ok": True}
+
+
+# --- SCHOOL PROFILE (single doc) ---
+@api.get("/school-profile")
+async def get_school_profile(user=Depends(get_current_user)):
+    doc = await db.school_profile.find_one({"id": "main"}, {"_id": 0})
+    return doc or {}
+
+
+@api.put("/school-profile")
+async def update_school_profile(payload: SchoolProfileIn, user=Depends(require_role("admin"))):
+    data = payload.model_dump()
+    data["id"] = "main"
+    data["updated_at"] = now_iso()
+    await db.school_profile.update_one({"id": "main"}, {"$set": data}, upsert=True)
+    return data
+
+
+# --- MEDIA (foto / file) ---
+@api.get("/media")
+async def list_media(
+    classroom_id: Optional[str] = None,
+    student_id: Optional[str] = None,
+    communication_id: Optional[str] = None,
+    user=Depends(get_current_user),
+):
+    q = {}
+    if classroom_id:
+        q["classroom_id"] = classroom_id
+    if student_id:
+        q["student_id"] = student_id
+    if communication_id:
+        q["communication_id"] = communication_id
+    # Parent: only see media of their children's classrooms
+    if user["role"] == "parent":
+        links = await db.parent_links.find({"parent_id": user["id"]}, {"_id": 0}).to_list(20)
+        active = await db.school_years.find_one({"is_active": True}, {"_id": 0})
+        if not active:
+            return []
+        child_ids = [l["student_id"] for l in links]
+        enrolls = await db.enrollments.find({"student_id": {"$in": child_ids}, "school_year_id": active["id"]}, {"_id": 0}).to_list(50)
+        class_ids = list({e["classroom_id"] for e in enrolls})
+        q["$or"] = [
+            {"classroom_id": {"$in": class_ids}},
+            {"student_id": {"$in": child_ids}},
+        ]
+    # Exclude heavy base64 from list
+    docs = await db.media.find(q, {"_id": 0, "data_base64": 0}).sort("created_at", -1).to_list(500)
+    return docs
+
+
+@api.get("/media/{mid}")
+async def get_media(mid: str, user=Depends(get_current_user)):
+    doc = await db.media.find_one({"id": mid}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Media non trovato")
+    return doc
+
+
+@api.post("/media")
+async def upload_media(payload: MediaIn, user=Depends(require_role("admin", "teacher"))):
+    doc = payload.model_dump()
+    doc["id"] = gen_id()
+    doc["created_at"] = now_iso()
+    doc["uploaded_by"] = user["id"]
+    await db.media.insert_one(doc)
+    return clean_doc(doc)
+
+
+@api.delete("/media/{mid}")
+async def delete_media(mid: str, user=Depends(require_role("admin", "teacher"))):
+    await db.media.delete_one({"id": mid})
+    return {"ok": True}
+
+
+# --- ATTENDANCE & BARCODE ---
+@api.post("/barcodes")
+async def generate_barcode(payload: BarcodeGenIn, user=Depends(require_role("admin", "teacher"))):
+    s = await db.students.find_one({"id": payload.student_id})
+    if not s:
+        raise HTTPException(404, "Alunno non trovato")
+    code = payload.code or datetime.now(timezone.utc).strftime("%y%m%d%H%M%S")
+    # Ensure uniqueness
+    if await db.barcodes.find_one({"code": code}):
+        code = f"{code}{secrets.token_hex(2)}"
+    await db.barcodes.update_one(
+        {"student_id": payload.student_id},
+        {"$set": {"id": gen_id(), "student_id": payload.student_id, "code": code, "created_at": now_iso()}},
+        upsert=True,
+    )
+    return {"student_id": payload.student_id, "code": code}
+
+
+@api.get("/barcodes")
+async def list_barcodes(user=Depends(require_role("admin", "teacher"))):
+    docs = await db.barcodes.find({}, {"_id": 0}).to_list(1000)
+    return docs
+
+
+@api.post("/attendance")
+async def attendance_check(payload: AttendanceCheckIn, user=Depends(require_role("admin", "teacher"))):
+    student = None
+    if payload.barcode:
+        b = await db.barcodes.find_one({"code": payload.barcode})
+        if not b:
+            raise HTTPException(404, "Barcode non trovato")
+        student = await db.students.find_one({"id": b["student_id"]}, {"_id": 0})
+    elif payload.student_id:
+        student = await db.students.find_one({"id": payload.student_id}, {"_id": 0})
+    if not student:
+        raise HTTPException(404, "Alunno non trovato")
+
+    now = datetime.now(timezone.utc)
+    doc = {
+        "id": gen_id(),
+        "student_id": student["id"],
+        "action": payload.action,
+        "ts": now.isoformat(),
+        "date": now.date().isoformat(),
+        "note": payload.note,
+        "by_user_id": user["id"],
+    }
+    await db.attendance.insert_one(doc)
+    return {"ok": True, "student": clean_doc(student), "entry": clean_doc(doc), "ts_local": now.isoformat()}
+
+
+@api.get("/attendance")
+async def list_attendance(
+    date_str: Optional[str] = None,
+    student_id: Optional[str] = None,
+    classroom_id: Optional[str] = None,
+    school_year_id: Optional[str] = None,
+    user=Depends(get_current_user),
+):
+    q = {}
+    if date_str:
+        q["date"] = date_str
+    if student_id:
+        q["student_id"] = student_id
+    if classroom_id and school_year_id:
+        enrolls = await db.enrollments.find({"classroom_id": classroom_id, "school_year_id": school_year_id}, {"_id": 0}).to_list(500)
+        ids = [e["student_id"] for e in enrolls]
+        q["student_id"] = {"$in": ids}
+    docs = await db.attendance.find(q, {"_id": 0}).sort("ts", -1).to_list(2000)
+    return docs
+
+
+# --- PARENT-FACING for new entities ---
+@api.get("/parent/me/lesson-plans")
+async def parent_lesson_plans(user=Depends(require_role("parent"))):
+    links = await db.parent_links.find({"parent_id": user["id"]}, {"_id": 0}).to_list(20)
+    active = await db.school_years.find_one({"is_active": True}, {"_id": 0})
+    if not active or not links:
+        return []
+    child_ids = [l["student_id"] for l in links]
+    enrolls = await db.enrollments.find({"student_id": {"$in": child_ids}, "school_year_id": active["id"]}, {"_id": 0}).to_list(50)
+    class_ids = list({e["classroom_id"] for e in enrolls})
+    docs = await db.lesson_plans.find({"classroom_id": {"$in": class_ids}}, {"_id": 0}).sort("date_from", -1).to_list(100)
+    return docs
+
+
+@api.get("/parent/me/communications")
+async def parent_communications(user=Depends(require_role("parent"))):
+    links = await db.parent_links.find({"parent_id": user["id"]}, {"_id": 0}).to_list(20)
+    active = await db.school_years.find_one({"is_active": True}, {"_id": 0})
+    child_ids = [l["student_id"] for l in links]
+    enrolls = await db.enrollments.find({"student_id": {"$in": child_ids}, "school_year_id": active["id"]} if active else {"student_id": {"$in": child_ids}}, {"_id": 0}).to_list(50)
+    class_ids = list({e["classroom_id"] for e in enrolls})
+    docs = await db.communications.find({"$or": [{"classroom_id": None}, {"classroom_id": {"$in": class_ids}}]}, {"_id": 0}).sort("publish_date", -1).to_list(200)
+    for d in docs:
+        if d.get("media_ids"):
+            media = await db.media.find({"id": {"$in": d["media_ids"]}}, {"_id": 0, "data_base64": 0}).to_list(50)
+            d["media"] = media
+        else:
+            d["media"] = []
+    return docs
+
+
+@api.get("/parent/me/extra-labs")
+async def parent_extra_labs(user=Depends(require_role("parent"))):
+    links = await db.parent_links.find({"parent_id": user["id"]}, {"_id": 0}).to_list(20)
+    active = await db.school_years.find_one({"is_active": True}, {"_id": 0})
+    child_ids = [l["student_id"] for l in links]
+    enrolls = await db.enrollments.find({"student_id": {"$in": child_ids}, "school_year_id": active["id"]} if active else {"student_id": {"$in": child_ids}}, {"_id": 0}).to_list(50)
+    class_ids = list({e["classroom_id"] for e in enrolls})
+    docs = await db.extra_labs.find({"classroom_id": {"$in": class_ids}}, {"_id": 0}).to_list(200)
+    return docs
+
+
+@api.get("/public/school-profile")
+async def public_school_profile():
+    """Public school profile (no auth) for landing/contact info"""
+    doc = await db.school_profile.find_one({"id": "main"}, {"_id": 0})
+    if not doc:
+        return {}
+    # Remove logo if very large or just return
+    return doc
+
+
+
+
 # ----------------------------- HEALTH -----------------------------
 @api.get("/")
 async def root():
@@ -1130,7 +1552,88 @@ async def seed():
             {"id": gen_id(), "title": "Riunione genitori", "body": "Giovedì alle 17:00 si terrà la riunione con i genitori della sezione Coccinelle.", "category": "avviso", "classroom_id": c1, "publish_date": now_iso(), "author_name": "Direzione", "created_at": now_iso()},
         ])
 
-        logger.info("Demo data seeded")
+        # --- STEP 1h demo data ---
+        # School profile
+        await db.school_profile.update_one({"id": "main"}, {"$set": {
+            "id": "main",
+            "name": "L'Albero della Vita",
+            "email": "alberodellavita2000@alice.it",
+            "phone": "0818566418",
+            "mobile": "3511992918",
+            "whatsapp": "3921850455",
+            "address": "Corso Nazionale, 171 - Scafati (SA)",
+            "vat": "03686240650",
+            "website": "https://www.lalberodellavitascafati.it",
+            "facebook": "https://www.facebook.com/lalberodellavita",
+            "instagram": "",
+            "logo_base64": "",
+            "updated_at": now_iso(),
+        }}, upsert=True)
+
+        # Calendar events (festivities)
+        await db.calendar_events.insert_many([
+            {"id": gen_id(), "name": "Inizio anno scolastico", "date": "2025-09-15", "category": "altro", "notes": "", "created_at": now_iso()},
+            {"id": gen_id(), "name": "Chiusura Ognissanti", "date": "2025-11-01", "category": "festivita", "notes": "", "created_at": now_iso()},
+            {"id": gen_id(), "name": "Chiusura Immacolata", "date": "2025-12-08", "category": "festivita", "notes": "", "created_at": now_iso()},
+            {"id": gen_id(), "name": "Chiusura Natalizie", "date": "2025-12-24", "end_date": "2026-01-06", "category": "chiusura", "notes": "Riapertura 7 gennaio", "created_at": now_iso()},
+            {"id": gen_id(), "name": "Festa di Carnevale", "date": "2026-02-17", "category": "festa", "notes": "Bambini in maschera", "created_at": now_iso()},
+            {"id": gen_id(), "name": "Festa dei Nonni", "date": "2025-10-02", "category": "festa", "notes": "", "created_at": now_iso()},
+            {"id": gen_id(), "name": "Riunione genitori Coccinelle", "date": "2026-05-22", "category": "riunione", "notes": "Ore 17:00", "created_at": now_iso()},
+        ])
+
+        # Extra labs (palinsesto)
+        await db.extra_labs.insert_many([
+            {"id": gen_id(), "classroom_id": c1, "day_of_week": "lunedì", "title": "Musicoterapia", "teacher_name": "Graziella Bambace", "created_at": now_iso()},
+            {"id": gen_id(), "classroom_id": c1, "day_of_week": "mercoledì", "title": "Psicomotricità", "teacher_name": "Sabrina Giallo", "created_at": now_iso()},
+            {"id": gen_id(), "classroom_id": c2, "day_of_week": "martedì", "title": "Teatro", "teacher_name": "Tonia Aprea", "created_at": now_iso()},
+            {"id": gen_id(), "classroom_id": c2, "day_of_week": "giovedì", "title": "Psicomotricità", "teacher_name": "Ornella Aprea", "created_at": now_iso()},
+            {"id": gen_id(), "classroom_id": c2, "day_of_week": "venerdì", "title": "Laboratorio Arte", "teacher_name": "Maestra Pina", "created_at": now_iso()},
+            {"id": gen_id(), "classroom_id": c3, "day_of_week": "martedì", "title": "Inglese", "teacher_name": "Maestra Tonia", "created_at": now_iso()},
+            {"id": gen_id(), "classroom_id": c3, "day_of_week": "giovedì", "title": "Motoria", "teacher_name": "Maestra Anna", "created_at": now_iso()},
+        ])
+
+        # Lesson plans
+        await db.lesson_plans.insert_many([
+            {"id": gen_id(), "classroom_id": c1, "school_year_id": year_id,
+             "date_from": (date.today() - timedelta(days=date.today().weekday())).isoformat(),
+             "date_to": (date.today() + timedelta(days=4 - date.today().weekday())).isoformat(),
+             "title": "Settimana del personaggio guida: Simba",
+             "body": "<p>Questa settimana presentiamo ai bambini il nostro <strong>personaggio guida</strong>: <em>Simba</em>. Attraverso racconti e canzoni esploreremo l'importanza della <strong>famiglia</strong>.</p><ul><li>Lunedì: presentazione di Simba con immagini</li><li>Martedì: cartellone della famiglia</li><li>Mercoledì: filastrocca</li><li>Giovedì: laboratorio di disegno</li><li>Venerdì: festa di chiusura settimana</li></ul>",
+             "created_at": now_iso(), "created_by": t1_id},
+            {"id": gen_id(), "classroom_id": c2, "school_year_id": year_id,
+             "date_from": (date.today() - timedelta(days=date.today().weekday()+7)).isoformat(),
+             "date_to": (date.today() - timedelta(days=date.today().weekday()+3)).isoformat(),
+             "title": "Settimana dei colori secondari",
+             "body": "<p>Lavoriamo sui colori secondari: <strong>arancione</strong>, <strong>verde</strong>, <strong>viola</strong>. Attraverso le tempere mostriamo come dai colori primari si ottengono i secondari.</p>",
+             "created_at": now_iso(), "created_by": t1_id},
+        ])
+
+        # Communications (with photo)
+        comm1, comm2 = gen_id(), gen_id()
+        await db.communications.insert_many([
+            {"id": comm1, "title": "Giornata mondiale della Gentilezza", "body": "<p>Il 13 novembre celebriamo la Giornata Mondiale della Gentilezza. Coinvolgeremo i bambini con racconti e attività dedicate.</p>",
+             "type": "evento_attivita", "classroom_id": c1, "publish_date": now_iso(), "media_ids": [], "author_name": "Maestra Giulia", "created_at": now_iso()},
+            {"id": comm2, "title": "Visita didattica alla fattoria", "body": "<p>Il prossimo mercoledì usciremo per una visita didattica alla <em>Fattoria didattica</em>. Vi chiediamo cortesemente di:</p><ul><li>vestire i bambini comodi</li><li>portare una bottiglietta d'acqua</li></ul>",
+             "type": "comunicazione_classe", "classroom_id": c2, "publish_date": now_iso(), "media_ids": [], "author_name": "Maestra Giulia", "created_at": now_iso()},
+        ])
+
+        # Barcodes for all students
+        for idx, sid in enumerate(student_ids):
+            await db.barcodes.update_one(
+                {"student_id": sid},
+                {"$set": {"id": gen_id(), "student_id": sid, "code": f"260515{idx+1:05d}", "created_at": now_iso()}},
+                upsert=True,
+            )
+
+        # Sample attendance today (Alice checked in this morning)
+        today_iso = date.today().isoformat()
+        check_ts = datetime.now(timezone.utc).replace(hour=8, minute=15, second=0).isoformat()
+        await db.attendance.insert_one({
+            "id": gen_id(), "student_id": student_ids[0], "action": "in",
+            "ts": check_ts, "date": today_iso, "note": "", "by_user_id": t1_id,
+        })
+
+        logger.info("Demo data seeded (incl. STEP 1h)")
 
 
 # ----------------------------- App wiring -----------------------------

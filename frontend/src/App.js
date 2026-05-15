@@ -19,12 +19,21 @@ import StaffMenu from "@/pages/staff/Menu";
 import StaffNews from "@/pages/staff/News";
 import StaffYears from "@/pages/staff/Years";
 import StaffYearTransition from "@/pages/staff/YearTransition";
+import StaffLessonPlans from "@/pages/staff/LessonPlans";
+import StaffCommunications from "@/pages/staff/Communications";
+import StaffEvents from "@/pages/staff/Events";
+import StaffExtraLabs from "@/pages/staff/ExtraLabs";
+import StaffSchoolProfile from "@/pages/staff/SchoolProfile";
+import StaffAttendance from "@/pages/staff/Attendance";
+import StaffGallery from "@/pages/staff/Gallery";
 
 import ParentLayout from "@/layouts/ParentLayout";
 import ParentHome from "@/pages/parent/Home";
 import ParentTimeline from "@/pages/parent/Timeline";
 import ParentMenuPage from "@/pages/parent/Menu";
 import ParentNews from "@/pages/parent/News";
+import ParentClass from "@/pages/parent/Class";
+import ParentCalendar from "@/pages/parent/Calendar";
 
 function Protected({ roles, children }) {
   const { user, bootDone } = useAuth();
@@ -87,6 +96,13 @@ function App() {
             <Route path="news" element={<StaffNews />} />
             <Route path="anni" element={<StaffYears />} />
             <Route path="passaggio-anno" element={<StaffYearTransition />} />
+            <Route path="piano" element={<StaffLessonPlans />} />
+            <Route path="comunicazioni" element={<StaffCommunications />} />
+            <Route path="eventi" element={<StaffEvents />} />
+            <Route path="laboratori" element={<StaffExtraLabs />} />
+            <Route path="scuola" element={<StaffSchoolProfile />} />
+            <Route path="presenze" element={<StaffAttendance />} />
+            <Route path="galleria" element={<StaffGallery />} />
           </Route>
 
           {/* PARENT */}
@@ -100,6 +116,8 @@ function App() {
           >
             <Route index element={<ParentHome />} />
             <Route path="timeline" element={<ParentTimeline />} />
+            <Route path="classe" element={<ParentClass />} />
+            <Route path="calendario" element={<ParentCalendar />} />
             <Route path="menu" element={<ParentMenuPage />} />
             <Route path="news" element={<ParentNews />} />
           </Route>

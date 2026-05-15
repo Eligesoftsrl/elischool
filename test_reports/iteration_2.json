@@ -1,0 +1,41 @@
+{
+  "summary": "Backend-only test pass for STEP 1h (new entities) + full regression of iteration_1. 53/53 pytest tests passed. New coverage: lesson-plans (list+filters, CRUD, parent 403 on POST), communications (list returns media[] WITHOUT data_base64, CRUD, parent 403 on POST), calendar-events (date_from/date_to filter, teacher 403 on DELETE, admin 200), extra-labs (filter by classroom_id, CRUD by teacher), school-profile (seeded 'L'Albero della Vita' confirmed, teacher 403 on PUT, admin 200 with restore), public/school-profile reachable without auth, media (upload with base64, list excludes data_base64, GET /{id} returns full doc, parent 403 on upload, parent isolation: only own classroom media visible), barcodes (upsert one-per-student), attendance (valid barcode -> 200 with student info, invalid barcode -> 404, student_id+out registers exit, list filter by date+classroom+year), parent endpoints (/parent/me/lesson-plans scoped to own classroom, /parent/me/communications with media enrichment, /parent/me/extra-labs). All iteration_1 tests still green: auth (admin/parent login, wrong-pw 401, /me, forgot+reset, brute-force 429), school-years/classrooms/students CRUD, enrollment transfer, year-transition (upsert OK), parent invite flow, activities upsert, menus, news, AI report (Italian non-empty), role protection. Assertions cover status codes AND body fields (e.g., school name, classroom scoping, base64 exclusion).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/barcodes", "issue": "When the request arrives with a code that already exists for another student, the server silently appends a random suffix rather than returning 409. Acceptable for upsert flow but undocumented."},
+      {"endpoint": "GET /api/communications (no classroom_id query)", "issue": "Without a classroom_id filter the endpoint returns ALL communications (including other classrooms). Parents must therefore use /parent/me/communications; the generic /communications is open to any authenticated user including parents. Consider scoping or restricting role."},
+      {"endpoint": "GET /api/extra-labs / /api/lesson-plans / /api/calendar-events", "issue": "These three list endpoints accept any authenticated user (including parent) and are not scoped. A parent could fetch lesson plans of unrelated classrooms via /api/lesson-plans?classroom_id=X. Parents currently have no UI to do so but the API is unrestricted."},
+      {"endpoint": "POST /api/attendance", "issue": "No idempotency / no duplicate prevention: the same barcode scanned twice in quick succession will create two 'in' rows for the same student/day. Consider unique index or last-action check."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional - security hardening) Scope GET /api/communications, /api/lesson-plans, /api/extra-labs, /api/calendar-events by role so parents cannot cross-fetch unrelated classroom data via query params; force them through /parent/me/* endpoints.",
+    "(Optional) Add duplicate-action guard on POST /api/attendance to prevent double check-ins within N minutes.",
+    "(Code quality) server.py is now 1662 lines - exceeds 700-line guideline; should be split into modules (auth, school, parents, activities, communications, attendance, media, ai).",
+    "(Optional) POST /api/barcodes returns 'code' but no doc id; consider returning the upserted barcode document."
+  ],
+  "critical_code_review_comments": [
+    "server.py 1662 lines - well over the 700-line threshold; split into focused modules.",
+    "GET /api/media for parent role filters by (classroom_id IN own_classes) OR (student_id IN own_children). Good. But it also keeps any explicit classroom_id/student_id query filter via $and-like merge that could be bypassed because the user-provided filter is set first and then $or is added; if a parent passes ?classroom_id=OTHER, the final Mongo query becomes {classroom_id: OTHER, $or: [own_class, own_kids]} which correctly returns empty (verified by test). Acceptable but worth a comment.",
+    "POST /api/attendance accepts barcode OR student_id but does not verify the acting user has rights over the student (any teacher can check-in any kid). Acceptable for nursery context but flag.",
+    "PATCH endpoints (lesson-plans, communications, calendar-events, extra-labs) require full payload (LessonPlanIn etc.) rather than a partial update model - clients must resend all required fields or PATCH will 422.",
+    "DELETE /api/calendar-events is admin-only but POST/PATCH allow teacher - inconsistent; consider aligning.",
+    "/api/public/school-profile returns the full document including logo_base64 (potentially large). Comment in code says 'Remove logo if very large or just return' but it does NOT remove it."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py"
+  ],
+  "success_rate": {"backend": "100% (53/53)", "frontend": "N/A (not requested)"},
+  "test_credentials": "admin@scuolapp.it/Admin2026!, maestra.giulia@scuolapp.it/Maestra2026!, genitore@scuolapp.it/Genitore2026! - all working and seeded",
+  "seed_data_creation": "Tests reuse existing seed (incl. STEP 1h: school_profile='L'Albero della Vita', 7 calendar events, 7 extra labs, 2 lesson plans, 2 communications, 6 barcodes, 1 attendance row for Alice). Test-created entities are prefixed TEST_ and cleaned up.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend fully green at 53/53. Pytest entry: pytest /app/backend/tests/backend_test.py -v --junitxml=/app/test_reports/pytest/pytest_results.xml. Run completes in ~63s including AI report path. No blocking issues. Action items are optional hardenings (parent scoping on generic list endpoints, attendance duplicate guard, server.py modularization).",
+  "rca of the issue": "N/A - no bugs blocking requested features."
+}

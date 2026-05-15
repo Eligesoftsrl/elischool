@@ -1,13 +1,14 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Home, Calendar, Utensils, Newspaper, LogOut, Heart } from "lucide-react";
+import { Home, Calendar, Utensils, Newspaper, LogOut, Heart, CalendarDays, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 
 const NAV = [
   { to: "/g", icon: Home, label: "Oggi", end: true },
-  { to: "/g/timeline", icon: Calendar, label: "Timeline" },
+  { to: "/g/timeline", icon: Calendar, label: "Diario" },
+  { to: "/g/classe", icon: BookOpen, label: "Classe" },
+  { to: "/g/calendario", icon: CalendarDays, label: "Calendario" },
   { to: "/g/menu", icon: Utensils, label: "Menu" },
-  { to: "/g/news", icon: Newspaper, label: "News" },
 ];
 
 export default function ParentLayout() {
