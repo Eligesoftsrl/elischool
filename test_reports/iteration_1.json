@@ -1,0 +1,41 @@
+{
+  "summary": "Backend-only test pass for Scuola Infanzia API. 26/26 pytest tests passed covering auth (login admin/parent, wrong password, /me, forgot+reset, brute-force lockout 5->429), dashboard, school-years CRUD+activate, classrooms (with student_count enrichment, students-by-classroom), students CRUD, enrollment transfer (within same year), year-transition wizard (verified moved count + new-year enrollments), parent invite flow (create -> pending status -> mock_invite_link -> setup-password -> active login -> linked children), resend-invite, activities upsert idempotency + filtering by classroom+year+date_from, menus list/create + current-week match, news list (parent + admin) + create, parent-facing /parent/me/children with classroom enrichment, /child/{sid}/day (today's seeded activity for Alice), /child/{sid}/timeline, 403 for unlinked child, AI daily report returns non-empty Italian text (covers AI path or Italian fallback), role protection (parent->/dashboard/stats=403, parent->DELETE /school-years=403). All assertions covered status codes AND response bodies/persistence.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/auth/login (pending parent)", "issue": "When a pending parent has no password_hash and is queried with an arbitrary password the server returns 401 (wrong creds) before reaching the 'status==pending' 403 branch. The 403 'account non attivato' message is only reachable if the user already has a valid password_hash but status is still pending. Functionally fine, just note that the spec line 'Parent login fails while status=pending (403)' is technically observed as 401 in this implementation."},
+      {"endpoint": "POST /api/year-transition", "issue": "Upsert uses filter {student_id, school_year_id:to_year_id} and $set includes a new 'id' field on every call, so re-running the same transition rewrites the enrollment id. Not breaking but non-idempotent on id. Also, the same student is counted as 'moved' even if it was already enrolled."},
+      {"endpoint": "GET /api/news?classroom_id=...", "issue": "Filter uses {$or:[classroom_id:X, classroom_id:None]} but seeded global news has classroom_id=None which only matches when classroom_id query param is provided; without classroom_id all news are returned (works as intended). Just confirm desired behavior."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Make pending-parent login return 403 explicitly even when no password set (currently returns 401 because hash is None).",
+    "(Optional) In /api/year-transition, avoid overwriting existing enrollment id on each run (use $setOnInsert for id/created_at).",
+    "(Code quality) server.py is ~1160 lines; consider splitting into auth.py / school.py / parents.py / activities.py / ai.py modules.",
+    "(Security) CORS uses allow_origins=['*'] with allow_credentials=False — cookies set on /auth/login are therefore unusable cross-origin; Bearer tokens are the only working auth path, which the frontend should use consistently."
+  ],
+  "critical_code_review_comments": [
+    "server.py 1159 lines — exceeds 700-line guideline; should be split into modules.",
+    "AI report endpoint imports emergentintegrations inside the function — fine for cold-start tolerance but means import errors only surface at runtime.",
+    "verify_password swallows all exceptions returning False — could mask malformed hashes silently.",
+    "Brute-force counter resets to 0 after lockout creation; if a 6th attempt arrives after 15 min the counter restarts at 1 — acceptable.",
+    "No rate limiting on /auth/forgot-password — potential abuse vector (low priority for MVP).",
+    "AI daily report fallback uses a hard-coded sentence even when GPT call succeeds with empty text; consider validating response length before caching."
+  ],
+  "updated_files": [
+    "/app/backend/tests/__init__.py",
+    "/app/backend/tests/backend_test.py"
+  ],
+  "success_rate": {"backend": "100% (26/26)", "frontend": "N/A (not requested)"},
+  "test_credentials": "admin@scuolapp.it/Admin2026!, maestra.giulia@scuolapp.it/Maestra2026!, genitore@scuolapp.it/Genitore2026! — all working and seeded",
+  "seed_data_creation": "Tests reuse seeded data (6 students, 3 classrooms, 2 school years, 1 active parent linked to Alice, 1 today activity, 1 weekly menu, 2 news). Test-created entities are prefixed TEST_ and cleaned up.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend is fully green. AI report path returned a real GPT-5.2 response (>20 chars) on this run; fallback path is exercised inside the try/except in server.py and would also pass the test (Italian non-empty text). If retesting after frontend changes, run: pytest /app/backend/tests/backend_test.py -v.  Note: pending-parent login returns 401 (not 403) because password_hash is None — see action_items.",
+  "rca of the issue": "N/A — no bugs blocking the requested features."
+}
