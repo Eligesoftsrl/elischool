@@ -1035,7 +1035,7 @@ class BarcodeGenIn(BaseModel):
 async def list_lesson_plans(
     classroom_id: Optional[str] = None,
     school_year_id: Optional[str] = None,
-    user=Depends(get_current_user),
+    user=Depends(require_role("admin", "teacher")),
 ):
     q = {}
     if classroom_id:
@@ -1074,7 +1074,7 @@ async def delete_lesson_plan(pid: str, user=Depends(require_role("admin", "teach
 
 # --- COMMUNICATIONS (rich news) ---
 @api.get("/communications")
-async def list_communications(classroom_id: Optional[str] = None, user=Depends(get_current_user)):
+async def list_communications(classroom_id: Optional[str] = None, user=Depends(require_role("admin", "teacher"))):
     q = {}
     if classroom_id:
         q["$or"] = [{"classroom_id": classroom_id}, {"classroom_id": None}]
@@ -1149,7 +1149,7 @@ async def delete_event(eid: str, user=Depends(require_role("admin"))):
 
 # --- EXTRA LABS (palinsesto laboratori) ---
 @api.get("/extra-labs")
-async def list_extra_labs(classroom_id: Optional[str] = None, user=Depends(get_current_user)):
+async def list_extra_labs(classroom_id: Optional[str] = None, user=Depends(require_role("admin", "teacher"))):
     q = {}
     if classroom_id:
         q["classroom_id"] = classroom_id

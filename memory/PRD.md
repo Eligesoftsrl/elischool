@@ -1,86 +1,89 @@
 # PRD — Scuola dell'Infanzia PWA ("nido.")
 
 ## Original Problem
-Riconvertire un'applicazione esistente (Flask + MySQL) per la gestione di una scuola dell'infanzia in una PWA mobile-first "wow", fruibile al 100% da smartphone e tablet, con:
-- Riferimento "anno scolastico"
-- Possibilità di spostare alunni fra classi e di promuoverli al nuovo anno
-- Accesso genitori sicuro con recupero password
-- AI Report giornaliero per i genitori
+Riconvertire un'applicazione esistente (Flask + MySQL) per la gestione di una scuola dell'infanzia in una PWA mobile-first "wow".
 
-## Stack scelto
-- Frontend: React 19 + Tailwind + framer-motion + lucide-react + shadcn (su misura)
+## Stack
+- Frontend: React 19 + Tailwind + framer-motion + lucide-react + @tailwindcss/typography
 - Backend: FastAPI + Motor (Mongo)
 - DB: MongoDB
-- Auth: JWT (bearer in localStorage, cookies set ma allow_credentials=False)
-- AI: GPT-5.2 via Emergent Universal Key (emergentintegrations) con fallback italiano automatico
-- Email: MOCKED (link restituito in API + log)
+- Auth: JWT (bearer in localStorage)
+- AI: GPT-5.2 via Emergent Universal Key (fallback Italian text)
+- Email: MOCKED
 
 ## Architettura
 ```
-/app/backend/server.py              ~1200 righe — auth, anni, classrooms, students, enrollments, transfer, year-transition, teachers, parents (invite mock), activities (upsert/idempotent), menus, news, parent endpoints, AI daily report, seed
+/app/backend/server.py              ~1660 righe (da splittare in P2)
 /app/backend/.env                   JWT_SECRET, ADMIN_*, EMERGENT_LLM_KEY, FRONTEND_URL
-/app/frontend/src/App.js            React Router con route protette + AuthProvider
+/app/frontend/src/App.js            React Router con route protette
 /app/frontend/src/contexts/AuthContext.jsx
-/app/frontend/src/lib/api.js        Axios + Bearer interceptor + 401 redirect
-/app/frontend/src/layouts/StaffLayout.jsx   Top bar + side nav + year switcher + user menu
-/app/frontend/src/layouts/ParentLayout.jsx  Max-w-lg + bottom nav + glass
-/app/frontend/src/pages/...         Login, ForgotPassword, ResetPassword, SetupPassword, Landing
-/app/frontend/src/pages/staff/      Dashboard, Students, Classrooms, Teachers, Parents, Activities, Menu, News, Years, YearTransition
-/app/frontend/src/pages/parent/     Home (AI report), Timeline, Menu, News
-/app/frontend/src/components/Primitives.jsx
+/app/frontend/src/lib/api.js
+/app/frontend/src/layouts/StaffLayout.jsx   Top bar + side nav (16 voci) + year switcher
+/app/frontend/src/layouts/ParentLayout.jsx  Bottom nav (5 voci) + glass
+/app/frontend/src/pages/staff/      Dashboard, Students, Classrooms, Teachers, Parents, Activities, Menu, News, Years, YearTransition, LessonPlans, Communications, Events, ExtraLabs, SchoolProfile, Attendance, Gallery
+/app/frontend/src/pages/parent/     Home, Timeline, Menu, News, Class, Calendar
 ```
 
 ## Personas
-1. **Direzione/Admin** — gestisce anni, classi, maestre, genitori, menu, news; può fare passaggio anno
-2. **Maestra/Teacher** — registra le attività giornaliere, crea news/menu, gestisce classi/alunni
-3. **Genitore/Parent** — vede solo i propri figli, riceve il resoconto AI quotidiano, vede menu, news, timeline
+1. **Direzione/Admin** — gestisce anni, classi, maestre, profilo scuola, passaggio anno
+2. **Maestra/Teacher** — attività, piano didattico, comunicazioni, presenze, foto
+3. **Genitore/Parent** — vede solo i propri figli, riceve resoconto AI quotidiano, comunicazioni di classe + foto, piano didattico, laboratori, calendario eventi, menu
 
-## Funzionalità implementate (MVP completato 15/05/2026)
-- [x] Login JWT (admin + teacher + parent) con brute-force protection (5 tentativi → 15 min lock)
-- [x] Recupero password con token e link mock
-- [x] Invito genitori con token di setup-password mock
-- [x] Anno scolastico CRUD + attivazione
-- [x] Sezioni/Aule CRUD legate all'anno con assegnazione maestre + conteggio alunni
-- [x] Alunni CRUD con ricerca, allergie evidenziate
-- [x] Spostamento alunno tra sezioni (transfer log persistito)
-- [x] Wizard passaggio anno (mapping classe→classe, promozione bulk)
-- [x] Maestre CRUD (solo admin)
-- [x] Genitori CRUD con linking ai figli, status pending/active
-- [x] Attività quotidiane: didattica, motoria, merenda, pranzo, riposo (minuti), pipì/cacca/bagno, umore, note — upsert idempotente (student+date unique)
-- [x] Menu settimanale con 5 giorni × 4 portate
-- [x] News a tutta scuola o per sezione
-- [x] Dashboard staff con stats e attività di oggi
-- [x] Parent home: hero personalizzato, AI report con refresh, blocchi attività, contatori, note maestre
-- [x] Parent timeline 30 giorni
-- [x] Parent menu corrente + news
-- [x] Child-switcher per genitori con più figli
-- [x] Sicurezza: genitore può vedere SOLO i propri figli (403 altrimenti)
-- [x] PWA-ready meta tags (theme-color, apple-mobile-web-app-capable)
-- [x] Design mobile-first: bottom nav, max-w-lg, large touch targets (48px+), framer-motion transitions, bottom-sheet drawer per attività, Outfit/Manrope fonts, palette pastello con accenti per categoria attività
-- [x] Italiano UI ovunque
-- [x] data-testid su tutti gli elementi interattivi principali
+## Iterazioni completate
+
+### Iteration 1 (MVP, 15/05/2026) — 26/26 backend tests ✅
+- JWT auth (admin/teacher/parent) + brute-force protection + password recovery mock
+- Anno scolastico + attivazione
+- Sezioni/Aule, Alunni, Maestre, Genitori (invite mock), Parentela
+- Spostamento alunno fra sezioni + Wizard passaggio anno
+- Attività quotidiane (upsert per student+date)
+- Menu settimanale + News
+- AI Report giornaliero (GPT-5.2 + fallback)
+- Dashboard staff + Parent home con resoconto
+
+### Iteration 2 (STEP 1h, 15/05/2026) — 53/53 backend tests ✅
+Allineamento al DB MySQL reale dell'utente. Aggiunte:
+- **Piano didattico settimanale** (`lesson_plans`) — rich text HTML, per classe e range date
+- **Comunicazioni rich** (`communications`) — sostituisce News, con tipologia (classe/evento/avviso) + classe destinataria + foto allegate
+- **Eventi calendario** (`calendar_events`) — entità separata con categoria (festività, chiusura, gita, festa, riunione, altro)
+- **Laboratori extra** (`extra_labs`) — palinsesto settimanale classe × giorno (musicoterapia, teatro, ecc.)
+- **Profilo Scuola** (`school_profile`) — singleton: ragione sociale, P.IVA, contatti, social, logo (base64)
+- **Foto/Media** (`media`) — upload base64 (max 4MB), gallery, viewer, parent scoping
+- **Barcode + Presenze** (`barcodes`, `attendance`) — generazione barcode per alunno, scan ingresso/uscita, manuale fallback
+- **Endpoint parent** dedicati per lesson-plans, communications, extra-labs (con isolation per i propri figli)
+- **/api/public/school-profile** accessibile senza auth
+- Endpoint generici scoped admin/teacher (security hardening dopo test agent feedback)
+
+## Personalizzazioni UI
+- Outfit + Manrope fonts
+- Palette pastello (#FF8C6B brand, tonalità per attività)
+- Bottom-sheet drawer per registro giornaliero
+- Layout monthly per eventi
+- Palinsesto a 5 colonne (giorni)
+- Lazy load delle foto (singolo GET /media/{id} on demand)
 
 ## Test Coverage
-- Backend: 26/26 pytest tests passati (auth, RBAC, transfer, year-transition, AI fallback, parent security)
-- Frontend: validazione visiva tramite screenshot — Landing, Login, Staff Dashboard, Parent Home (con AI report), Staff Activities
+- Backend: **53/53 pytest passati** (iteration 2)
+- Frontend: validazione visuale OK su dashboard, presenze, comunicazioni, eventi, laboratori, piano
 
-## Backlog / Future
+## Backlog
 ### P1
-- [ ] Email reale (SendGrid/Resend) al posto del mock
-- [ ] Upload foto / gallery multimediale per attività
+- [ ] Email reali (SendGrid/Resend)
+- [ ] STEP 2 — Menu rotante multi-settimana (settimana 1/2/3/4) come nel DB originale
+- [ ] STEP 3 — Import dati da MySQL dump (script di migrazione)
 - [ ] Notifiche push PWA quando il report giornaliero è pronto
-- [ ] Eventi calendario condivisi (oltre alla news "evento")
-- [ ] Esportazione PDF resoconto mensile
+- [ ] Esportazione PDF resoconto mensile / settimanale
 
 ### P2
-- [ ] Importazione dati da MySQL dump
-- [ ] Manifest.json completo + icone 192/512 per installazione PWA
-- [ ] Sezione "permessi granulari" per parentela (papà / mamma / nonna)
-- [ ] Chat 1:1 tra genitore e maestra
+- [ ] Splittare server.py in moduli (auth, school, parents, activities, communications, attendance, media, ai)
+- [ ] Duplicate-action guard su POST /api/attendance (evita doppio check-in)
+- [ ] Storage media su filesystem/S3 invece di base64 in Mongo
+- [ ] Manifest.json + icone PWA installabili
 - [ ] Multi-tenant (più scuole)
-- [ ] Splittare server.py in moduli (auth.py, students.py, ai.py…)
+- [ ] Chat 1:1 maestra-genitore
+- [ ] OCR/QR scanner camera-based per barcode
 
 ## Note Tecniche
-- Emergent Universal Key dev budget: limitato. Se esaurito l'AI report cade automaticamente sul fallback italiano (testo concatenato dalle attività registrate). Per AI completa, top-up della key da Profilo → Universal Key.
-- CORS attualmente `*` con `allow_credentials=False`: il frontend usa Bearer token in localStorage.
-- Brute-force lockout collection: `login_attempts` (TTL non impostato, pulizia manuale opzionale).
+- Universal Key dev budget limitato → AI report cade su fallback italiano automatico.
+- CORS `*` con `allow_credentials=False`; frontend usa Bearer in localStorage.
+- Media storage: base64 in MongoDB (OK per MVP, da migrare a storage esterno in produzione).
