@@ -41,6 +41,15 @@ Riconvertire un'applicazione esistente (Flask + MySQL) per la gestione di una sc
 - AI Report giornaliero (GPT-5.2 + fallback)
 - Dashboard staff + Parent home con resoconto
 
+### Iteration 5 (Bulk apply scheda, 18/05/2026) — 76/76 backend tests ✅
+Rifatto secondo l'osservazione corretta dell'utente: "Replica scheda" non aveva senso perché pranzo/didattica/motoria dipendono dalla data (sono già auto-fill), e Si/No cambiano ogni giorno. Sostituito con il workflow reale:
+- **POST /api/activities/bulk** — applica UNA scheda a TUTTI gli alunni della sezione per una data
+- Body: `{classroom_id, school_year_id, date, ...activity_fields, overwrite_existing, only_student_ids?}`
+- Risposta: `{applied, skipped, students_modified}`
+- Skip se la scheda di un alunno esiste già (a meno di `overwrite_existing=true`)
+- Frontend: bottone "Compila tutta la sezione" → modal con auto-fill da menu/piano/laboratori già attivi + banner conferma + checkbox sovrascrivi
+- Workflow: maestra fa il bulk una volta, poi ritocca singolarmente le 1-2 varianti
+
 ### Iteration 4 (Auto-fill scheda + Replica, 18/05/2026)
 Replicato comportamento del Flask originale `nuova_attivita`:
 - **GET /api/activities/suggestions?student_id=&date_str=** → restituisce auto-fill per:
