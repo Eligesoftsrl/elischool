@@ -1031,3 +1031,286 @@ class TestParentNewEndpoints:
         assert r.status_code == 200
         assert isinstance(r.json(), list)
         assert len(r.json()) >= 1
+
+
+# ---------------- Activities BULK (STEP 5: "Compila tutta la sezione") ----------------
+class TestActivitiesBulk:
+    """POST /api/activities/bulk applies a single activity card to all enrolled students
+    of a classroom for a given date. Verifies skip/overwrite, only_student_ids,
+    role guards, edge cases, idempotency, and per-student row creation."""
+
+    BULK_DATE = "2026-05-25"  # future date with no existing activities
+
+    def _get_coccinelle_and_students(self, admin_token):
+        years = requests.get(f"{API}/school-years", headers=_h(admin_token)).json()
+        active = next(y for y in years if y["is_active"])
+        rooms = requests.get(f"{API}/classrooms?school_year_id={active['id']}", headers=_h(admin_token)).json()
+        coc = next((r for r in rooms if r["name"].lower().startswith("coccinelle")), rooms[0])
+        # Use enrollment-scoped endpoint (mirrors what bulk endpoint queries)
+        students = requests.get(
+            f"{API}/classrooms/{coc['id']}/students?school_year_id={active['id']}",
+            headers=_h(admin_token),
+        ).json()
+        return active["id"], coc["id"], [s["id"] for s in students]
+
+    def _cleanup(self, admin_token, student_ids, date_str):
+        """Delete any activity row for these students on date_str."""
+        for sid in student_ids:
+            rows = requests.get(
+                f"{API}/activities?student_id={sid}&date_from={date_str}&date_to={date_str}",
+                headers=_h(admin_token),
+            ).json()
+            for a in rows:
+                requests.delete(f"{API}/activities/{a['id']}", headers=_h(admin_token))
+
+    def test_bulk_apply_to_all_students_creates_separate_rows(self, admin_token):
+        yid, cid, sids = self._get_coccinelle_and_students(admin_token)
+        assert len(sids) >= 2, "Coccinelle must have >=2 students for this test"
+        self._cleanup(admin_token, sids, self.BULK_DATE)
+        try:
+            payload = {
+                "classroom_id": cid,
+                "school_year_id": yid,
+                "date": self.BULK_DATE,
+                "overwrite_existing": False,
+                "didattica": "Partecipato",
+                "pranzo": "Ha mangiato",
+                "merenda": "Si",
+                "note": "TEST_bulk_all",
+            }
+            r = requests.post(f"{API}/activities/bulk", headers=_h(admin_token), json=payload)
+            assert r.status_code == 200, r.text
+            body = r.json()
+            assert set(body.keys()) >= {"applied", "skipped", "students_modified"}
+            assert body["applied"] == len(sids)
+            assert body["skipped"] == 0
+            assert set(body["students_modified"]) == set(sids)
+
+            # Verify SEPARATE rows per student (not a shared doc)
+            for sid in sids:
+                rows = requests.get(
+                    f"{API}/activities?student_id={sid}&date_from={self.BULK_DATE}&date_to={self.BULK_DATE}",
+                    headers=_h(admin_token),
+                ).json()
+                assert len(rows) == 1, f"student {sid} should have 1 row, got {len(rows)}"
+                assert rows[0]["student_id"] == sid
+                assert rows[0]["date"] == self.BULK_DATE
+                assert rows[0]["didattica"] == "Partecipato"
+                assert rows[0]["pranzo"] == "Ha mangiato"
+                assert rows[0]["note"] == "TEST_bulk_all"
+        finally:
+            self._cleanup(admin_token, sids, self.BULK_DATE)
+
+    def test_bulk_overwrite_false_skips_existing(self, admin_token):
+        yid, cid, sids = self._get_coccinelle_and_students(admin_token)
+        self._cleanup(admin_token, sids, self.BULK_DATE)
+        try:
+            # Pre-create activity for FIRST student only
+            pre = requests.post(f"{API}/activities", headers=_h(admin_token), json={
+                "student_id": sids[0], "date": self.BULK_DATE,
+                "didattica": "Non ha Partecipato", "note": "TEST_preexisting",
+            })
+            assert pre.status_code == 200
+
+            r = requests.post(f"{API}/activities/bulk", headers=_h(admin_token), json={
+                "classroom_id": cid, "school_year_id": yid, "date": self.BULK_DATE,
+                "overwrite_existing": False,
+                "didattica": "Partecipato", "note": "TEST_bulk_skip",
+            })
+            assert r.status_code == 200
+            body = r.json()
+            assert body["skipped"] == 1, body
+            assert body["applied"] == len(sids) - 1
+            assert sids[0] not in body["students_modified"]
+
+            # Verify the pre-existing row was NOT changed
+            rows = requests.get(
+                f"{API}/activities?student_id={sids[0]}&date_from={self.BULK_DATE}&date_to={self.BULK_DATE}",
+                headers=_h(admin_token),
+            ).json()
+            assert rows[0]["didattica"] == "Non ha Partecipato"
+            assert rows[0]["note"] == "TEST_preexisting"
+        finally:
+            self._cleanup(admin_token, sids, self.BULK_DATE)
+
+    def test_bulk_overwrite_true_overwrites_existing(self, admin_token):
+        yid, cid, sids = self._get_coccinelle_and_students(admin_token)
+        self._cleanup(admin_token, sids, self.BULK_DATE)
+        try:
+            requests.post(f"{API}/activities", headers=_h(admin_token), json={
+                "student_id": sids[0], "date": self.BULK_DATE,
+                "didattica": "Non ha Partecipato", "note": "TEST_preexisting",
+            })
+
+            r = requests.post(f"{API}/activities/bulk", headers=_h(admin_token), json={
+                "classroom_id": cid, "school_year_id": yid, "date": self.BULK_DATE,
+                "overwrite_existing": True,
+                "didattica": "Partecipato", "note": "TEST_bulk_overwrite",
+            })
+            assert r.status_code == 200
+            body = r.json()
+            assert body["applied"] == len(sids), body
+            assert body["skipped"] == 0
+
+            # Verify pre-existing row WAS overwritten
+            rows = requests.get(
+                f"{API}/activities?student_id={sids[0]}&date_from={self.BULK_DATE}&date_to={self.BULK_DATE}",
+                headers=_h(admin_token),
+            ).json()
+            assert rows[0]["didattica"] == "Partecipato"
+            assert rows[0]["note"] == "TEST_bulk_overwrite"
+        finally:
+            self._cleanup(admin_token, sids, self.BULK_DATE)
+
+    def test_bulk_only_student_ids_subset(self, admin_token):
+        yid, cid, sids = self._get_coccinelle_and_students(admin_token)
+        assert len(sids) >= 2
+        self._cleanup(admin_token, sids, self.BULK_DATE)
+        try:
+            subset = [sids[0]]  # only the first one
+            r = requests.post(f"{API}/activities/bulk", headers=_h(admin_token), json={
+                "classroom_id": cid, "school_year_id": yid, "date": self.BULK_DATE,
+                "overwrite_existing": False,
+                "only_student_ids": subset,
+                "didattica": "Partecipato", "note": "TEST_bulk_subset",
+            })
+            assert r.status_code == 200, r.text
+            body = r.json()
+            assert body["applied"] == 1
+            assert body["students_modified"] == subset
+
+            # Only subset student has a row; others do NOT
+            rows0 = requests.get(
+                f"{API}/activities?student_id={sids[0]}&date_from={self.BULK_DATE}&date_to={self.BULK_DATE}",
+                headers=_h(admin_token),
+            ).json()
+            assert len(rows0) == 1
+            for sid in sids[1:]:
+                rows = requests.get(
+                    f"{API}/activities?student_id={sid}&date_from={self.BULK_DATE}&date_to={self.BULK_DATE}",
+                    headers=_h(admin_token),
+                ).json()
+                assert len(rows) == 0, f"student {sid} should NOT have a row"
+        finally:
+            self._cleanup(admin_token, sids, self.BULK_DATE)
+
+    def test_bulk_parent_forbidden(self, parent_token, admin_token):
+        yid, cid, _sids = self._get_coccinelle_and_students(admin_token)
+        r = requests.post(f"{API}/activities/bulk", headers=_h(parent_token), json={
+            "classroom_id": cid, "school_year_id": yid, "date": self.BULK_DATE,
+            "didattica": "Partecipato",
+        })
+        assert r.status_code == 403, f"parent should get 403, got {r.status_code}"
+
+    def test_bulk_teacher_allowed(self, teacher_token, admin_token):
+        yid, cid, sids = self._get_coccinelle_and_students(admin_token)
+        self._cleanup(admin_token, sids, self.BULK_DATE)
+        try:
+            r = requests.post(f"{API}/activities/bulk", headers=_h(teacher_token), json={
+                "classroom_id": cid, "school_year_id": yid, "date": self.BULK_DATE,
+                "overwrite_existing": True,
+                "didattica": "Partecipato", "note": "TEST_bulk_teacher",
+            })
+            assert r.status_code == 200, r.text
+            assert r.json()["applied"] == len(sids)
+        finally:
+            self._cleanup(admin_token, sids, self.BULK_DATE)
+
+    def test_bulk_nonexistent_classroom_returns_zero(self, admin_token):
+        yid, _cid, _sids = self._get_coccinelle_and_students(admin_token)
+        r = requests.post(f"{API}/activities/bulk", headers=_h(admin_token), json={
+            "classroom_id": "non-existent-classroom-id-xyz",
+            "school_year_id": yid, "date": self.BULK_DATE,
+            "didattica": "Partecipato",
+        })
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["applied"] == 0
+        assert body["skipped"] == 0
+        assert body["students_modified"] == []
+
+    def test_bulk_idempotency_twice_with_overwrite_false(self, admin_token):
+        yid, cid, sids = self._get_coccinelle_and_students(admin_token)
+        self._cleanup(admin_token, sids, self.BULK_DATE)
+        try:
+            payload = {
+                "classroom_id": cid, "school_year_id": yid, "date": self.BULK_DATE,
+                "overwrite_existing": False,
+                "didattica": "Partecipato", "note": "TEST_bulk_idem",
+            }
+            r1 = requests.post(f"{API}/activities/bulk", headers=_h(admin_token), json=payload)
+            assert r1.status_code == 200
+            assert r1.json()["applied"] == len(sids)
+            assert r1.json()["skipped"] == 0
+
+            r2 = requests.post(f"{API}/activities/bulk", headers=_h(admin_token), json=payload)
+            assert r2.status_code == 200
+            body2 = r2.json()
+            assert body2["applied"] == 0, body2
+            assert body2["skipped"] == len(sids), body2
+            assert body2["students_modified"] == []
+
+            # Still exactly N rows total (no duplicates)
+            for sid in sids:
+                rows = requests.get(
+                    f"{API}/activities?student_id={sid}&date_from={self.BULK_DATE}&date_to={self.BULK_DATE}",
+                    headers=_h(admin_token),
+                ).json()
+                assert len(rows) == 1
+        finally:
+            self._cleanup(admin_token, sids, self.BULK_DATE)
+
+
+# ---------------- Regression: suggestions / last-before / replicate-from ----------------
+class TestActivitiesAuxRegression:
+    def test_suggestions_admin(self, admin_token):
+        students = requests.get(f"{API}/students", headers=_h(admin_token)).json()
+        sid = students[0]["id"]
+        r = requests.get(
+            f"{API}/activities/suggestions?student_id={sid}&date_str=2026-05-25",
+            headers=_h(admin_token),
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        for k in ("note_pranzo", "note_didattica", "note_motoria", "sources"):
+            assert k in body
+
+    def test_suggestions_parent_forbidden(self, parent_token):
+        r = requests.get(
+            f"{API}/activities/suggestions?student_id=any&date_str=2026-05-25",
+            headers=_h(parent_token),
+        )
+        assert r.status_code == 403
+
+    def test_last_before_for_alice(self, admin_token, parent_token):
+        kids = requests.get(f"{API}/parent/me/children", headers=_h(parent_token)).json()
+        alice_id = kids[0]["id"]
+        # Alice has a seeded activity for today; ask for something well in the future
+        r = requests.get(
+            f"{API}/activities/last-before?student_id={alice_id}&before_date=2099-01-01",
+            headers=_h(admin_token),
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert "source_date" in body
+        for k in ("didattica", "motoria", "pranzo", "merenda", "riposo", "cacca", "pipi"):
+            assert k in body
+
+    def test_last_before_404_when_none(self, admin_token):
+        students = requests.get(f"{API}/students", headers=_h(admin_token)).json()
+        # Use a student who likely has no activities before 1900
+        sid = students[-1]["id"]
+        r = requests.get(
+            f"{API}/activities/last-before?student_id={sid}&before_date=1900-01-01",
+            headers=_h(admin_token),
+        )
+        assert r.status_code == 404
+
+    def test_replicate_from_404_when_missing(self, admin_token):
+        students = requests.get(f"{API}/students", headers=_h(admin_token)).json()
+        sid = students[0]["id"]
+        r = requests.get(
+            f"{API}/activities/replicate-from?student_id={sid}&from_date=1900-01-01",
+            headers=_h(admin_token),
+        )
+        assert r.status_code == 404

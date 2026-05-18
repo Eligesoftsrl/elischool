@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, ChevronLeft, ChevronRight, Save, BookOpen, Activity, UtensilsCrossed,
-  Cookie, Bed, Bath, Check, Sparkles, History, RotateCcw,
+  Cookie, Bed, Bath, Check, Sparkles, Users, AlertCircle,
 } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill, SectionLabel } from "@/components/Primitives";
@@ -31,10 +31,11 @@ export default function StaffActivities() {
   const [classId, setClassId] = useState(null);
   const [students, setStudents] = useState([]);
   const [activities, setActivities] = useState({});
-  const [editing, setEditing] = useState(null);
+  const [editing, setEditing] = useState(null);  // student object OR {bulk: true, classroom: {...}}
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [hint, setHint] = useState(null);
+  const [bulkOverwrite, setBulkOverwrite] = useState(false);
 
   useEffect(() => {
     if (!activeYear) return;
@@ -65,6 +66,7 @@ export default function StaffActivities() {
   const startEdit = async (s) => {
     setEditing(s);
     setHint(null);
+    setBulkOverwrite(false);
     const existing = activities[s.id];
     if (existing) {
       setForm({
@@ -101,38 +103,56 @@ export default function StaffActivities() {
     }
   };
 
-  const replicateYesterday = async () => {
-    if (!editing) return;
-    try {
-      const { data } = await api.get("/activities/last-before", {
-        params: { student_id: editing.id, before_date: date },
-      });
-      setForm({
-        didattica: data.didattica || "",
-        note_didattica: data.note_didattica || "",
-        motoria: data.motoria || "",
-        note_motoria: data.note_motoria || "",
-        pranzo: data.pranzo || "",
-        note_pranzo: data.note_pranzo || "",
-        merenda: data.merenda || "",
-        riposo: data.riposo || "",
-        cacca: data.cacca || "",
-        pipi: data.pipi || "",
-        note: data.note || "",
-      });
-      setHint(`Replicata dalla scheda del ${data.source_date}. Modifica solo ciò che è cambiato.`);
-      toast.success("Scheda replicata");
-    } catch (e) { toast.error(apiErrorMessage(e, "Nessuna scheda precedente da copiare")); }
+  const startBulk = async () => {
+    const classroom = classrooms.find((c) => c.id === classId);
+    if (!classroom) return;
+    setEditing({ bulk: true, classroom });
+    setHint(null);
+    setBulkOverwrite(false);
+    // Use the first student of the class to fetch suggestions (they share class so same piano/menu/labs)
+    if (students.length > 0) {
+      try {
+        const { data } = await api.get("/activities/suggestions", { params: { student_id: students[0].id, date_str: date } });
+        setForm({
+          ...emptyForm,
+          note_didattica: data.note_didattica || "",
+          note_motoria: data.note_motoria || "",
+          note_pranzo: data.note_pranzo || "",
+        });
+        const sources = [];
+        if (data.note_didattica) sources.push("piano didattico");
+        if (data.note_motoria) sources.push("laboratorio extra");
+        if (data.note_pranzo) sources.push("menu del giorno");
+        if (sources.length) setHint(`Pre-compilato da: ${sources.join(" · ")}`);
+      } catch (_) { setForm(emptyForm); }
+    } else { setForm(emptyForm); }
   };
 
   const save = async () => {
     if (!editing) return;
     setSaving(true);
     try {
-      const { data } = await api.post("/activities", { student_id: editing.id, date, ...form });
-      setActivities({ ...activities, [editing.id]: data });
-      toast.success("Salvato");
-      setEditing(null);
+      if (editing.bulk) {
+        const { data } = await api.post("/activities/bulk", {
+          classroom_id: editing.classroom.id,
+          school_year_id: activeYear.id,
+          date,
+          overwrite_existing: bulkOverwrite,
+          ...form,
+        });
+        toast.success(`Applicata a ${data.applied} alunni${data.skipped ? ` (${data.skipped} già compilati, saltati)` : ""}`);
+        // Reload activities
+        const a = await api.get("/activities", { params: { date_from: date, date_to: date, classroom_id: classId, school_year_id: activeYear.id } });
+        const map = {};
+        for (const x of a.data) map[x.student_id] = x;
+        setActivities(map);
+        setEditing(null);
+      } else {
+        const { data } = await api.post("/activities", { student_id: editing.id, date, ...form });
+        setActivities({ ...activities, [editing.id]: data });
+        toast.success("Salvato");
+        setEditing(null);
+      }
     } catch (e) { toast.error(apiErrorMessage(e)); }
     finally { setSaving(false); }
   };
@@ -145,7 +165,15 @@ export default function StaffActivities() {
 
   return (
     <div>
-      <PageHeader title="Scheda quotidiana" subtitle="Tocca un bambino per registrare la giornata" />
+      <PageHeader title="Scheda quotidiana" subtitle="Tocca un bambino per registrare la giornata"
+        right={classId && students.length > 0 ? (
+          <button onClick={startBulk}
+            className="h-12 px-4 rounded-2xl bg-stone-900 hover:bg-stone-800 text-white font-semibold text-sm flex items-center gap-2 tap-press"
+            data-testid="bulk-fill-button">
+            <Users className="h-4 w-4" /> Compila tutta la sezione
+          </button>
+        ) : null}
+      />
 
       <Card className="mb-5 !p-3">
         <div className="flex items-center justify-between gap-3">
@@ -211,19 +239,23 @@ export default function StaffActivities() {
               transition={{ type: "spring", damping: 28, stiffness: 260 }}
               className="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-[2.5rem] shadow-2xl max-h-[92vh] overflow-y-auto">
               <div className="sticky top-0 bg-white px-5 pt-4 pb-3 border-b border-stone-100 flex items-center justify-between z-10">
-                <div>
-                  <p className="text-xs text-stone-500 uppercase tracking-wider font-bold">Scheda del {date}</p>
-                  <p className="font-display text-lg font-bold">{editing.first_name} {editing.last_name}</p>
+                <div className="min-w-0">
+                  <p className="text-xs text-stone-500 uppercase tracking-wider font-bold">
+                    {editing.bulk ? "Tutta la sezione" : "Scheda"} del {date}
+                  </p>
+                  <p className="font-display text-lg font-bold flex items-center gap-2 truncate">
+                    {editing.bulk ? (
+                      <>
+                        <Users className="h-5 w-5 text-stone-700 shrink-0" />
+                        {editing.classroom.name}
+                        <span className="text-xs font-normal text-stone-500">· {students.length} alunni</span>
+                      </>
+                    ) : (
+                      <>{editing.first_name} {editing.last_name}</>
+                    )}
+                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={replicateYesterday} type="button"
-                    className="h-10 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold flex items-center gap-1.5"
-                    data-testid="replicate-yesterday-button"
-                    title="Copia dalla scheda più recente">
-                    <RotateCcw className="h-3.5 w-3.5" /> Replica
-                  </button>
-                  <button onClick={() => setEditing(null)} className="h-10 w-10 rounded-xl bg-stone-100 flex items-center justify-center"><X className="h-4 w-4" /></button>
-                </div>
+                <button onClick={() => setEditing(null)} className="h-10 w-10 rounded-xl bg-stone-100 flex items-center justify-center shrink-0"><X className="h-4 w-4" /></button>
               </div>
 
               <div className="p-5 space-y-5">
@@ -231,6 +263,24 @@ export default function StaffActivities() {
                   <div className="rounded-2xl bg-gradient-to-br from-indigo-50 via-violet-50 to-rose-50 border border-indigo-100 p-3 flex items-start gap-2">
                     <Sparkles className="h-4 w-4 text-indigo-500 mt-0.5 shrink-0" />
                     <p className="text-xs text-stone-700 leading-relaxed" data-testid="autofill-hint">{hint}</p>
+                  </div>
+                )}
+                {editing.bulk && (
+                  <div className="rounded-2xl bg-amber-50 border border-amber-200 p-3">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-amber-900 font-semibold leading-relaxed">
+                          Quello che inserisci qui sarà applicato a tutti i {students.length} alunni della sezione <b>{editing.classroom.name}</b>.
+                          Dopo, potrai ritoccare le singole schede dei bambini con varianti.
+                        </p>
+                        <label className="mt-2 flex items-center gap-2 text-xs text-amber-900 font-medium cursor-pointer">
+                          <input type="checkbox" checked={bulkOverwrite} onChange={(e) => setBulkOverwrite(e.target.checked)}
+                            data-testid="bulk-overwrite-checkbox" />
+                          Sovrascrivi anche le schede già compilate ({Object.keys(activities).length} esistenti)
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 )}
                 {/* Didattica */}
@@ -281,7 +331,8 @@ export default function StaffActivities() {
                 <button onClick={save} disabled={saving}
                   className="w-full h-14 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2"
                   data-testid="save-activity-button">
-                  <Save className="h-5 w-5" /> {saving ? "Salvataggio..." : "Inserisci / Modifica attività"}
+                  <Save className="h-5 w-5" />
+                  {saving ? "Salvataggio..." : editing.bulk ? `Applica a ${students.length} alunni` : "Inserisci / Modifica attività"}
                 </button>
               </div>
             </motion.div>

@@ -1,0 +1,42 @@
+{
+  "summary": "STEP 5 backend-only: POST /api/activities/bulk ('Compila tutta la sezione') fully verified. 76/76 pytest tests passed (13 new tests: 8 TestActivitiesBulk + 5 TestActivitiesAuxRegression on top of the 63-test iteration_3 regression). Bulk endpoint: applies same activity card to ALL enrolled students of a classroom for a date, returns {applied, skipped, students_modified}. Verified: (a) default overwrite_existing=false skips students with an existing activity for that date (skipped=1 when 1 of 2 students pre-existed); (b) overwrite_existing=true overwrites and applied=N (entire enrolled set); (c) only_student_ids=[subset] applies ONLY to that subset and leaves the rest untouched; (d) parent gets 403 (role guard intact), teacher 200; (e) non-existent classroom_id returns {applied:0, skipped:0, students_modified:[]} — no error; (f) idempotency: first call applies N, second call skips N with overwrite=false; (g) activities collection holds SEPARATE rows per student (no shared doc) — verified by querying /activities?student_id per kid. Regression for adjacent endpoints (suggestions, last-before, replicate-from) also green: suggestions returns {note_pranzo,note_didattica,note_motoria,sources} for admin and 403 for parent; last-before returns source_date+activity keys for Alice and 404 when none; replicate-from returns 404 when missing. All iteration_3 (63) tests still green: auth, brute-force lockout, dashboards, school-years, classrooms, students CRUD, transfer, year-transition, parents invite, activities (string shape), menus rotating 4x5, news, parent-facing, role protection, lesson-plans, communications, calendar-events, extra-labs, school-profile, media (no base64 in list), attendance/barcodes, AI report fallback. All test data prefixed TEST_ and cleaned up in finally blocks; the Coccinelle BULK_DATE=2026-05-25 is reset between every test.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/activities/bulk", "issue": "When overwriting an existing row, the bulk update only $set's the new activity fields, updated_at, updated_by; it does NOT recompute/preserve created_by/created_at (those stay as the original creator's). Correct behavior — just noting for audit traceability."},
+      {"endpoint": "POST /api/activities/bulk", "issue": "Returns 200 even when classroom_id is invalid/non-existent (applied=0). This is by design per the review request, but consider whether a 404 would be more discoverable for the UI. Currently it's a silent no-op — UI must check applied>0."},
+      {"endpoint": "POST /api/activities/bulk", "issue": "No validation on activity field values (didattica/pranzo/etc.) — e.g. didattica='foo' would be persisted. Same Literal[] concern carried over from iteration_3 on ActivityIn."},
+      {"endpoint": "POST /api/activities/bulk", "issue": "enrollments query uses .to_list(500) hard cap — fine for an infant school but worth a comment if larger classrooms ever exist."},
+      {"endpoint": "GET /api/students", "issue": "Endpoint ignores the classroom_id query param entirely (only supports q and school_year_id). Frontend or other agents may assume classroom filtering works. Carry-over, not introduced by this iteration."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Add Literal[...] validation to BulkActivityIn fields to reject malformed values, matching what should also be added to ActivityIn (iteration_3 carry-over).",
+    "(Optional) Consider returning 404 instead of {applied:0,skipped:0} when classroom_id does not exist — current contract is a silent no-op as requested.",
+    "(Carry-over) server.py is ~1988 lines — still exceeds the 700-line guideline; split into modules (auth, school, parents, activities, menus, communications, media, attendance, ai)."
+  ],
+  "critical_code_review_comments": [
+    "bulk_apply_activity correctly scopes the student set via (classroom_id, school_year_id) on enrollments, then optionally filters by only_student_ids — semantics match the review spec exactly.",
+    "Existing-activity check uses find_one({student_id, date}) per student then $set on existing.id or insert_one with gen_id() — this guarantees the activities collection has SEPARATE rows per student (verified by tests). Good.",
+    "Per-student loop is sequential (await in for); for a kindergarten this is fine but could become N round-trips at larger scale. asyncio.gather over student_ids would parallelize.",
+    "When overwrite=true and a row exists, created_by/created_at are preserved (only updated_at/updated_by are bumped). Good audit behavior.",
+    "Role guard uses require_role('admin','teacher') — parent correctly receives 403 (verified).",
+    "Carry-over from iteration_3: server.py is now 1988 lines; modularization is overdue.",
+    "BulkActivityIn duplicates the activity-field surface of ActivityIn — could be refactored to a shared ActivityFields base model to avoid drift if fields evolve."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py"
+  ],
+  "success_rate": {"backend": "100% (76/76)", "frontend": "N/A (not requested)"},
+  "test_credentials": "admin@scuolapp.it/Admin2026!, maestra.giulia@scuolapp.it/Maestra2026!, genitore@scuolapp.it/Genitore2026! — all working",
+  "seed_data_creation": "Tests use existing seeded data (Coccinelle classroom with 2 active-year enrolled students). Bulk tests use future date 2026-05-25 and clean up all activity rows for the classroom's enrolled students in finally blocks. Pre-existing Alice activity for today is NOT touched by bulk tests.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend fully green at 76/76. Run: pytest /app/backend/tests/backend_test.py -v --junitxml=/app/test_reports/pytest/pytest_results.xml (~107s incl. AI report + brute-force sleep). New test classes added in this iteration: TestActivitiesBulk (8 tests covering bulk apply, skip/overwrite, only_student_ids, role guards, non-existent classroom, idempotency, per-student rows) and TestActivitiesAuxRegression (5 tests for suggestions/last-before/replicate-from). Helper _get_coccinelle_and_students uses /api/classrooms/{cid}/students?school_year_id=... (NOT /api/students?classroom_id which is ignored by the backend). BULK_DATE=2026-05-25 chosen to avoid collisions with seeded data. All 53 iteration_2 + 10 iteration_3 + 13 iteration_4 tests pass.",
+  "rca of the issue": "N/A — no bugs found in the bulk endpoint. One initial test-helper mistake: GET /api/students?classroom_id=... is silently ignored by the backend (only q and school_year_id are honored), causing my helper to return all 6 students across all years instead of the 2 actually enrolled in Coccinelle for the active year. Fixed by switching to GET /api/classrooms/{cid}/students?school_year_id=... which queries enrollments directly — same source the bulk endpoint uses. After the fix all 8 bulk tests pass deterministically."
+}

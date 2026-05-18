@@ -218,12 +218,24 @@ class ActivityIn(BaseModel):
     note: Optional[str] = ""
 
 
-class WeeklyMenuIn(BaseModel):
-    """Legacy single-week menu — kept for backward compatibility."""
-    week_label: str  # e.g. "settimana 1"
-    valid_from: str
-    valid_to: str
-    days: List[dict]  # [{giorno:"lunedì", primo, secondo, contorno, frutta}]
+class BulkActivityIn(BaseModel):
+    classroom_id: str
+    school_year_id: str
+    date: str
+    overwrite_existing: bool = False
+    # Activity fields (same as ActivityIn minus student_id+date)
+    didattica: Optional[str] = ""
+    note_didattica: Optional[str] = ""
+    motoria: Optional[str] = ""
+    note_motoria: Optional[str] = ""
+    pranzo: Optional[str] = ""
+    note_pranzo: Optional[str] = ""
+    merenda: Optional[str] = ""
+    riposo: Optional[str] = ""
+    cacca: Optional[str] = ""
+    pipi: Optional[str] = ""
+    note: Optional[str] = ""
+    only_student_ids: Optional[List[str]] = None  # if provided, restrict to these students
 
 
 # Rotating multi-week menu (4 settimane × 5 giorni) — matches user's MySQL schema
@@ -873,7 +885,7 @@ async def last_before(
     before_date: str,
     user=Depends(require_role("admin", "teacher")),
 ):
-    """Restituisce l'ultima scheda registrata PRIMA di una certa data (utile per 'copia da ieri')."""
+    """Restituisce l'ultima scheda registrata PRIMA di una certa data."""
     src = await db.activities.find_one(
         {"student_id": student_id, "date": {"$lt": before_date}},
         {"_id": 0},
@@ -886,6 +898,62 @@ async def last_before(
     out = {k: src.get(k, "") for k in keep}
     out["source_date"] = src["date"]
     return out
+
+
+@api.post("/activities/bulk")
+async def bulk_apply_activity(payload: BulkActivityIn, user=Depends(require_role("admin", "teacher"))):
+    """Applica la stessa scheda a TUTTI gli alunni della sezione per la data data.
+    Se overwrite_existing è False, gli alunni che hanno già una scheda quel giorno vengono saltati.
+    Restituisce {applied, skipped, students_modified}.
+    """
+    enrolls = await db.enrollments.find(
+        {"classroom_id": payload.classroom_id, "school_year_id": payload.school_year_id},
+        {"_id": 0},
+    ).to_list(500)
+    student_ids = [e["student_id"] for e in enrolls]
+    if payload.only_student_ids is not None:
+        student_ids = [sid for sid in student_ids if sid in payload.only_student_ids]
+
+    activity_fields = {
+        "didattica": payload.didattica,
+        "note_didattica": payload.note_didattica,
+        "motoria": payload.motoria,
+        "note_motoria": payload.note_motoria,
+        "pranzo": payload.pranzo,
+        "note_pranzo": payload.note_pranzo,
+        "merenda": payload.merenda,
+        "riposo": payload.riposo,
+        "cacca": payload.cacca,
+        "pipi": payload.pipi,
+        "note": payload.note,
+    }
+
+    applied = 0
+    skipped = 0
+    modified_ids = []
+    for sid in student_ids:
+        existing = await db.activities.find_one({"student_id": sid, "date": payload.date})
+        if existing and not payload.overwrite_existing:
+            skipped += 1
+            continue
+        data = {**activity_fields}
+        if existing:
+            await db.activities.update_one(
+                {"id": existing["id"]},
+                {"$set": {**data, "updated_at": now_iso(), "updated_by": user["id"]}},
+            )
+        else:
+            await db.activities.insert_one({
+                **data,
+                "id": gen_id(),
+                "student_id": sid,
+                "date": payload.date,
+                "created_at": now_iso(),
+                "created_by": user["id"],
+            })
+        applied += 1
+        modified_ids.append(sid)
+    return {"applied": applied, "skipped": skipped, "students_modified": modified_ids}
 
 
 # ----------------------------- MENU (rotating 4-week) -----------------------------
