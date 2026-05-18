@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, ChevronLeft, ChevronRight, Save, BookOpen, Activity, UtensilsCrossed,
-  Cookie, Bed, Bath, Check,
+  Cookie, Bed, Bath, Check, Sparkles, History, RotateCcw,
 } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill, SectionLabel } from "@/components/Primitives";
@@ -34,6 +34,7 @@ export default function StaffActivities() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [hint, setHint] = useState(null);
 
   useEffect(() => {
     if (!activeYear) return;
@@ -61,8 +62,9 @@ export default function StaffActivities() {
     })();
   }, [classId, activeYear, date]);
 
-  const startEdit = (s) => {
+  const startEdit = async (s) => {
     setEditing(s);
+    setHint(null);
     const existing = activities[s.id];
     if (existing) {
       setForm({
@@ -78,7 +80,49 @@ export default function StaffActivities() {
         pipi: existing.pipi || "",
         note: existing.note || "",
       });
-    } else setForm(emptyForm);
+    } else {
+      // NEW: ask backend for auto-fill suggestions (menu/piano/laboratori)
+      try {
+        const { data } = await api.get("/activities/suggestions", { params: { student_id: s.id, date_str: date } });
+        setForm({
+          ...emptyForm,
+          note_didattica: data.note_didattica || "",
+          note_motoria: data.note_motoria || "",
+          note_pranzo: data.note_pranzo || "",
+        });
+        const sources = [];
+        if (data.note_didattica) sources.push("piano didattico");
+        if (data.note_motoria) sources.push("laboratorio extra");
+        if (data.note_pranzo) sources.push("menu del giorno");
+        if (sources.length) setHint(`Pre-compilato da: ${sources.join(" · ")}`);
+      } catch (_) {
+        setForm(emptyForm);
+      }
+    }
+  };
+
+  const replicateYesterday = async () => {
+    if (!editing) return;
+    try {
+      const { data } = await api.get("/activities/last-before", {
+        params: { student_id: editing.id, before_date: date },
+      });
+      setForm({
+        didattica: data.didattica || "",
+        note_didattica: data.note_didattica || "",
+        motoria: data.motoria || "",
+        note_motoria: data.note_motoria || "",
+        pranzo: data.pranzo || "",
+        note_pranzo: data.note_pranzo || "",
+        merenda: data.merenda || "",
+        riposo: data.riposo || "",
+        cacca: data.cacca || "",
+        pipi: data.pipi || "",
+        note: data.note || "",
+      });
+      setHint(`Replicata dalla scheda del ${data.source_date}. Modifica solo ciò che è cambiato.`);
+      toast.success("Scheda replicata");
+    } catch (e) { toast.error(apiErrorMessage(e, "Nessuna scheda precedente da copiare")); }
   };
 
   const save = async () => {
@@ -171,10 +215,24 @@ export default function StaffActivities() {
                   <p className="text-xs text-stone-500 uppercase tracking-wider font-bold">Scheda del {date}</p>
                   <p className="font-display text-lg font-bold">{editing.first_name} {editing.last_name}</p>
                 </div>
-                <button onClick={() => setEditing(null)} className="h-10 w-10 rounded-xl bg-stone-100 flex items-center justify-center"><X className="h-4 w-4" /></button>
+                <div className="flex items-center gap-2">
+                  <button onClick={replicateYesterday} type="button"
+                    className="h-10 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold flex items-center gap-1.5"
+                    data-testid="replicate-yesterday-button"
+                    title="Copia dalla scheda più recente">
+                    <RotateCcw className="h-3.5 w-3.5" /> Replica
+                  </button>
+                  <button onClick={() => setEditing(null)} className="h-10 w-10 rounded-xl bg-stone-100 flex items-center justify-center"><X className="h-4 w-4" /></button>
+                </div>
               </div>
 
               <div className="p-5 space-y-5">
+                {hint && (
+                  <div className="rounded-2xl bg-gradient-to-br from-indigo-50 via-violet-50 to-rose-50 border border-indigo-100 p-3 flex items-start gap-2">
+                    <Sparkles className="h-4 w-4 text-indigo-500 mt-0.5 shrink-0" />
+                    <p className="text-xs text-stone-700 leading-relaxed" data-testid="autofill-hint">{hint}</p>
+                  </div>
+                )}
                 {/* Didattica */}
                 <div>
                   <SectionLabel><BookOpen className="inline h-3 w-3 mr-1" /> Attività didattiche</SectionLabel>

@@ -41,6 +41,16 @@ Riconvertire un'applicazione esistente (Flask + MySQL) per la gestione di una sc
 - AI Report giornaliero (GPT-5.2 + fallback)
 - Dashboard staff + Parent home con resoconto
 
+### Iteration 4 (Auto-fill scheda + Replica, 18/05/2026)
+Replicato comportamento del Flask originale `nuova_attivita`:
+- **GET /api/activities/suggestions?student_id=&date_str=** → restituisce auto-fill per:
+  - `note_pranzo` ← dal menu rotante (settimana corrente × giorno della settimana)
+  - `note_didattica` ← dai piani didattici attivi della classe per quella data (HTML strippato)
+  - `note_motoria` ← dal laboratorio extra della classe per quel giorno della settimana
+- **GET /api/activities/last-before?student_id=&before_date=** → ultima scheda precedente (per "Copia da ieri")
+- **GET /api/activities/replicate-from?student_id=&from_date=** → scheda di una data specifica
+- Frontend Activities.jsx: auto-call suggestions quando si apre scheda NUOVA, banner "Pre-compilato da: piano · laboratorio · menu", bottone "Replica" in header del modal
+
 ### Iteration 3 (STEP 2, 18/05/2026) — 63/63 backend tests ✅
 Allineamento esatto al backend Flask originale per due cose critiche:
 - **Scheda quotidiana attività** — voci e valori IDENTICI al Flask:

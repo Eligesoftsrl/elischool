@@ -752,6 +752,142 @@ async def delete_activity(aid: str, user=Depends(require_role("admin", "teacher"
     return {"ok": True}
 
 
+# --- ACTIVITY AUTO-FILL: from piano didattico / menu / extra labs ---
+DAYS_IT_LOWER = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"]
+DAYS_IT_CAP = ["Lunedi", "Martedi", "Mercoledi", "Giovedi", "Venerdi"]
+
+
+def _compute_week_for_date(valid_from_iso: str, target_iso: str) -> int:
+    try:
+        start = datetime.fromisoformat(valid_from_iso).date()
+        target = datetime.fromisoformat(target_iso).date()
+    except Exception:
+        return 1
+    start_mon = start - timedelta(days=start.weekday())
+    target_mon = target - timedelta(days=target.weekday())
+    delta_weeks = (target_mon - start_mon).days // 7
+    return (delta_weeks % 4) + 1
+
+
+def _strip_html(s: str) -> str:
+    import re
+    return re.sub(r"<[^>]+>", " ", s or "").replace("&nbsp;", " ").strip()
+
+
+@api.get("/activities/suggestions")
+async def activity_suggestions(
+    student_id: str,
+    date_str: str,
+    user=Depends(require_role("admin", "teacher")),
+):
+    """Auto-fill suggestions per la scheda nuova (come nel Flask originale):
+    - note_pranzo: dal menu rotante del giorno
+    - note_didattica: dai piani didattici attivi della classe
+    - note_motoria: dal laboratorio extra del giorno della settimana
+    """
+    active = await db.school_years.find_one({"is_active": True}, {"_id": 0})
+    classroom_id = None
+    if active:
+        enr = await db.enrollments.find_one({"student_id": student_id, "school_year_id": active["id"]}, {"_id": 0})
+        if enr:
+            classroom_id = enr.get("classroom_id")
+
+    out = {"note_pranzo": "", "note_didattica": "", "note_motoria": "", "sources": {}}
+
+    # Menu del giorno
+    menu = await db.menus.find_one(
+        {"valid_from": {"$lte": date_str}, "valid_to": {"$gte": date_str}},
+        {"_id": 0},
+    )
+    if menu:
+        try:
+            d_obj = datetime.fromisoformat(date_str).date()
+        except Exception:
+            d_obj = date.today()
+        if d_obj.weekday() < 5:  # only Mon-Fri
+            week = _compute_week_for_date(menu["valid_from"], date_str)
+            day_cap = DAYS_IT_CAP[d_obj.weekday()]
+            meal = await db.menu_meals.find_one(
+                {"menu_id": menu["id"], "week": week, "day": day_cap},
+                {"_id": 0},
+            )
+            if meal:
+                parts = [meal.get("primo", ""), meal.get("secondo", ""), meal.get("contorno", ""), meal.get("frutta", "")]
+                parts = [p for p in parts if p]
+                if parts:
+                    out["note_pranzo"] = " - ".join(parts)
+                    out["sources"]["pranzo"] = {"week": week, "day": day_cap}
+
+    if classroom_id:
+        # Piani didattici attivi per la data
+        plans = await db.lesson_plans.find(
+            {"classroom_id": classroom_id, "date_from": {"$lte": date_str}, "date_to": {"$gte": date_str}},
+            {"_id": 0},
+        ).to_list(20)
+        if plans:
+            texts = [_strip_html(p.get("body", "")) for p in plans]
+            texts = [t for t in texts if t]
+            if texts:
+                out["note_didattica"] = "\n\n".join(texts)
+                out["sources"]["didattica"] = [p["id"] for p in plans]
+
+        # Laboratorio extra del giorno
+        try:
+            d_obj = datetime.fromisoformat(date_str).date()
+        except Exception:
+            d_obj = date.today()
+        if d_obj.weekday() < 5:
+            day_lower = DAYS_IT_LOWER[d_obj.weekday()]
+            lab = await db.extra_labs.find_one(
+                {"classroom_id": classroom_id, "day_of_week": day_lower},
+                {"_id": 0},
+            )
+            if lab:
+                txt = lab.get("title", "")
+                if lab.get("teacher_name"):
+                    txt += f" con {lab['teacher_name']}"
+                out["note_motoria"] = txt
+                out["sources"]["motoria"] = lab["id"]
+
+    return out
+
+
+@api.get("/activities/replicate-from")
+async def replicate_from(
+    student_id: str,
+    from_date: str,
+    user=Depends(require_role("admin", "teacher")),
+):
+    """Restituisce i campi di una scheda precedente da replicare."""
+    src = await db.activities.find_one({"student_id": student_id, "date": from_date}, {"_id": 0})
+    if not src:
+        raise HTTPException(404, "Nessuna scheda da replicare in quella data")
+    keep = ["didattica", "note_didattica", "motoria", "note_motoria",
+            "pranzo", "note_pranzo", "merenda", "riposo", "cacca", "pipi", "note"]
+    return {k: src.get(k, "") for k in keep}
+
+
+@api.get("/activities/last-before")
+async def last_before(
+    student_id: str,
+    before_date: str,
+    user=Depends(require_role("admin", "teacher")),
+):
+    """Restituisce l'ultima scheda registrata PRIMA di una certa data (utile per 'copia da ieri')."""
+    src = await db.activities.find_one(
+        {"student_id": student_id, "date": {"$lt": before_date}},
+        {"_id": 0},
+        sort=[("date", -1)],
+    )
+    if not src:
+        raise HTTPException(404, "Nessuna scheda precedente trovata")
+    keep = ["didattica", "note_didattica", "motoria", "note_motoria",
+            "pranzo", "note_pranzo", "merenda", "riposo", "cacca", "pipi", "note"]
+    out = {k: src.get(k, "") for k in keep}
+    out["source_date"] = src["date"]
+    return out
+
+
 # ----------------------------- MENU (rotating 4-week) -----------------------------
 DAYS_IT = ["Lunedi", "Martedi", "Mercoledi", "Giovedi", "Venerdi"]
 
