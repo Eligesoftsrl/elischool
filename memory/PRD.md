@@ -41,6 +41,23 @@ Riconvertire un'applicazione esistente (Flask + MySQL) per la gestione di una sc
 - AI Report giornaliero (GPT-5.2 + fallback)
 - Dashboard staff + Parent home con resoconto
 
+### Iteration 3 (STEP 2, 18/05/2026) — 63/63 backend tests ✅
+Allineamento esatto al backend Flask originale per due cose critiche:
+- **Scheda quotidiana attività** — voci e valori IDENTICI al Flask:
+  - Didattica: `Partecipato` / `Non ha Partecipato`
+  - Motoria: `Partecipato` / `Non ha Partecipato`
+  - Pranzo: `Ha mangiato` / `Non ha mangiato` / `Ha mangiato poco`
+  - Merenda, Riposo, Cacca, Pipì: `Si` / `No`
+  - Note libere per ognuna delle voci principali + Note generali
+  - Rimossi i campi inventati (umore, riposo_minuti, bagno_cambi, contatori pipì/cacca)
+- **Menu rotante 4 settimane × 5 giorni** (lun-ven):
+  - Modello `menus` (contenitore) + `menu_meals` (righe per settimana × giorno)
+  - 20 righe per menu (4 × 5), pre-create automaticamente alla creazione
+  - Editor a tab per settimana, UI mobile-friendly
+  - GET `/menus/current` calcola la settimana rotante (1..4) in base alla settimana ISO corrente vs `valid_from`
+  - Seed con i veri dati dal dump MySQL dell'utente (Settimana 1 Lun = Pasta con legumi/Prosciutto cotto/Insalata/Frutta fresca, ecc.)
+  - Vista genitore: mostra automaticamente la settimana corrente
+
 ### Iteration 2 (STEP 1h, 15/05/2026) — 53/53 backend tests ✅
 Allineamento al DB MySQL reale dell'utente. Aggiunte:
 - **Piano didattico settimanale** (`lesson_plans`) — rich text HTML, per classe e range date
