@@ -205,26 +205,47 @@ class ParentIn(BaseModel):
 class ActivityIn(BaseModel):
     student_id: str
     date: str  # YYYY-MM-DD
-    didattica: Optional[bool] = False
+    didattica: Optional[str] = ""        # "Partecipato" | "Non ha Partecipato"
     note_didattica: Optional[str] = ""
-    motoria: Optional[bool] = False
+    motoria: Optional[str] = ""          # "Partecipato" | "Non ha Partecipato"
     note_motoria: Optional[str] = ""
-    merenda: Optional[str] = ""  # tutta / metà / poca / niente
-    pranzo: Optional[str] = ""
+    pranzo: Optional[str] = ""           # "Ha mangiato" | "Non ha mangiato" | "Ha mangiato poco"
     note_pranzo: Optional[str] = ""
-    riposo_minuti: Optional[int] = 0
-    bagno_cambi: Optional[int] = 0
-    cacca: Optional[int] = 0
-    pipi: Optional[int] = 0
-    umore: Optional[str] = ""  # sereno, vivace, stanco, irritabile
+    merenda: Optional[str] = ""          # "Si" | "No"
+    riposo: Optional[str] = ""           # "Si" | "No"
+    cacca: Optional[str] = ""            # "Si" | "No"
+    pipi: Optional[str] = ""             # "Si" | "No"
     note: Optional[str] = ""
 
 
 class WeeklyMenuIn(BaseModel):
+    """Legacy single-week menu — kept for backward compatibility."""
     week_label: str  # e.g. "settimana 1"
     valid_from: str
     valid_to: str
     days: List[dict]  # [{giorno:"lunedì", primo, secondo, contorno, frutta}]
+
+
+# Rotating multi-week menu (4 settimane × 5 giorni) — matches user's MySQL schema
+class MenuIn(BaseModel):
+    name: str
+    valid_from: str
+    valid_to: str
+    notes: Optional[str] = ""
+    school_year_id: Optional[str] = None
+
+
+class MealIn(BaseModel):
+    week: int  # 1..4
+    day: str   # "Lunedi" | "Martedi" | "Mercoledi" | "Giovedi" | "Venerdi"
+    primo: Optional[str] = ""
+    secondo: Optional[str] = ""
+    contorno: Optional[str] = ""
+    frutta: Optional[str] = ""
+
+
+class MealsBulkIn(BaseModel):
+    meals: List[MealIn]
 
 
 class NewsIn(BaseModel):
@@ -731,24 +752,43 @@ async def delete_activity(aid: str, user=Depends(require_role("admin", "teacher"
     return {"ok": True}
 
 
-# ----------------------------- WEEKLY MENU -----------------------------
+# ----------------------------- MENU (rotating 4-week) -----------------------------
+DAYS_IT = ["Lunedi", "Martedi", "Mercoledi", "Giovedi", "Venerdi"]
+
+
 @api.get("/menus")
 async def list_menus(user=Depends(get_current_user)):
     docs = await db.menus.find({}, {"_id": 0}).sort("valid_from", -1).to_list(200)
+    for d in docs:
+        d["meal_count"] = await db.menu_meals.count_documents({"menu_id": d["id"]})
     return docs
 
 
 @api.post("/menus")
-async def create_menu(payload: WeeklyMenuIn, user=Depends(require_role("admin", "teacher"))):
+async def create_menu(payload: MenuIn, user=Depends(require_role("admin", "teacher"))):
     doc = payload.model_dump()
     doc["id"] = gen_id()
     doc["created_at"] = now_iso()
+    if not doc.get("school_year_id"):
+        active = await db.school_years.find_one({"is_active": True}, {"_id": 0})
+        if active:
+            doc["school_year_id"] = active["id"]
     await db.menus.insert_one(doc)
+    # Pre-create empty grid (4 weeks × 5 days)
+    grid = []
+    for w in [1, 2, 3, 4]:
+        for d in DAYS_IT:
+            grid.append({
+                "id": gen_id(), "menu_id": doc["id"], "week": w, "day": d,
+                "primo": "", "secondo": "", "contorno": "", "frutta": "",
+            })
+    if grid:
+        await db.menu_meals.insert_many(grid)
     return clean_doc(doc)
 
 
 @api.patch("/menus/{mid}")
-async def update_menu(mid: str, payload: WeeklyMenuIn, user=Depends(require_role("admin", "teacher"))):
+async def update_menu(mid: str, payload: MenuIn, user=Depends(require_role("admin", "teacher"))):
     await db.menus.update_one({"id": mid}, {"$set": payload.model_dump()})
     return await db.menus.find_one({"id": mid}, {"_id": 0})
 
@@ -756,14 +796,74 @@ async def update_menu(mid: str, payload: WeeklyMenuIn, user=Depends(require_role
 @api.delete("/menus/{mid}")
 async def delete_menu(mid: str, user=Depends(require_role("admin"))):
     await db.menus.delete_one({"id": mid})
+    await db.menu_meals.delete_many({"menu_id": mid})
     return {"ok": True}
+
+
+@api.get("/menus/{mid}/meals")
+async def get_meals(mid: str, user=Depends(get_current_user)):
+    """Return the 4×5 grid (filling missing cells)."""
+    docs = await db.menu_meals.find({"menu_id": mid}, {"_id": 0}).to_list(200)
+    by_key = {(d["week"], d["day"]): d for d in docs}
+    out = []
+    for w in [1, 2, 3, 4]:
+        for d in DAYS_IT:
+            existing = by_key.get((w, d))
+            if existing:
+                out.append(existing)
+            else:
+                out.append({"id": None, "menu_id": mid, "week": w, "day": d, "primo": "", "secondo": "", "contorno": "", "frutta": ""})
+    return out
+
+
+@api.put("/menus/{mid}/meals")
+async def replace_meals(mid: str, payload: MealsBulkIn, user=Depends(require_role("admin", "teacher"))):
+    # Idempotent upsert per (menu_id, week, day)
+    for m in payload.meals:
+        await db.menu_meals.update_one(
+            {"menu_id": mid, "week": m.week, "day": m.day},
+            {"$set": {
+                "id": gen_id(),
+                "menu_id": mid,
+                "week": m.week,
+                "day": m.day,
+                "primo": m.primo,
+                "secondo": m.secondo,
+                "contorno": m.contorno,
+                "frutta": m.frutta,
+                "updated_at": now_iso(),
+            }},
+            upsert=True,
+        )
+    return {"ok": True, "saved": len(payload.meals)}
+
+
+def compute_current_week(valid_from: str) -> int:
+    """Return rotating week number 1..4 based on weeks elapsed since valid_from."""
+    try:
+        start = datetime.fromisoformat(valid_from).date()
+    except Exception:
+        return 1
+    today = date.today()
+    # Align to ISO Monday of start week
+    start_mon = start - timedelta(days=start.weekday())
+    today_mon = today - timedelta(days=today.weekday())
+    delta_weeks = (today_mon - start_mon).days // 7
+    return (delta_weeks % 4) + 1
 
 
 @api.get("/menus/current")
 async def current_menu(user=Depends(get_current_user)):
     today = date.today().isoformat()
-    doc = await db.menus.find_one({"valid_from": {"$lte": today}, "valid_to": {"$gte": today}}, {"_id": 0})
-    return doc
+    menu = await db.menus.find_one({"valid_from": {"$lte": today}, "valid_to": {"$gte": today}}, {"_id": 0})
+    if not menu:
+        return None
+    week = compute_current_week(menu["valid_from"])
+    meals = await db.menu_meals.find({"menu_id": menu["id"], "week": week}, {"_id": 0}).to_list(20)
+    # Sort by DAYS_IT order
+    order = {d: i for i, d in enumerate(DAYS_IT)}
+    meals.sort(key=lambda m: order.get(m["day"], 99))
+    return {"menu": menu, "current_week": week, "meals": meals}
 
 
 # ----------------------------- NEWS -----------------------------
@@ -889,23 +989,19 @@ async def ai_daily_report(sid: str, date_str: Optional[str] = None, user=Depends
     bambino = student.get("first_name", "il/la bambino/a")
     parts = []
     if activity.get("didattica"):
-        parts.append(f"Ha partecipato all'attività didattica. Note: {activity.get('note_didattica', '')}")
+        parts.append(f"Attività didattiche: {activity['didattica']}. Note: {activity.get('note_didattica', '') or '—'}")
     if activity.get("motoria"):
-        parts.append(f"Ha fatto attività motoria. Note: {activity.get('note_motoria', '')}")
+        parts.append(f"Attività motoria: {activity['motoria']}. Note: {activity.get('note_motoria', '') or '—'}")
     if activity.get("merenda"):
         parts.append(f"Merenda: {activity['merenda']}")
     if activity.get("pranzo"):
-        parts.append(f"Pranzo: {activity['pranzo']}. Note: {activity.get('note_pranzo', '')}")
-    if activity.get("riposo_minuti"):
-        parts.append(f"Ha dormito {activity['riposo_minuti']} minuti")
-    if activity.get("bagno_cambi"):
-        parts.append(f"Cambi bagno: {activity['bagno_cambi']}")
-    if activity.get("cacca") is not None:
-        parts.append(f"Cacca: {activity['cacca']} volte")
-    if activity.get("pipi") is not None:
-        parts.append(f"Pipì: {activity['pipi']} volte")
-    if activity.get("umore"):
-        parts.append(f"Umore: {activity['umore']}")
+        parts.append(f"Pranzo: {activity['pranzo']}. Note: {activity.get('note_pranzo', '') or '—'}")
+    if activity.get("riposo"):
+        parts.append(f"Riposo: {activity['riposo']}")
+    if activity.get("cacca"):
+        parts.append(f"Cacca: {activity['cacca']}")
+    if activity.get("pipi"):
+        parts.append(f"Pipì: {activity['pipi']}")
     if activity.get("note"):
         parts.append(f"Note delle maestre: {activity['note']}")
 
@@ -1508,43 +1604,69 @@ async def seed():
         })
         await db.parent_links.insert_one({"id": gen_id(), "parent_id": parent_id, "student_id": student_ids[0], "created_at": now_iso()})
 
-        # Today activity for Alice
+        # Today activity for Alice (new shape — same as Flask original)
         today = date.today().isoformat()
         await db.activities.insert_one({
             "id": gen_id(),
             "student_id": student_ids[0],
             "date": today,
-            "didattica": True,
+            "didattica": "Partecipato",
             "note_didattica": "Disegni con i colori a dita, ha lavorato sui colori primari",
-            "motoria": True,
+            "motoria": "Partecipato",
             "note_motoria": "Giochi con la palla in giardino",
-            "merenda": "tutta",
-            "pranzo": "tutto",
+            "merenda": "Si",
+            "pranzo": "Ha mangiato",
             "note_pranzo": "Ha gradito molto la pasta al pomodoro",
-            "riposo_minuti": 75,
-            "bagno_cambi": 0,
-            "cacca": 1,
-            "pipi": 4,
-            "umore": "sereno",
+            "riposo": "Si",
+            "cacca": "Si",
+            "pipi": "Si",
             "note": "Giornata serena e collaborativa. Ha aiutato a riordinare i giochi.",
             "created_at": now_iso(),
         })
 
-        # Weekly menu
+        # Rotating menu (4 weeks × 5 days) — uses real data from user's MySQL dump
+        menu_id = gen_id()
         await db.menus.insert_one({
-            "id": gen_id(),
-            "week_label": "Settimana corrente",
-            "valid_from": (date.today() - timedelta(days=date.today().weekday())).isoformat(),
-            "valid_to": (date.today() + timedelta(days=6 - date.today().weekday())).isoformat(),
-            "days": [
-                {"giorno": "lunedì", "primo": "Pasta al pomodoro", "secondo": "Petto di pollo", "contorno": "Carote", "frutta": "Mela"},
-                {"giorno": "martedì", "primo": "Riso con verdure", "secondo": "Frittata", "contorno": "Spinaci", "frutta": "Pera"},
-                {"giorno": "mercoledì", "primo": "Minestra di legumi", "secondo": "Tacchino", "contorno": "Patate", "frutta": "Banana"},
-                {"giorno": "giovedì", "primo": "Pasta in bianco", "secondo": "Hamburger di manzo", "contorno": "Zucchine", "frutta": "Arancia"},
-                {"giorno": "venerdì", "primo": "Risotto alla zucca", "secondo": "Merluzzo al forno", "contorno": "Insalata", "frutta": "Kiwi"},
-            ],
+            "id": menu_id,
+            "name": "Menu 2025/2026",
+            "valid_from": "2025-09-15",
+            "valid_to": "2026-06-30",
+            "notes": "NOTA BENE: verdura e frutta subiranno variazioni in base alla stagione.",
+            "school_year_id": year_id,
             "created_at": now_iso(),
         })
+        # Real meal data from the user's s_pranzo (id_menu=1, 4 weeks × 5 days)
+        meals_data = [
+            # Settimana 1
+            (1, "Lunedi", "Pasta con legumi (lenticchie)", "Prosciutto cotto", "Insalata", "Frutta fresca"),
+            (1, "Martedi", "Pasta al pomodoro", "Tacchino", "Piselli", "Frutta di stagione"),
+            (1, "Mercoledi", "Pasta e zucca", "Mozzarella", "Pomodori", "Frutta di stagione"),
+            (1, "Giovedi", "Pasta al pomodoro", "Polpette", "Patate lesse", "Frutta di stagione"),
+            (1, "Venerdi", "Pasta con legumi/patate", "Pesce", "Carote/Piselli", "Frutta fresca"),
+            # Settimana 2
+            (2, "Lunedi", "Pasta con legumi (lenticchie)", "Prosciutto cotto", "Pomodori", "Frutta di stagione"),
+            (2, "Martedi", "Pasta al pomodoro", "Tacchino", "Piselli", "Frutta di stagione"),
+            (2, "Mercoledi", "Pasta e zucca", "Mozzarella", "Insalata", "Frutta di stagione"),
+            (2, "Giovedi", "Pasta al pomodoro", "Polpette", "Patate lesse", "Frutta di stagione"),
+            (2, "Venerdi", "Pasta con legumi/patate", "Pesce", "Carote lesse", "Frutta fresca"),
+            # Settimana 3
+            (3, "Lunedi", "Pasta con legumi (lenticchie)", "Prosciutto cotto", "Insalata", "Frutta di stagione"),
+            (3, "Martedi", "Pasta al pomodoro", "Tacchino", "Piselli", "Frutta di stagione"),
+            (3, "Mercoledi", "Pasta e zucca", "Mozzarella", "Pomodori", "Frutta di stagione"),
+            (3, "Giovedi", "Pasta al pomodoro", "Polpette", "Patate lesse", "Frutta di stagione"),
+            (3, "Venerdi", "Pasta con legumi/patate", "Pesce", "Carote lesse", "Frutta di stagione"),
+            # Settimana 4
+            (4, "Lunedi", "Pasta con legumi (lenticchie)", "Prosciutto cotto", "Insalata", "Frutta di stagione"),
+            (4, "Martedi", "Pasta al pomodoro", "Tacchino", "Piselli", "Frutta di stagione"),
+            (4, "Mercoledi", "Pasta e zucca", "Mozzarella", "Pomodori", "Frutta di stagione"),
+            (4, "Giovedi", "Pasta al pomodoro", "Polpette", "Patate lesse", "Frutta di stagione"),
+            (4, "Venerdi", "Pasta con legumi/patate", "Pesce", "Carote lesse", "Frutta di stagione"),
+        ]
+        await db.menu_meals.insert_many([
+            {"id": gen_id(), "menu_id": menu_id, "week": w, "day": d,
+             "primo": p, "secondo": s, "contorno": c, "frutta": f, "created_at": now_iso()}
+            for (w, d, p, s, c, f) in meals_data
+        ])
 
         # News
         await db.news.insert_many([

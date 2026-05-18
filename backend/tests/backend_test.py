@@ -308,24 +308,87 @@ class TestParents:
         requests.delete(f"{API}/parents/{pid}", headers=_h(admin_token))
 
 
-# ---------------- Activities / Menus / News ----------------
-class TestActivitiesMenusNews:
-    def test_activities_upsert_idempotent(self, admin_token):
+# ---------------- Activities (new string-shape) / News ----------------
+class TestActivitiesNews:
+    def test_activities_upsert_string_shape_idempotent(self, admin_token):
         students = requests.get(f"{API}/students", headers=_h(admin_token)).json()
         sid = students[1]["id"]
         d = "2025-01-15"
-        payload = {"student_id": sid, "date": d, "didattica": True, "umore": "sereno"}
+        payload = {
+            "student_id": sid, "date": d,
+            "didattica": "Partecipato", "note_didattica": "ok",
+            "motoria": "Non ha Partecipato", "note_motoria": "",
+            "pranzo": "Ha mangiato poco", "note_pranzo": "poca pasta",
+            "merenda": "Si", "riposo": "No",
+            "cacca": "Si", "pipi": "No",
+            "note": "TEST_note",
+        }
         r1 = requests.post(f"{API}/activities", headers=_h(admin_token), json=payload)
-        assert r1.status_code == 200
-        aid1 = r1.json()["id"]
-        # upsert again
+        assert r1.status_code == 200, r1.text
+        body1 = r1.json()
+        aid1 = body1["id"]
+        # Verify NEW string fields
+        assert body1["didattica"] == "Partecipato"
+        assert body1["motoria"] == "Non ha Partecipato"
+        assert body1["pranzo"] == "Ha mangiato poco"
+        assert body1["merenda"] == "Si"
+        assert body1["riposo"] == "No"
+        # OLD fields must NOT exist on the model output
+        for old_field in ("umore", "riposo_minuti", "bagno_cambi"):
+            assert old_field not in body1, f"old field {old_field} still present"
+
+        # OLD integer fields must NOT be required: posting without them works (already done above)
+        # Sending old fields should also be ignored (extra fields → 200, fields silently dropped by pydantic default)
+        # Idempotent upsert: same (student_id, date)
         payload2 = dict(payload)
-        payload2["umore"] = "vivace"
+        payload2["pranzo"] = "Ha mangiato"
+        payload2["note"] = "TEST_updated"
         r2 = requests.post(f"{API}/activities", headers=_h(admin_token), json=payload2)
         assert r2.status_code == 200
         assert r2.json()["id"] == aid1
-        assert r2.json()["umore"] == "vivace"
+        assert r2.json()["pranzo"] == "Ha mangiato"
+        assert r2.json()["note"] == "TEST_updated"
+
+        # GET verifies persistence
+        rl = requests.get(f"{API}/activities?student_id={sid}&date_from={d}&date_to={d}", headers=_h(admin_token))
+        assert rl.status_code == 200
+        rows = rl.json()
+        assert len(rows) == 1 and rows[0]["id"] == aid1
+        assert rows[0]["pranzo"] == "Ha mangiato"
+
         requests.delete(f"{API}/activities/{aid1}", headers=_h(admin_token))
+
+    def test_activities_old_integer_fields_not_required(self, admin_token):
+        """Posting with only minimal new-shape fields (no umore/riposo_minuti/bagno_cambi) must succeed."""
+        students = requests.get(f"{API}/students", headers=_h(admin_token)).json()
+        sid = students[2]["id"]
+        d = "2025-01-16"
+        r = requests.post(f"{API}/activities", headers=_h(admin_token), json={
+            "student_id": sid, "date": d, "didattica": "Partecipato"
+        })
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["didattica"] == "Partecipato"
+        # empty defaults for other strings
+        assert body["pranzo"] == ""
+        assert body["riposo"] == ""
+        requests.delete(f"{API}/activities/{body['id']}", headers=_h(admin_token))
+
+    def test_activities_seeded_alice_new_shape(self, admin_token, parent_token):
+        """The seeded Alice activity must use the new string values."""
+        kids = requests.get(f"{API}/parent/me/children", headers=_h(parent_token)).json()
+        alice_id = kids[0]["id"]
+        r = requests.get(f"{API}/parent/child/{alice_id}/day", headers=_h(parent_token))
+        assert r.status_code == 200
+        act = r.json()["activity"]
+        assert act is not None
+        assert act["didattica"] == "Partecipato"
+        assert act["motoria"] == "Partecipato"
+        assert act["pranzo"] == "Ha mangiato"
+        assert act["riposo"] == "Si"
+        assert act["merenda"] == "Si"
+        assert act["cacca"] == "Si"
+        assert act["pipi"] == "Si"
 
     def test_activities_filter(self, admin_token):
         years = requests.get(f"{API}/school-years", headers=_h(admin_token)).json()
@@ -337,18 +400,18 @@ class TestActivitiesMenusNews:
         assert r.status_code == 200
         assert isinstance(r.json(), list)
 
-    def test_menus(self, admin_token):
-        r = requests.get(f"{API}/menus", headers=_h(admin_token))
-        assert r.status_code == 200 and len(r.json()) >= 1
-        cur = requests.get(f"{API}/menus/current", headers=_h(admin_token))
-        assert cur.status_code == 200
-        assert cur.json() is not None  # seeded for current week
-        # create
-        rc = requests.post(f"{API}/menus", headers=_h(admin_token), json={
-            "week_label": "TEST_week", "valid_from": "2099-01-01", "valid_to": "2099-01-07", "days": []
-        })
-        assert rc.status_code == 200
-        requests.delete(f"{API}/menus/{rc.json()['id']}", headers=_h(admin_token))
+    def test_ai_report_uses_new_shape(self, parent_token):
+        """The AI report fallback should mention the new string values."""
+        kids = requests.get(f"{API}/parent/me/children", headers=_h(parent_token)).json()
+        sid = kids[0]["id"]
+        r = requests.get(f"{API}/ai/daily-report/{sid}", headers=_h(parent_token), timeout=60)
+        assert r.status_code == 200
+        body = r.json()
+        assert body.get("report") and len(body["report"]) > 20
+        # Either AI or fallback should reflect the new shapes (Partecipato / Ha mangiato)
+        # AI may paraphrase to lowercase ("ha partecipato", "ha mangiato"), so compare case-insensitive
+        rep_lower = body["report"].lower()
+        assert ("partecipato" in rep_lower) or ("ha mangiato" in rep_lower) or ("mangiat" in rep_lower)
 
     def test_news_list_and_create(self, admin_token, parent_token):
         # parent can list
@@ -360,6 +423,164 @@ class TestActivitiesMenusNews:
         })
         assert rc.status_code == 200
         requests.delete(f"{API}/news/{rc.json()['id']}", headers=_h(admin_token))
+
+
+# ---------------- Rotating Menu (4 weeks × 5 days) ----------------
+DAYS_IT = ["Lunedi", "Martedi", "Mercoledi", "Giovedi", "Venerdi"]
+
+
+class TestMenuRotating:
+    def test_list_menus_with_meal_count(self, admin_token):
+        r = requests.get(f"{API}/menus", headers=_h(admin_token))
+        assert r.status_code == 200
+        menus = r.json()
+        assert len(menus) >= 1
+        seeded = next((m for m in menus if m.get("name") == "Menu 2025/2026"), None)
+        assert seeded is not None, "Seeded menu 'Menu 2025/2026' missing"
+        assert seeded.get("meal_count") == 20, f"seeded meal_count {seeded.get('meal_count')} != 20"
+        assert seeded["valid_from"] == "2025-09-15"
+        assert seeded["valid_to"] == "2026-06-30"
+        assert "NOTA BENE" in (seeded.get("notes") or "")
+
+    def test_seeded_menu_meals_match_mysql(self, admin_token):
+        menus = requests.get(f"{API}/menus", headers=_h(admin_token)).json()
+        seeded = next(m for m in menus if m.get("name") == "Menu 2025/2026")
+        r = requests.get(f"{API}/menus/{seeded['id']}/meals", headers=_h(admin_token))
+        assert r.status_code == 200
+        meals = r.json()
+        assert len(meals) == 20
+        # Ordering: week 1..4, day Lunedi..Venerdi
+        expected_order = [(w, d) for w in [1, 2, 3, 4] for d in DAYS_IT]
+        assert [(m["week"], m["day"]) for m in meals] == expected_order
+        # Sett 1 Lunedi must match user's MySQL data
+        s1_lun = meals[0]
+        assert s1_lun["primo"] == "Pasta con legumi (lenticchie)"
+        assert s1_lun["secondo"] == "Prosciutto cotto"
+        assert s1_lun["contorno"] == "Insalata"
+        assert s1_lun["frutta"] == "Frutta fresca"
+
+    def test_create_menu_autocreates_20_empty_meals(self, admin_token):
+        rc = requests.post(f"{API}/menus", headers=_h(admin_token), json={
+            "name": "TEST_menu_rot", "valid_from": "2099-01-01", "valid_to": "2099-12-31",
+            "notes": "TEST"
+        })
+        assert rc.status_code == 200, rc.text
+        mid = rc.json()["id"]
+        try:
+            r = requests.get(f"{API}/menus/{mid}/meals", headers=_h(admin_token))
+            assert r.status_code == 200
+            meals = r.json()
+            assert len(meals) == 20
+            # All empty
+            for m in meals:
+                assert m["primo"] == "" and m["secondo"] == "" and m["contorno"] == "" and m["frutta"] == ""
+            # meal_count via list
+            menus = requests.get(f"{API}/menus", headers=_h(admin_token)).json()
+            mine = next(m for m in menus if m["id"] == mid)
+            assert mine["meal_count"] == 20
+        finally:
+            requests.delete(f"{API}/menus/{mid}", headers=_h(admin_token))
+
+    def test_put_meals_idempotent_upsert(self, admin_token):
+        # Create a fresh menu so we can mutate freely
+        rc = requests.post(f"{API}/menus", headers=_h(admin_token), json={
+            "name": "TEST_menu_upsert", "valid_from": "2099-02-01", "valid_to": "2099-12-31"
+        })
+        mid = rc.json()["id"]
+        try:
+            payload = {"meals": [
+                {"week": 1, "day": "Lunedi", "primo": "P1", "secondo": "S1", "contorno": "C1", "frutta": "F1"},
+                {"week": 2, "day": "Martedi", "primo": "P2", "secondo": "S2", "contorno": "C2", "frutta": "F2"},
+            ]}
+            r1 = requests.put(f"{API}/menus/{mid}/meals", headers=_h(admin_token), json=payload)
+            assert r1.status_code == 200
+            # second identical call
+            r2 = requests.put(f"{API}/menus/{mid}/meals", headers=_h(admin_token), json=payload)
+            assert r2.status_code == 200
+            # Still 20 rows total
+            meals = requests.get(f"{API}/menus/{mid}/meals", headers=_h(admin_token)).json()
+            assert len(meals) == 20
+            # The two specified cells got values
+            lun1 = next(m for m in meals if m["week"] == 1 and m["day"] == "Lunedi")
+            assert lun1["primo"] == "P1" and lun1["frutta"] == "F1"
+            mar2 = next(m for m in meals if m["week"] == 2 and m["day"] == "Martedi")
+            assert mar2["primo"] == "P2"
+            # Untouched cell remains empty
+            ven4 = next(m for m in meals if m["week"] == 4 and m["day"] == "Venerdi")
+            assert ven4["primo"] == ""
+        finally:
+            requests.delete(f"{API}/menus/{mid}", headers=_h(admin_token))
+
+    def test_current_menu_returns_5_meals_and_week_1_to_4(self, admin_token, parent_token):
+        # Admin call
+        r = requests.get(f"{API}/menus/current", headers=_h(admin_token))
+        assert r.status_code == 200
+        body = r.json()
+        assert body is not None
+        assert "menu" in body and "current_week" in body and "meals" in body
+        assert body["current_week"] in (1, 2, 3, 4)
+        assert len(body["meals"]) == 5
+        # Order Lunedi..Venerdi
+        assert [m["day"] for m in body["meals"]] == DAYS_IT
+        # Parent can also call /menus/current (gated only by get_current_user)
+        rp = requests.get(f"{API}/menus/current", headers=_h(parent_token))
+        assert rp.status_code == 200, rp.text
+        bp = rp.json()
+        assert bp is not None and bp["current_week"] in (1, 2, 3, 4)
+        assert len(bp["meals"]) == 5
+
+    def test_delete_menu_cascades_meals(self, admin_token):
+        rc = requests.post(f"{API}/menus", headers=_h(admin_token), json={
+            "name": "TEST_menu_del", "valid_from": "2099-03-01", "valid_to": "2099-12-31"
+        })
+        mid = rc.json()["id"]
+        # confirm 20 meals
+        assert len(requests.get(f"{API}/menus/{mid}/meals", headers=_h(admin_token)).json()) == 20
+        rd = requests.delete(f"{API}/menus/{mid}", headers=_h(admin_token))
+        assert rd.status_code == 200
+        # After delete, the GET-meals endpoint backfills empties (doesn't 404),
+        # but the menus list should NOT contain it anymore
+        menus = requests.get(f"{API}/menus", headers=_h(admin_token)).json()
+        assert not any(m["id"] == mid for m in menus)
+        # Direct count via list endpoint must show 0 stored meals (only generated placeholders)
+        # Since the GET fills placeholders, we verify via meal_count of a recreated empty namesake stays 0:
+        # Better: check that all returned meals have id=None (placeholder)
+        leftover = requests.get(f"{API}/menus/{mid}/meals", headers=_h(admin_token)).json()
+        assert all(m.get("id") is None for m in leftover), "menu_meals not cascaded"
+
+    def test_role_guards_parent_forbidden(self, parent_token, admin_token):
+        menus = requests.get(f"{API}/menus", headers=_h(admin_token)).json()
+        any_mid = menus[0]["id"]
+        # POST /menus
+        r1 = requests.post(f"{API}/menus", headers=_h(parent_token), json={
+            "name": "TEST_pf", "valid_from": "2099-04-01", "valid_to": "2099-12-31"
+        })
+        assert r1.status_code == 403
+        # PUT /menus/{id}/meals
+        r2 = requests.put(f"{API}/menus/{any_mid}/meals", headers=_h(parent_token), json={"meals": []})
+        assert r2.status_code == 403
+        # DELETE /menus/{id}
+        r3 = requests.delete(f"{API}/menus/{any_mid}", headers=_h(parent_token))
+        assert r3.status_code == 403
+
+    def test_role_guards_teacher_can_post_put_but_not_delete(self, teacher_token, admin_token):
+        # teacher CAN create
+        rc = requests.post(f"{API}/menus", headers=_h(teacher_token), json={
+            "name": "TEST_menu_teach", "valid_from": "2099-05-01", "valid_to": "2099-12-31"
+        })
+        assert rc.status_code == 200
+        mid = rc.json()["id"]
+        # teacher CAN put meals
+        rp = requests.put(f"{API}/menus/{mid}/meals", headers=_h(teacher_token), json={"meals": [
+            {"week": 1, "day": "Lunedi", "primo": "TP", "secondo": "TS", "contorno": "TC", "frutta": "TF"}
+        ]})
+        assert rp.status_code == 200
+        # teacher CANNOT delete (delete is admin-only)
+        rd_t = requests.delete(f"{API}/menus/{mid}", headers=_h(teacher_token))
+        assert rd_t.status_code == 403
+        # admin cleanup
+        requests.delete(f"{API}/menus/{mid}", headers=_h(admin_token))
+
 
 
 # ---------------- Parent endpoints + AI report ----------------

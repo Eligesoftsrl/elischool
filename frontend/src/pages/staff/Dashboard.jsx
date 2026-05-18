@@ -94,9 +94,8 @@ export default function StaffDashboard() {
                     </div>
                   </div>
                   <div className="flex gap-1 flex-wrap justify-end">
-                    {a.didattica && <Pill color="amber">didattica</Pill>}
-                    {a.motoria && <Pill color="rose">motoria</Pill>}
-                    {a.umore && <Pill color="purple">{a.umore}</Pill>}
+                    {a.didattica && <Pill color={a.didattica === "Partecipato" ? "amber" : "stone"}>{a.didattica}</Pill>}
+                    {a.pranzo && <Pill color="green">{a.pranzo}</Pill>}
                   </div>
                 </li>
               ))}

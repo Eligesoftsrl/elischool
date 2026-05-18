@@ -120,34 +120,15 @@ export default function ParentHome() {
       {a ? (
         <div className="space-y-3">
           <SectionLabel>Attività di oggi</SectionLabel>
-          <Block icon={<BookOpen className="h-5 w-5" />} bg="#FDE68A" title="Didattica" on={a.didattica} note={a.note_didattica} />
-          <Block icon={<Activity className="h-5 w-5" />} bg="#FFB38A" title="Motoria" on={a.motoria} note={a.note_motoria} />
-          <Block icon={<UtensilsCrossed className="h-5 w-5" />} bg="#A7D7C5" title="Pranzo" on={!!a.pranzo} note={`Porzione: ${a.pranzo || "—"}${a.note_pranzo ? " · " + a.note_pranzo : ""}`} />
-          {a.merenda && <Block icon={<UtensilsCrossed className="h-5 w-5" />} bg="#A7D7C5" title="Merenda" on={true} note={`Porzione: ${a.merenda}`} />}
-          {a.riposo_minuti > 0 && <Block icon={<Bed className="h-5 w-5" />} bg="#A2D2FF" title="Riposo" on={true} note={`${a.riposo_minuti} minuti`} />}
-          {a.umore && (
-            <Card className="!p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-2xl bg-violet-50 flex items-center justify-center"><Smile className="h-5 w-5 text-violet-600" /></div>
-              <div className="flex-1">
-                <p className="text-xs uppercase tracking-wider font-bold text-stone-500">Umore</p>
-                <p className="font-semibold capitalize">{a.umore}</p>
-              </div>
-            </Card>
-          )}
-          {(a.pipi > 0 || a.cacca > 0 || a.bagno_cambi > 0) && (
-            <Card className="!p-4 grid grid-cols-3 gap-3 text-center">
-              {[
-                ["Pipì", a.pipi],
-                ["Cacca", a.cacca],
-                ["Cambi", a.bagno_cambi],
-              ].map(([l, v]) => (
-                <div key={l}>
-                  <p className="text-[11px] uppercase tracking-wider font-bold text-stone-500">{l}</p>
-                  <p className="font-display text-2xl font-bold">{v || 0}</p>
-                </div>
-              ))}
-            </Card>
-          )}
+          <Block icon={<BookOpen className="h-5 w-5" />} bg="#FDE68A" title="Didattica" value={a.didattica} note={a.note_didattica} />
+          <Block icon={<Activity className="h-5 w-5" />} bg="#FFB38A" title="Motoria" value={a.motoria} note={a.note_motoria} />
+          <Block icon={<UtensilsCrossed className="h-5 w-5" />} bg="#A7D7C5" title="Pranzo" value={a.pranzo} note={a.note_pranzo} />
+          <div className="grid grid-cols-2 gap-3">
+            <MiniBlock title="Merenda" value={a.merenda} />
+            <MiniBlock title="Riposo" value={a.riposo} />
+            <MiniBlock title="Cacca" value={a.cacca} />
+            <MiniBlock title="Pipì" value={a.pipi} />
+          </div>
           {a.note && (
             <Card className="!p-5 border-l-4 border-[#FF8C6B]">
               <p className="text-xs uppercase tracking-wider font-bold text-stone-500 mb-1">Note dalle maestre</p>
@@ -166,19 +147,35 @@ export default function ParentHome() {
   );
 }
 
-function Block({ icon, title, on, note, bg }) {
+function Block({ icon, title, value, note, bg }) {
+  const positive = value === "Partecipato" || value === "Ha mangiato" || value === "Si";
+  const negative = value === "Non ha Partecipato" || value === "Non ha mangiato" || value === "No";
   return (
     <Card className="!p-4 flex items-center gap-3">
-      <div className="h-12 w-12 rounded-2xl flex items-center justify-center" style={{ background: on ? bg : "#F5F5F4" }}>
+      <div className="h-12 w-12 rounded-2xl flex items-center justify-center" style={{ background: positive ? bg : "#F5F5F4" }}>
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <p className="font-semibold text-stone-900">{title}</p>
-          {on ? <Pill color="green">✓</Pill> : <Pill color="stone">no</Pill>}
+          {value
+            ? <Pill color={positive ? "green" : negative ? "rose" : "stone"}>{value}</Pill>
+            : <Pill color="stone">—</Pill>}
         </div>
-        {on && note && <p className="text-sm text-stone-500 mt-0.5 line-clamp-2">{note}</p>}
+        {note && <p className="text-sm text-stone-500 mt-0.5 line-clamp-3">{note}</p>}
       </div>
+    </Card>
+  );
+}
+
+function MiniBlock({ title, value, bg }) {
+  const yes = value === "Si";
+  return (
+    <Card className="!p-4 text-center">
+      <p className="text-[11px] uppercase tracking-wider font-bold text-stone-500 mb-1">{title}</p>
+      <p className="font-display text-2xl font-bold" style={{ color: yes ? "#0E7C5C" : value === "No" ? "#9B5151" : "#A8A29E" }}>
+        {value || "—"}
+      </p>
     </Card>
   );
 }

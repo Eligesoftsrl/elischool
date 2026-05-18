@@ -63,14 +63,13 @@ export default function ParentTimeline() {
                     <Calendar className="h-4 w-4 text-stone-400" />
                     {new Date(a.date).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}
                   </p>
-                  {a.umore && <Pill color="purple">{a.umore}</Pill>}
                 </div>
                 <div className="flex flex-wrap gap-1">
-                  {a.didattica && <Pill color="amber">didattica</Pill>}
-                  {a.motoria && <Pill color="rose">motoria</Pill>}
-                  {a.pranzo && <Pill color="green">pranzo: {a.pranzo}</Pill>}
-                  {a.merenda && <Pill color="green">merenda: {a.merenda}</Pill>}
-                  {a.riposo_minuti > 0 && <Pill color="blue">riposo {a.riposo_minuti}'</Pill>}
+                  {a.didattica && <Pill color={a.didattica === "Partecipato" ? "amber" : "stone"}>Didattica: {a.didattica}</Pill>}
+                  {a.motoria && <Pill color={a.motoria === "Partecipato" ? "rose" : "stone"}>Motoria: {a.motoria}</Pill>}
+                  {a.pranzo && <Pill color="green">{a.pranzo}</Pill>}
+                  {a.merenda && <Pill color={a.merenda === "Si" ? "green" : "stone"}>Merenda: {a.merenda}</Pill>}
+                  {a.riposo && <Pill color={a.riposo === "Si" ? "blue" : "stone"}>Riposo: {a.riposo}</Pill>}
                 </div>
                 {a.note && <p className="text-sm text-stone-600 mt-2 line-clamp-3">{a.note}</p>}
               </Card>

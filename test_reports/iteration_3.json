@@ -1,0 +1,39 @@
+{
+  "summary": "STEP 2 backend-only test pass: refactored activities to string values + rotating 4-week menu. 63/63 pytest tests passed (10 new tests added on top of the iteration_2 regression). Activities: new string shape ('Partecipato'/'Non ha Partecipato', 'Ha mangiato'/'Non ha mangiato'/'Ha mangiato poco', 'Si'/'No', notes) verified end-to-end. Old integer fields (umore, riposo_minuti, bagno_cambi) confirmed NO LONGER required nor present in API output. Idempotent upsert per (student_id,date) still works. Seeded Alice activity has didattica='Partecipato', motoria='Partecipato', pranzo='Ha mangiato', merenda='Si', riposo='Si', cacca='Si', pipi='Si'. AI report still produces Italian text mentioning 'partecipato'/'mangiato' from the new fields. Rotating menu: GET /menus returns meal_count=20 for 'Menu 2025/2026' (valid_from 2025-09-15, valid_to 2026-06-30, notes contain 'NOTA BENE'). The 20 meals match the user's MySQL dump (Sett 1 Lun = Pasta con legumi (lenticchie)/Prosciutto cotto/Insalata/Frutta fresca) and are ordered week 1..4 × Lunedi..Venerdi. POST /menus auto-creates 20 empty meal rows. PUT /menus/{id}/meals is idempotent (same payload twice keeps 20 rows). GET /menus/current returns {menu, current_week in 1..4, meals[5]} ordered Lun..Ven for admin AND parent. DELETE /menus/{id} cascades menu_meals (verified via /menus/{id}/meals returning placeholder rows with id=None). Role guards verified: parent gets 403 on POST/PUT/DELETE on menus & meals; teacher can POST + PUT meals but DELETE is admin-only. All 53 iteration_2 tests still green.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/menus/{id}/meals (after DELETE)", "issue": "After deleting a menu, this endpoint still returns 20 placeholder cells (id=None) instead of 404. Not a bug — current contract is 'always fill the 4x5 grid' — but undocumented."},
+      {"endpoint": "POST /api/activities", "issue": "Pydantic model silently drops extra/old fields (umore, riposo_minuti, bagno_cambi) instead of 422. Acceptable for forward-compat migration but worth a comment."},
+      {"endpoint": "Legacy WeeklyMenuIn model still defined in server.py but unused — dead code (carry-over from STEP 1)."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional cleanup) Remove unused WeeklyMenuIn model from server.py.",
+    "(Optional) GET /menus/{id}/meals for a non-existing menu_id returns 20 placeholder rows; consider 404 instead.",
+    "(Carry-over from iteration_2, still applicable) server.py is now even larger (~1700+ lines) - split into modules; scope generic list endpoints (communications, lesson-plans, extra-labs, calendar-events) by role; add duplicate-action guard on POST /attendance."
+  ],
+  "critical_code_review_comments": [
+    "compute_current_week uses ISO Monday alignment via .weekday() - correct for rotating 4-week schedule. Returns (delta_weeks % 4)+1, range [1,4]. Verified.",
+    "PUT /menus/{id}/meals uses $set with a fresh gen_id() on every upsert — re-running the same payload changes the row's id field. Functionally harmless but means external clients caching by id will see id changes. Consider $setOnInsert for id.",
+    "DELETE /menus/{id} correctly cascades menu_meals. Good.",
+    "GET /menus/current does NOT verify the menu_id of the menu_meals via index (no compound index on menu_id+week+day). Acceptable at this scale but add unique index if you want to enforce uniqueness at the DB level.",
+    "ActivityIn now all-strings: no enum/Literal validation on didattica/pranzo/etc. — a malformed value like 'foo' would be accepted. Consider Literal[...] for stricter API.",
+    "server.py still 1700+ lines — exceeds 700-line guideline; split into modules (auth, school, parents, activities, menus, communications, media, attendance, ai)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py"
+  ],
+  "success_rate": {"backend": "100% (63/63)", "frontend": "N/A (not requested)"},
+  "test_credentials": "admin@scuolapp.it/Admin2026!, maestra.giulia@scuolapp.it/Maestra2026!, genitore@scuolapp.it/Genitore2026! - all working post-reseed",
+  "seed_data_creation": "Tests reuse the reseeded DB (Alice activity in new string shape; rotating Menu 2025/2026 with 20 real MySQL meals). All test-created data prefixed TEST_ and cleaned up in finally blocks.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend fully green at 63/63 (10 new STEP 2 tests + 53 regression). Run: pytest /app/backend/tests/backend_test.py -v --junitxml=/app/test_reports/pytest/pytest_results.xml (~80s incl. AI). New test classes: TestActivitiesNews (5 tests), TestMenuRotating (8 tests). All STEP 2 features verified per the review request. No blocking issues.",
+  "rca of the issue": "N/A — no bugs; one test assertion was initially too strict (Title-Case-only) since the AI paraphrases to lowercase ('ha partecipato'). Fixed by switching to case-insensitive substring match against the lowercased report."
+}
