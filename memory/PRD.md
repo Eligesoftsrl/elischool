@@ -98,6 +98,14 @@ Allineamento al DB MySQL reale dell'utente. Aggiunte:
 - Palinsesto a 5 colonne (giorni)
 - Lazy load delle foto (singolo GET /media/{id} on demand)
 
+### Iteration 8 (19/02/2026) — Multi-tenant Frontend (Fase 1B + 1C) ✅
+Cablato il frontend per il SaaS multi-tenant. Test 100% verde (backend 12/12 + frontend 8/8 E2E):
+- **Layout SuperAdmin** dark, separato dal layout staff (`/app/frontend/src/layouts/SuperAdminLayout.jsx`)
+- **Pagina `/superadmin`** — lista scuole con stats card (alunni/utenti/sezioni/in attesa), azioni: sospendi/riattiva, copia link iscrizione, elimina (con doppia conferma cascade)
+- **Pagina `/superadmin/tenants/new`** — wizard creazione scuola con auto-slugify, success screen mostra invite link + URL iscrizione pubblica
+- **Header staff/parent** dinamico: logo + nome scuola del tenant corrente (fallback a "nido." se assente); login response arricchita con `user.tenant`
+- **Route pubblica `/iscrizione/:slug`** — landing branded per scuola, query param `tenant_slug` automatico
+
 ### Iteration 7 (19/02/2026) — Multi-tenant SaaS Foundation ✅
 Trasformata l'app in **SaaS multi-tenant**: una sola istanza serve N scuole isolate.
 - **`tenants` collection**: `{id, slug, name, logo_base64, contact_email/phone, address, vat_number, website, plan, status, created_at}`
@@ -133,17 +141,18 @@ Aggiunte le 3 ultime feature per parità 100% con Flask/MySQL legacy:
 - Frontend: E2E Playwright OK su Iscrizione pubblica, Compleanni, Tesserini PDF, approvazione admin
 
 ## Backlog
-### P1 — Multi-tenant Fase 1B & 1C (prossima sessione)
-- [ ] **Frontend tenant-aware**: header con logo/nome scuola dinamico (da `user.tenant`)
-- [ ] **Endpoint `/api/me/tenant`** per caricare branding nel frontend
-- [ ] **URL pubblico per scuola**: `/iscrizione/:slug` (lato React)
-- [ ] **Pagina super-admin** `/superadmin`: lista scuole + wizard "Crea nuova scuola"
-- [ ] **Login bloccato lato frontend** se tenant sospeso (mostra messaggio elegante)
+### P1 (prossimi)
 - [ ] STEP 3 — Import dati da MySQL dump (186 alunni, 169 genitori) come secondo tenant
 - [ ] Dopo approvazione iscrizione → modal/redirect per assegnare sezione
+- [ ] Stripe Subscriptions integrato col `tenant.plan` (trial 30gg → basic/pro)
 - [ ] Notifiche push PWA quando il report giornaliero è pronto
 - [ ] Esportazione PDF resoconto mensile / settimanale
 - [ ] Rate-limit sul POST /api/public/enrollment-requests (anti-spam)
+
+### P2
+- [ ] Modifica completa tenant lato superadmin (al momento solo status/plan via PATCH)
+- [ ] Sender email Brevo per-tenant (ogni scuola può configurare il proprio dominio)
+- [ ] Webhook Brevo per tracciare aperture/bounce
 
 ### P2
 - [ ] Splittare server.py in moduli (auth, school, parents, activities, communications, attendance, media, ai)

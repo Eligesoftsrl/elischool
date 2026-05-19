@@ -114,7 +114,7 @@ function Stat({ icon: Icon, label, value }) {
     <div className="rounded-xl bg-stone-950/50 border border-stone-800 px-2 py-2.5 text-center">
       <Icon className="h-3.5 w-3.5 text-stone-500 mx-auto mb-0.5"/>
       <p className="font-display text-lg font-bold text-stone-100 leading-none">{value}</p>
-      <p className="text-[10px] text-stone-500 uppercase tracking-wider mt-1">{label}</p>
+      <p className="text-[10px] text-stone-500 uppercase tracking-wide mt-1 whitespace-nowrap">{label}</p>
     </div>
   );
 }
