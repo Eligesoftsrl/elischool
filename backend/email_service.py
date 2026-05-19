@@ -1,23 +1,19 @@
 """
-Brevo SMTP email service.
-Sends branded Italian transactional emails via Brevo's SMTP relay.
-Falls back gracefully: if EMAIL_ENABLED is false or SMTP fails, returns False
+Brevo transactional email service (REST API v3).
+Sends branded Italian transactional emails via Brevo's HTTP API.
+Falls back gracefully: if EMAIL_ENABLED is false or the API fails, returns False
 without raising so the calling flow (enrollment, invite, password reset) never breaks.
 """
 import os
 import logging
-from email.message import EmailMessage
-from email.utils import formataddr
 from typing import Optional
 
-import aiosmtplib
+import httpx
 
 logger = logging.getLogger(__name__)
 
-SMTP_HOST = os.environ.get("BREVO_SMTP_HOST", "smtp-relay.brevo.com")
-SMTP_PORT = int(os.environ.get("BREVO_SMTP_PORT", "587"))
-SMTP_LOGIN = os.environ.get("BREVO_SMTP_LOGIN", "")
-SMTP_KEY = os.environ.get("BREVO_SMTP_KEY", "")
+BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "")
 SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "nido.")
 EMAIL_ENABLED = os.environ.get("EMAIL_ENABLED", "false").lower() == "true"
@@ -67,29 +63,32 @@ async def _send(to_email: str, to_name: str, subject: str, html: str, text_fallb
     if not EMAIL_ENABLED:
         logger.info(f"[EMAIL DISABLED] would send '{subject}' to {to_email}")
         return False
-    if not (SMTP_LOGIN and SMTP_KEY and SENDER_EMAIL):
-        logger.warning(f"[EMAIL MISCONFIG] missing SMTP credentials, cannot send to {to_email}")
+    if not (BREVO_API_KEY and SENDER_EMAIL):
+        logger.warning(f"[EMAIL MISCONFIG] missing Brevo API key or sender, cannot send to {to_email}")
         return False
 
-    msg = EmailMessage()
-    msg["From"] = formataddr((SENDER_NAME, SENDER_EMAIL))
-    msg["To"] = formataddr((to_name or "", to_email))
-    msg["Subject"] = subject
-    msg.set_content(text_fallback)
-    msg.add_alternative(html, subtype="html")
+    payload = {
+        "sender": {"name": SENDER_NAME, "email": SENDER_EMAIL},
+        "to": [{"email": to_email, "name": to_name or to_email}],
+        "subject": subject,
+        "htmlContent": html,
+        "textContent": text_fallback,
+    }
+    headers = {
+        "api-key": BREVO_API_KEY,
+        "accept": "application/json",
+        "content-type": "application/json",
+    }
 
     try:
-        await aiosmtplib.send(
-            msg,
-            hostname=SMTP_HOST,
-            port=SMTP_PORT,
-            username=SMTP_LOGIN,
-            password=SMTP_KEY,
-            start_tls=True,
-            timeout=15,
-        )
-        logger.info(f"[EMAIL SENT] '{subject}' → {to_email}")
-        return True
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.post(BREVO_API_URL, json=payload, headers=headers)
+        if r.status_code in (200, 201):
+            message_id = (r.json() or {}).get("messageId", "?")
+            logger.info(f"[EMAIL SENT] '{subject}' → {to_email} (msgid={message_id})")
+            return True
+        logger.error(f"[EMAIL FAIL] to {to_email}: HTTP {r.status_code} — {r.text[:300]}")
+        return False
     except Exception as e:
         logger.error(f"[EMAIL FAIL] to {to_email}: {type(e).__name__}: {e}")
         return False
