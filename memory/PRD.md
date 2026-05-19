@@ -98,17 +98,26 @@ Allineamento al DB MySQL reale dell'utente. Aggiunte:
 - Palinsesto a 5 colonne (giorni)
 - Lazy load delle foto (singolo GET /media/{id} on demand)
 
+### Iteration 5 (19/02/2026) — Legacy Parity Final ✅
+Aggiunte le 3 ultime feature per parità 100% con Flask/MySQL legacy:
+- **Compleanni** (`/api/birthdays`) — dashboard con prossimi compleanni (7/30/90/365 giorni), raggruppati per mese, evidenziazione "Oggi" e "Domani"
+- **Stampa tesserini PDF** (`/api/barcodes/pdf`) — ReportLab A4 con 10 barcode Code-128 per pagina, filtro per sezione o tutta la scuola
+- **Iscrizione pubblica** (`/iscrizione` + `/api/public/enrollment-requests`) — form pubblico senza auth, lista admin con approva/rifiuta, alla approvazione crea alunno + genitore con link invito mock
+- Link pubblico aggiunto in Landing e Login (`Iscrivi tuo figlio`)
+- Test E2E: backend 22/22 pytest + frontend Playwright 7/7 checkpoint (iteration_5.json)
+
 ## Test Coverage
-- Backend: **53/53 pytest passati** (iteration 2)
-- Frontend: validazione visuale OK su dashboard, presenze, comunicazioni, eventi, laboratori, piano
+- Backend: **75/75 pytest** (53 iter2 + 22 iter5) ✅
+- Frontend: E2E Playwright OK su Iscrizione pubblica, Compleanni, Tesserini PDF, approvazione admin
 
 ## Backlog
 ### P1
-- [ ] Email reali (SendGrid/Resend)
-- [ ] STEP 2 — Menu rotante multi-settimana (settimana 1/2/3/4) come nel DB originale
-- [ ] STEP 3 — Import dati da MySQL dump (script di migrazione)
+- [ ] STEP 3 — Import dati da MySQL dump (186 alunni, 169 genitori, attività storiche)
+- [ ] Email reali (SendGrid/Resend) sostituendo i mock invite link
 - [ ] Notifiche push PWA quando il report giornaliero è pronto
 - [ ] Esportazione PDF resoconto mensile / settimanale
+- [ ] Dopo approvazione iscrizione, redirect automatico ad inserimento sezione per il nuovo alunno
+- [ ] Rate-limit sul POST /api/public/enrollment-requests (anti-spam)
 
 ### P2
 - [ ] Splittare server.py in moduli (auth, school, parents, activities, communications, attendance, media, ai)
