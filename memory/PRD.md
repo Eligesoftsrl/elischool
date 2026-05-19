@@ -98,6 +98,16 @@ Allineamento al DB MySQL reale dell'utente. Aggiunte:
 - Palinsesto a 5 colonne (giorni)
 - Lazy load delle foto (singolo GET /media/{id} on demand)
 
+### Iteration 6 (19/02/2026) — Brevo Email Integration ✅
+Sostituiti tutti i mock email con invii reali via Brevo REST API v3:
+- **Servizio `email_service.py`** — usa httpx + Brevo `POST /v3/smtp/email`, fallback graceful (se Brevo fallisce, app non si rompe, ritorna mock link)
+- **3 flussi cablati**: forgot-password, create parent invite, resend invite, approve enrollment request
+- **Template HTML brandizzati "nido."** in italiano (header con logo, CTA button arancio, footer firmato)
+- **Endpoint admin** `POST /api/admin/email/test` per verificare la config
+- **Env vars**: `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `EMAIL_ENABLED`
+- ⚠️ Brevo IP whitelist: l'IP del pod (34.16.56.64) deve essere autorizzato su Brevo
+- Verificato live: 3 email inviate con successo a casella reale, HTTP 201 + messageId
+
 ### Iteration 5 (19/02/2026) — Legacy Parity Final ✅
 Aggiunte le 3 ultime feature per parità 100% con Flask/MySQL legacy:
 - **Compleanni** (`/api/birthdays`) — dashboard con prossimi compleanni (7/30/90/365 giorni), raggruppati per mese, evidenziazione "Oggi" e "Domani"
@@ -113,7 +123,7 @@ Aggiunte le 3 ultime feature per parità 100% con Flask/MySQL legacy:
 ## Backlog
 ### P1
 - [ ] STEP 3 — Import dati da MySQL dump (186 alunni, 169 genitori, attività storiche)
-- [ ] Email reali (SendGrid/Resend) sostituendo i mock invite link
+- [ ] ~~Email reali (Brevo)~~ ✅ FATTO iteration 6
 - [ ] Notifiche push PWA quando il report giornaliero è pronto
 - [ ] Esportazione PDF resoconto mensile / settimanale
 - [ ] Dopo approvazione iscrizione, redirect automatico ad inserimento sezione per il nuovo alunno
