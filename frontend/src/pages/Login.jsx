@@ -125,6 +125,10 @@ export default function Login() {
 
         <div className="text-center mt-5 text-xs text-stone-400">
           <Link to="/" className="hover:text-stone-700">← Torna alla home</Link>
+          <span className="mx-2">·</span>
+          <Link to="/iscrizione" className="hover:text-brand font-semibold" data-testid="login-enrollment-link">
+            Iscrivi tuo figlio
+          </Link>
         </div>
       </motion.div>
     </div>

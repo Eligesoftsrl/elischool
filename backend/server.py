@@ -1675,6 +1675,300 @@ async def public_school_profile():
     return doc
 
 
+# ============================================================
+# NEW: Compleanni, Stampa Barcode PDF, Iscrizione pubblica
+# ============================================================
+
+class EnrollmentRequestIn(BaseModel):
+    student_first_name: str
+    student_last_name: str
+    student_birth_date: str
+    parent_first_name: str
+    parent_last_name: str
+    parent_email: EmailStr
+    parent_phone: Optional[str] = ""
+    address: Optional[str] = ""
+    notes: Optional[str] = ""
+
+
+@api.get("/birthdays")
+async def upcoming_birthdays(days: int = 7, user=Depends(require_role("admin", "teacher"))):
+    """Compleanni dei prossimi N giorni (default 7)."""
+    today = date.today()
+    students = await db.students.find({"birth_date": {"$ne": ""}}, {"_id": 0}).to_list(2000)
+    out = []
+    for s in students:
+        bd_str = s.get("birth_date")
+        if not bd_str:
+            continue
+        try:
+            bd = datetime.fromisoformat(bd_str).date()
+        except Exception:
+            continue
+        # Next occurrence
+        try:
+            next_bd = bd.replace(year=today.year)
+        except ValueError:
+            # Feb 29 → use Feb 28
+            next_bd = bd.replace(year=today.year, day=28)
+        if next_bd < today:
+            try:
+                next_bd = bd.replace(year=today.year + 1)
+            except ValueError:
+                next_bd = bd.replace(year=today.year + 1, day=28)
+        delta_days = (next_bd - today).days
+        if 0 <= delta_days <= days:
+            age = next_bd.year - bd.year
+            out.append({
+                **s,
+                "next_birthday": next_bd.isoformat(),
+                "days_until": delta_days,
+                "age_turning": age,
+            })
+    out.sort(key=lambda x: x["days_until"])
+    return out
+
+
+@api.get("/barcodes/pdf")
+async def barcodes_pdf(
+    classroom_id: Optional[str] = None,
+    school_year_id: Optional[str] = None,
+    user=Depends(require_role("admin", "teacher")),
+):
+    """Genera un PDF A4 con i tesserini barcode degli alunni di una sezione (o tutti)."""
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.colors import HexColor
+    import barcode as bc
+    from barcode.writer import ImageWriter
+
+    # Resolve students
+    if classroom_id and school_year_id:
+        enrolls = await db.enrollments.find(
+            {"classroom_id": classroom_id, "school_year_id": school_year_id}, {"_id": 0}
+        ).to_list(500)
+        ids = [e["student_id"] for e in enrolls]
+        students = await db.students.find({"id": {"$in": ids}}, {"_id": 0}).sort("last_name", 1).to_list(500)
+        classroom = await db.classrooms.find_one({"id": classroom_id}, {"_id": 0}) or {}
+        title_suffix = classroom.get("name", "")
+    else:
+        students = await db.students.find({}, {"_id": 0}).sort("last_name", 1).to_list(2000)
+        title_suffix = "Tutti gli alunni"
+
+    if not students:
+        raise HTTPException(404, "Nessun alunno trovato")
+
+    # Ensure every student has a barcode
+    for s in students:
+        existing = await db.barcodes.find_one({"student_id": s["id"]})
+        if not existing:
+            code = datetime.now(timezone.utc).strftime("%y%m%d%H%M%S") + secrets.token_hex(2)
+            await db.barcodes.update_one(
+                {"student_id": s["id"]},
+                {"$set": {"id": gen_id(), "student_id": s["id"], "code": code, "created_at": now_iso()}},
+                upsert=True,
+            )
+            s["_code"] = code
+        else:
+            s["_code"] = existing["code"]
+
+    school = await db.school_profile.find_one({"id": "main"}, {"_id": 0}) or {}
+
+    buf = BytesIO()
+    pdf = canvas.Canvas(buf, pagesize=A4)
+    page_w, page_h = A4
+
+    # Layout: 2 columns × 5 rows = 10 badges per page
+    cols, rows = 2, 5
+    margin_x, margin_y = 12 * mm, 12 * mm
+    badge_w = (page_w - 2 * margin_x) / cols
+    badge_h = (page_h - 2 * margin_y) / rows
+
+    def draw_badge(x, y, student, code):
+        # Border
+        pdf.setStrokeColor(HexColor("#E7E5E4"))
+        pdf.setLineWidth(0.6)
+        pdf.roundRect(x + 4 * mm, y + 4 * mm, badge_w - 8 * mm, badge_h - 8 * mm, 6 * mm, stroke=1, fill=0)
+
+        # School name (top)
+        pdf.setFillColor(HexColor("#FF7A54"))
+        pdf.setFont("Helvetica-Bold", 9)
+        pdf.drawString(x + 10 * mm, y + badge_h - 12 * mm, (school.get("name") or "Scuola dell'infanzia")[:42])
+
+        # Student name (large)
+        pdf.setFillColor(HexColor("#1C1917"))
+        pdf.setFont("Helvetica-Bold", 14)
+        full_name = f"{student.get('first_name','')} {student.get('last_name','')}".strip()
+        pdf.drawString(x + 10 * mm, y + badge_h - 22 * mm, full_name[:30])
+
+        # Birth date + classroom
+        pdf.setFont("Helvetica", 8)
+        pdf.setFillColor(HexColor("#57534E"))
+        bd = student.get("birth_date") or ""
+        line = title_suffix + (f" · nato/a il {bd}" if bd else "")
+        pdf.drawString(x + 10 * mm, y + badge_h - 28 * mm, line[:60])
+
+        # Barcode
+        try:
+            code128 = bc.get("code128", code, writer=ImageWriter())
+            img_buf = BytesIO()
+            code128.write(img_buf, options={"module_width": 0.28, "module_height": 11, "font_size": 9,
+                                            "write_text": True, "quiet_zone": 2})
+            img_buf.seek(0)
+            from reportlab.lib.utils import ImageReader
+            img = ImageReader(img_buf)
+            iw, ih = img.getSize()
+            target_w = badge_w - 20 * mm
+            target_h = target_w * (ih / iw)
+            pdf.drawImage(img, x + 10 * mm, y + 8 * mm, width=target_w, height=target_h, mask="auto")
+        except Exception as ex:
+            pdf.setFont("Helvetica", 9)
+            pdf.drawString(x + 10 * mm, y + 14 * mm, f"Codice: {code}")
+
+    # Title page header
+    def draw_header(page_num):
+        pdf.setFont("Helvetica-Bold", 11)
+        pdf.setFillColor(HexColor("#1C1917"))
+        pdf.drawString(margin_x, page_h - 8 * mm, f"Tesserini · {title_suffix}")
+        pdf.setFont("Helvetica", 8)
+        pdf.setFillColor(HexColor("#A8A29E"))
+        pdf.drawRightString(page_w - margin_x, page_h - 8 * mm, f"Pagina {page_num} · {date.today().isoformat()}")
+
+    page_num = 1
+    draw_header(page_num)
+    for i, s in enumerate(students):
+        idx_on_page = i % (cols * rows)
+        if i > 0 and idx_on_page == 0:
+            pdf.showPage()
+            page_num += 1
+            draw_header(page_num)
+        row = idx_on_page // cols
+        col = idx_on_page % cols
+        x = margin_x + col * badge_w
+        y = page_h - margin_y - (row + 1) * badge_h
+        draw_badge(x, y, s, s["_code"])
+
+    pdf.save()
+    buf.seek(0)
+    fname = f"tesserini-{title_suffix.lower().replace(' ', '-')}.pdf"
+    from fastapi.responses import Response as FastResponse
+    return FastResponse(
+        content=buf.getvalue(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
+
+
+@api.post("/public/enrollment-requests")
+async def public_enrollment_request(payload: EnrollmentRequestIn):
+    """Form pubblico iscrizione (no auth)."""
+    doc = payload.model_dump()
+    doc["id"] = gen_id()
+    doc["parent_email"] = doc["parent_email"].lower().strip()
+    doc["status"] = "pending"  # pending | approved | rejected
+    doc["created_at"] = now_iso()
+    await db.enrollment_requests.insert_one(doc)
+    return {"ok": True, "id": doc["id"], "message": "Richiesta inviata. La scuola la valuterà al più presto."}
+
+
+@api.get("/enrollment-requests")
+async def list_enrollment_requests(status: Optional[str] = None, user=Depends(require_role("admin", "teacher"))):
+    q = {}
+    if status:
+        q["status"] = status
+    docs = await db.enrollment_requests.find(q, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return docs
+
+
+@api.post("/enrollment-requests/{rid}/approve")
+async def approve_enrollment(rid: str, user=Depends(require_role("admin", "teacher"))):
+    req = await db.enrollment_requests.find_one({"id": rid}, {"_id": 0})
+    if not req:
+        raise HTTPException(404, "Richiesta non trovata")
+    if req["status"] != "pending":
+        raise HTTPException(400, f"Richiesta già {req['status']}")
+
+    # Create student
+    student_id = gen_id()
+    await db.students.insert_one({
+        "id": student_id,
+        "first_name": req["student_first_name"],
+        "last_name": req["student_last_name"],
+        "birth_date": req["student_birth_date"],
+        "fiscal_code": "",
+        "residence": req.get("address", ""),
+        "allergies": "",
+        "notes": req.get("notes", ""),
+        "created_at": now_iso(),
+    })
+
+    # Create parent (pending - they'll receive invite)
+    parent_email = req["parent_email"].lower().strip()
+    existing = await db.users.find_one({"email": parent_email})
+    if existing:
+        parent_id = existing["id"]
+    else:
+        parent_id = gen_id()
+        await db.users.insert_one({
+            "id": parent_id,
+            "email": parent_email,
+            "first_name": req["parent_first_name"],
+            "last_name": req["parent_last_name"],
+            "name": f"{req['parent_first_name']} {req['parent_last_name']}",
+            "phone": req.get("parent_phone", ""),
+            "notes": "",
+            "role": "parent",
+            "status": "pending",
+            "password_hash": None,
+            "created_at": now_iso(),
+        })
+
+    # Link parent to student
+    await db.parent_links.insert_one({
+        "id": gen_id(), "parent_id": parent_id, "student_id": student_id, "created_at": now_iso()
+    })
+
+    # Generate invite token
+    token = secrets.token_urlsafe(32)
+    await db.password_reset_tokens.insert_one({
+        "token": token,
+        "user_id": parent_id,
+        "created_at": now_iso(),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+        "used": False,
+        "purpose": "invite",
+    })
+    invite_link = f"{os.environ.get('FRONTEND_URL', '')}/setup-password/{token}"
+    logger.info(f"[MOCK EMAIL] Approved enrollment for {parent_email}: {invite_link}")
+
+    await db.enrollment_requests.update_one(
+        {"id": rid},
+        {"$set": {"status": "approved", "approved_at": now_iso(), "approved_by": user["id"],
+                  "student_id": student_id, "parent_id": parent_id}}
+    )
+    return {"ok": True, "student_id": student_id, "parent_id": parent_id, "mock_invite_link": invite_link}
+
+
+@api.post("/enrollment-requests/{rid}/reject")
+async def reject_enrollment(rid: str, user=Depends(require_role("admin", "teacher"))):
+    req = await db.enrollment_requests.find_one({"id": rid})
+    if not req:
+        raise HTTPException(404, "Richiesta non trovata")
+    await db.enrollment_requests.update_one(
+        {"id": rid},
+        {"$set": {"status": "rejected", "rejected_at": now_iso(), "rejected_by": user["id"]}}
+    )
+    return {"ok": True}
+
+
+@api.delete("/enrollment-requests/{rid}")
+async def delete_enrollment_request(rid: str, user=Depends(require_role("admin"))):
+    await db.enrollment_requests.delete_one({"id": rid})
+    return {"ok": True}
+
+
 
 
 # ----------------------------- HEALTH -----------------------------
@@ -1957,6 +2251,22 @@ async def seed():
         await db.attendance.insert_one({
             "id": gen_id(), "student_id": student_ids[0], "action": "in",
             "ts": check_ts, "date": today_iso, "note": "", "by_user_id": t1_id,
+        })
+
+        # Demo enrollment request (pending)
+        await db.enrollment_requests.insert_one({
+            "id": gen_id(),
+            "student_first_name": "Giulia",
+            "student_last_name": "Esposito",
+            "student_birth_date": "2022-03-14",
+            "parent_first_name": "Anna",
+            "parent_last_name": "Esposito",
+            "parent_email": "anna.esposito@example.com",
+            "parent_phone": "+39 333 9876543",
+            "address": "Via Roma 12, Scafati (SA)",
+            "notes": "Vorremmo iscrivere nostra figlia per l'anno 2026/2027.",
+            "status": "pending",
+            "created_at": now_iso(),
         })
 
         logger.info("Demo data seeded (incl. STEP 1h)")

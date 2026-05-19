@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import {
   Home, Users, GraduationCap, UserCog, UsersRound, ClipboardList,
   Utensils, Megaphone, CalendarRange, ArrowRightLeft, LogOut, Menu as MenuIcon, X, ChevronDown, Heart,
-  BookOpen, Sparkles, Building2, Scan, Image as ImageIcon, CalendarDays,
+  BookOpen, Sparkles, Building2, Scan, Image as ImageIcon, CalendarDays, Cake, QrCode, Inbox,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,8 +20,11 @@ const NAV = [
   { to: "/s/comunicazioni", icon: Megaphone, label: "Comunicazioni" },
   { to: "/s/eventi", icon: CalendarDays, label: "Eventi" },
   { to: "/s/galleria", icon: ImageIcon, label: "Galleria" },
+  { to: "/s/compleanni", icon: Cake, label: "Compleanni" },
   { to: "/s/menu", icon: Utensils, label: "Menu" },
   { to: "/s/genitori", icon: UsersRound, label: "Genitori" },
+  { to: "/s/iscrizioni", icon: Inbox, label: "Iscrizioni", admin: true },
+  { to: "/s/tesserini", icon: QrCode, label: "Tesserini", admin: true },
   { to: "/s/maestre", icon: UserCog, label: "Maestre", admin: true },
   { to: "/s/scuola", icon: Building2, label: "Profilo Scuola", admin: true },
   { to: "/s/anni", icon: CalendarRange, label: "Anni scolastici", admin: true },

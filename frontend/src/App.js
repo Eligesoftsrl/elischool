@@ -26,6 +26,10 @@ import StaffExtraLabs from "@/pages/staff/ExtraLabs";
 import StaffSchoolProfile from "@/pages/staff/SchoolProfile";
 import StaffAttendance from "@/pages/staff/Attendance";
 import StaffGallery from "@/pages/staff/Gallery";
+import StaffBirthdays from "@/pages/staff/Birthdays";
+import StaffBarcodePrint from "@/pages/staff/BarcodePrint";
+import StaffEnrollmentRequests from "@/pages/staff/EnrollmentRequests";
+import PublicEnrollment from "@/pages/PublicEnrollment";
 
 import ParentLayout from "@/layouts/ParentLayout";
 import ParentHome from "@/pages/parent/Home";
@@ -76,6 +80,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/setup-password/:token" element={<SetupPassword />} />
+          <Route path="/iscrizione" element={<PublicEnrollment />} />
 
           {/* STAFF */}
           <Route
@@ -103,6 +108,9 @@ function App() {
             <Route path="scuola" element={<StaffSchoolProfile />} />
             <Route path="presenze" element={<StaffAttendance />} />
             <Route path="galleria" element={<StaffGallery />} />
+            <Route path="compleanni" element={<StaffBirthdays />} />
+            <Route path="tesserini" element={<StaffBarcodePrint />} />
+            <Route path="iscrizioni" element={<StaffEnrollmentRequests />} />
           </Route>
 
           {/* PARENT */}

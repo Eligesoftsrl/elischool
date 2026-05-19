@@ -58,6 +58,13 @@ export default function Landing() {
             >
               Scopri di più
             </a>
+            <Link
+              to="/iscrizione"
+              className="h-14 px-7 rounded-2xl bg-stone-900 hover:bg-stone-800 text-white font-semibold text-base tap-press flex items-center gap-2"
+              data-testid="landing-enrollment-button"
+            >
+              Iscrivi tuo figlio <Sparkles className="h-4 w-4 text-amber-300" />
+            </Link>
           </div>
         </motion.div>
 

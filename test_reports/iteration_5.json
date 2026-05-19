@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 5 — Full E2E (backend + frontend) for the 3 new legacy-parity features (Compleanni, Stampa Tesserini PDF, Iscrizione pubblica). ALL CHECKS GREEN. Backend: 22/22 pytest tests in /app/backend/tests/test_iter5_features.py covering POST /api/public/enrollment-requests (no-auth submit + 422 invalid email + _id leak guard), GET/POST /api/enrollment-requests (admin list, parent 403, approve creates student+parent+invite link, double-approve→400, reject flow, reject 404, DELETE cleanup), GET /api/birthdays (auth required, sorted by days_until, ranges 7/30/90/365, teacher allowed, parent 403), GET /api/barcodes/pdf (auth required, %PDF magic bytes + application/pdf content-type, classroom filter, parent 403). Frontend Playwright E2E end-to-end on https://nursery-smart.preview.emergentagent.com: public /iscrizione form fills + submits + success screen 'Richiesta inviata!' shows; Login page CTA login-enrollment-link present; admin login → /s/iscrizioni shows the new TESTF_Sofia request, Approve flow returns the mock invite link in data-testid=approve-invite-link with /setup-password/ path; /s/compleanni loads and all 4 range buttons (7/30/90/365) are clickable; /s/tesserini loads, 3 class pills (data-testid=bc-class-*) appear, 'Scarica PDF' triggers a real download (tesserini-tutti.pdf); StaffLayout nav has nav-compleanni, nav-tesserini, nav-iscrizioni (admin role).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/enrollment-requests/{id}/approve", "issue": "Creates the new student with no enrollment in any classroom/school_year and no default classroom assignment — admin must manually enroll the approved student afterwards. Likely intended (admin chooses sezione later), but worth documenting in UI."},
+      {"endpoint": "POST /api/enrollment-requests/{id}/approve", "issue": "Builds invite_link from os.environ.get('FRONTEND_URL','') — if FRONTEND_URL is unset the link starts with '/setup-password/...' (relative). In our env it resolved to the public URL, so it works, but consider falling back to REACT_APP_BACKEND_URL or request.url_for to make it robust."},
+      {"endpoint": "GET /api/barcodes/pdf", "issue": "Returns 404 'Nessun alunno trovato' when classroom is empty — fine, but the frontend toast says generic 'Errore'; consider surfacing the actual detail."},
+      {"endpoint": "POST /api/public/enrollment-requests", "issue": "No rate-limit / captcha on the public endpoint — could be spammed. Acceptable for an Italian preschool but worth a note."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/s/iscrizioni", "issues": ["Filter pill labels use the data-testid value (pending/approved/rejected/all) via `capitalize` Tailwind class on the underlying button, but the displayed text is correctly Italian (In attesa / Approvate / Rifiutate / Tutte). All good — just noting consistency."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter5_features.py",
+    "/app/test_reports/pytest/iter5_results.xml"
+  ],
+  "action_items": [
+    "(Optional) After approve, navigate the admin to /s/alunni or auto-open an enrollment modal so they can place the new child into a sezione without an extra hop.",
+    "(Optional) Make invite_link generation robust when FRONTEND_URL env is missing — fall back to request.base_url or REACT_APP_BACKEND_URL.",
+    "(Optional) Add lightweight rate-limit (e.g., per-IP cooldown) on POST /api/public/enrollment-requests."
+  ],
+  "critical_code_review_comments": [
+    "PublicEnrollment.jsx: form is well-structured, all 10 data-testids are wired, success state cleanly resets — good.",
+    "EnrollmentRequests.jsx uses window.confirm() for approve/reject — fine for admin tools but won't be intercepted by Playwright unless the test wires page.once('dialog', accept). Tests handled this; future agents take note.",
+    "BarcodePrint.jsx fetches the PDF via raw fetch() + manual Bearer header (bypassing axios). Works, but consider extracting an api.getBlob helper to share auth/error handling.",
+    "Birthdays endpoint loops all students in Python — fine at this scale (≤2000) but a MongoDB aggregation with $dateFromString could be faster for larger schools.",
+    "server.py still ~2298 lines (carry-over from iteration_4) — modularization remains overdue.",
+    "approve_enrollment uses purpose='invite' on the reset-token doc but the setup-password endpoint likely accepts the same token shape — verified end-to-end via the mock_invite_link path returned.",
+    "All new endpoints correctly exclude {_id:0} on Mongo reads — no ObjectId leakage observed."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter5_features.py"
+  ],
+  "success_rate": {"backend": "100% (22/22)", "frontend": "100% (all 7 E2E checkpoints passed)"},
+  "test_credentials": "admin@scuolapp.it/Admin2026!, maestra.giulia@scuolapp.it/Maestra2026!, genitore@scuolapp.it/Genitore2026! — all working",
+  "seed_data_creation": "Tests create ephemeral TESTF_/TEST_ prefixed enrollment requests with unique timestamps in the email; pending request is approved (creates a TEST_-prefixed student which is cleaned up in teardown_class), a second one is rejected then DELETEd. One E2E-created request (TESTF_Sofia) is left approved in the DB — main agent may want to clean it up if not desired (admin can delete via UI).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run with: `export $(grep -v '^#' /app/frontend/.env | xargs) && pytest /app/backend/tests/test_iter5_features.py -v` (~6s). REACT_APP_BACKEND_URL is REQUIRED in the shell. The full iteration_4 backend suite at /app/backend/tests/backend_test.py is NOT re-run here (already 76/76 in iteration_4). Frontend Playwright covered the full happy path for all 3 features incl. mobile/desktop-agnostic flow at 1280x900. The approve flow in /s/iscrizioni uses window.confirm — tests must wire `page.once('dialog', lambda d: d.accept())` BEFORE clicking approve/reject."
+}
