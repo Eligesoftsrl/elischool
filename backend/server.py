@@ -19,6 +19,13 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
+from email_service import (
+    send_parent_invite_email,
+    send_password_reset_email,
+    send_enrollment_approved_email,
+    send_test_email,
+)
+
 # ----------------------------- App & DB -----------------------------
 mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
@@ -350,8 +357,11 @@ async def forgot_password(payload: ForgotPasswordInput):
         "used": False,
     })
     reset_link = f"{os.environ.get('FRONTEND_URL', '')}/reset-password/{token}"
-    logger.info(f"[MOCK EMAIL] Password reset link for {email}: {reset_link}")
-    # MOCK: return the link in the response for testing
+    full_name = user.get("name") or f"{user.get('first_name','')} {user.get('last_name','')}".strip()
+    sent = await send_password_reset_email(email, full_name, reset_link)
+    if sent:
+        return {"ok": True, "message": "Email di reset inviata"}
+    logger.info(f"[EMAIL FALLBACK] Password reset link for {email}: {reset_link}")
     return {"ok": True, "mock_reset_link": reset_link, "mock_token": token}
 
 
@@ -671,10 +681,14 @@ async def create_parent(payload: ParentIn, user=Depends(require_role("admin", "t
         "purpose": "invite",
     })
     invite_link = f"{os.environ.get('FRONTEND_URL', '')}/setup-password/{token}"
-    logger.info(f"[MOCK EMAIL] Invite link for parent {email}: {invite_link}")
+    parent_name = f"{payload.first_name} {payload.last_name}".strip()
+    sent = await send_parent_invite_email(email, parent_name, invite_link)
+    if not sent:
+        logger.info(f"[EMAIL FALLBACK] Invite link for parent {email}: {invite_link}")
 
     return {
         "parent": clean_doc(dict(doc)),
+        "email_sent": sent,
         "mock_invite_link": invite_link,
         "mock_invite_token": token,
     }
@@ -719,8 +733,11 @@ async def resend_invite(pid: str, user=Depends(require_role("admin", "teacher"))
         "purpose": "invite",
     })
     invite_link = f"{os.environ.get('FRONTEND_URL', '')}/setup-password/{token}"
-    logger.info(f"[MOCK EMAIL] Resent invite link for {p['email']}: {invite_link}")
-    return {"mock_invite_link": invite_link, "mock_invite_token": token}
+    parent_name = p.get("name") or f"{p.get('first_name','')} {p.get('last_name','')}".strip()
+    sent = await send_parent_invite_email(p["email"], parent_name, invite_link)
+    if not sent:
+        logger.info(f"[EMAIL FALLBACK] Resent invite link for {p['email']}: {invite_link}")
+    return {"email_sent": sent, "mock_invite_link": invite_link, "mock_invite_token": token}
 
 
 # ----------------------------- DAILY ACTIVITIES -----------------------------
@@ -1941,14 +1958,21 @@ async def approve_enrollment(rid: str, user=Depends(require_role("admin", "teach
         "purpose": "invite",
     })
     invite_link = f"{os.environ.get('FRONTEND_URL', '')}/setup-password/{token}"
-    logger.info(f"[MOCK EMAIL] Approved enrollment for {parent_email}: {invite_link}")
+    # Send branded enrollment-approved email via Brevo
+    school_doc = await db.school_profile.find_one({}, {"_id": 0})
+    school_name = (school_doc or {}).get("name") or "la scuola"
+    parent_name = f"{req['parent_first_name']} {req['parent_last_name']}".strip()
+    student_name = f"{req['student_first_name']} {req['student_last_name']}".strip()
+    sent = await send_enrollment_approved_email(parent_email, parent_name, student_name, invite_link, school_name)
+    if not sent:
+        logger.info(f"[EMAIL FALLBACK] Approved enrollment for {parent_email}: {invite_link}")
 
     await db.enrollment_requests.update_one(
         {"id": rid},
         {"$set": {"status": "approved", "approved_at": now_iso(), "approved_by": user["id"],
                   "student_id": student_id, "parent_id": parent_id}}
     )
-    return {"ok": True, "student_id": student_id, "parent_id": parent_id, "mock_invite_link": invite_link}
+    return {"ok": True, "student_id": student_id, "parent_id": parent_id, "email_sent": sent, "mock_invite_link": invite_link}
 
 
 @api.post("/enrollment-requests/{rid}/reject")
@@ -1975,6 +1999,19 @@ async def delete_enrollment_request(rid: str, user=Depends(require_role("admin")
 @api.get("/")
 async def root():
     return {"app": "Scuola Infanzia", "status": "ok"}
+
+
+# ----------------------------- ADMIN: TEST EMAIL -----------------------------
+class TestEmailInput(BaseModel):
+    to: EmailStr
+
+
+@api.post("/admin/email/test")
+async def admin_test_email(payload: TestEmailInput, user=Depends(require_role("admin"))):
+    sent = await send_test_email(payload.to)
+    if not sent:
+        raise HTTPException(status_code=502, detail="Invio email fallito. Controlla i log e la configurazione Brevo.")
+    return {"ok": True, "sent_to": payload.to}
 
 
 # ----------------------------- SEED -----------------------------
