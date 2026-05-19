@@ -98,6 +98,18 @@ Allineamento al DB MySQL reale dell'utente. Aggiunte:
 - Palinsesto a 5 colonne (giorni)
 - Lazy load delle foto (singolo GET /media/{id} on demand)
 
+### Iteration 7 (19/02/2026) — Multi-tenant SaaS Foundation ✅
+Trasformata l'app in **SaaS multi-tenant**: una sola istanza serve N scuole isolate.
+- **`tenants` collection**: `{id, slug, name, logo_base64, contact_email/phone, address, vat_number, website, plan, status, created_at}`
+- **`tenant_db.py` (nuovo modulo)**: `SmartDB` wrapper su Motor + `contextvars`. Auto-scoping di TUTTE le query/insert sulle 18 collection "owned" (students, classrooms, users, enrollments, ecc.). Zero modifiche ai 97 endpoint esistenti.
+- **JWT esteso** con `tenant_id`. `get_current_user` imposta il contextvar.
+- **Ruolo `superadmin`** (no tenant, bypass scoping). Credenziali da `.env`.
+- **Migrazione one-shot** in `seed()`: tutti i documenti pre-esistenti taggati con `tenant_id="tenant-demo"`. Default tenant eredita dati da legacy `school_profile`.
+- **Endpoint `/api/superadmin/*`**: list, get, create (+ invio invito Brevo automatico al primo admin), patch (sospendi/cambia plan), delete (cascade su tutte le collection).
+- **Endpoint pubblici** identificano tenant via slug: `POST /api/public/enrollment-requests?tenant_slug=mariposa`, `GET /api/public/school-profile?tenant_slug=mariposa`.
+- **Sospensione**: login bloccato per utenti di tenant `suspended`.
+- **Test E2E**: 8/8 passati live → isolamento perfetto tra tenant Demo e Mariposa (creata + popolata + eliminata).
+
 ### Iteration 6 (19/02/2026) — Brevo Email Integration ✅
 Sostituiti tutti i mock email con invii reali via Brevo REST API v3:
 - **Servizio `email_service.py`** — usa httpx + Brevo `POST /v3/smtp/email`, fallback graceful (se Brevo fallisce, app non si rompe, ritorna mock link)
@@ -121,12 +133,16 @@ Aggiunte le 3 ultime feature per parità 100% con Flask/MySQL legacy:
 - Frontend: E2E Playwright OK su Iscrizione pubblica, Compleanni, Tesserini PDF, approvazione admin
 
 ## Backlog
-### P1
-- [ ] STEP 3 — Import dati da MySQL dump (186 alunni, 169 genitori, attività storiche)
-- [ ] ~~Email reali (Brevo)~~ ✅ FATTO iteration 6
+### P1 — Multi-tenant Fase 1B & 1C (prossima sessione)
+- [ ] **Frontend tenant-aware**: header con logo/nome scuola dinamico (da `user.tenant`)
+- [ ] **Endpoint `/api/me/tenant`** per caricare branding nel frontend
+- [ ] **URL pubblico per scuola**: `/iscrizione/:slug` (lato React)
+- [ ] **Pagina super-admin** `/superadmin`: lista scuole + wizard "Crea nuova scuola"
+- [ ] **Login bloccato lato frontend** se tenant sospeso (mostra messaggio elegante)
+- [ ] STEP 3 — Import dati da MySQL dump (186 alunni, 169 genitori) come secondo tenant
+- [ ] Dopo approvazione iscrizione → modal/redirect per assegnare sezione
 - [ ] Notifiche push PWA quando il report giornaliero è pronto
 - [ ] Esportazione PDF resoconto mensile / settimanale
-- [ ] Dopo approvazione iscrizione, redirect automatico ad inserimento sezione per il nuovo alunno
 - [ ] Rate-limit sul POST /api/public/enrollment-requests (anti-spam)
 
 ### P2

@@ -25,11 +25,15 @@ from email_service import (
     send_enrollment_approved_email,
     send_test_email,
 )
+from tenant_db import SmartDB, set_current_tenant
 
 # ----------------------------- App & DB -----------------------------
 mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ["DB_NAME"]]
+raw_db = client[os.environ["DB_NAME"]]
+db = SmartDB(raw_db)  # auto-scopes tenant-owned collections via contextvar
+
+DEFAULT_TENANT_ID = "tenant-demo"
 
 app = FastAPI(title="Scuola Infanzia API")
 api = APIRouter(prefix="/api")
@@ -50,11 +54,12 @@ def verify_password(plain: str, hashed: str) -> bool:
         return False
 
 
-def create_access_token(user_id: str, email: str, role: str) -> str:
+def create_access_token(user_id: str, email: str, role: str, tenant_id: Optional[str] = None) -> str:
     payload = {
         "sub": user_id,
         "email": email,
         "role": role,
+        "tenant_id": tenant_id,
         "exp": datetime.now(timezone.utc) + timedelta(hours=12),
         "type": "access",
     }
@@ -112,10 +117,32 @@ async def get_current_user(request: Request) -> dict:
         raise HTTPException(status_code=401, detail="Token scaduto")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Token non valido")
-    user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0})
+    user = await raw_db.users.find_one({"id": payload["sub"]}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=401, detail="Utente non trovato")
     user.pop("password_hash", None)
+    # Superadmin has no tenant; bypass scoping. All other users are scoped.
+    if user.get("role") != "superadmin":
+        tid = user.get("tenant_id") or payload.get("tenant_id")
+        if not tid:
+            raise HTTPException(status_code=403, detail="Tenant non valido")
+        # Verify tenant is active
+        tenant = await raw_db.tenants.find_one({"id": tid}, {"_id": 0})
+        if not tenant:
+            raise HTTPException(status_code=403, detail="Scuola non trovata")
+        if tenant.get("status") == "suspended":
+            raise HTTPException(status_code=403, detail="La scuola è sospesa. Contatta il supporto.")
+        set_current_tenant(tid)
+        user["tenant_id"] = tid
+        user["tenant"] = tenant
+    else:
+        set_current_tenant(None)
+    return user
+
+
+def require_superadmin(user=Depends(get_current_user)):
+    if user.get("role") != "superadmin":
+        raise HTTPException(status_code=403, detail="Accesso riservato al super-admin")
     return user
 
 
@@ -303,7 +330,18 @@ async def login(payload: LoginInput, response: Response):
 
     await db.login_attempts.delete_one({"identifier": identifier})
 
-    access = create_access_token(user["id"], user["email"], user["role"])
+    # Block login if user's tenant is suspended (skip for superadmin)
+    if user.get("role") != "superadmin":
+        tid = user.get("tenant_id")
+        if not tid:
+            raise HTTPException(status_code=403, detail="Utente senza scuola associata")
+        tenant = await raw_db.tenants.find_one({"id": tid}, {"_id": 0})
+        if not tenant:
+            raise HTTPException(status_code=403, detail="Scuola non trovata")
+        if tenant.get("status") == "suspended":
+            raise HTTPException(status_code=403, detail="La scuola è sospesa. Contatta il supporto.")
+
+    access = create_access_token(user["id"], user["email"], user["role"], user.get("tenant_id"))
     refresh = create_refresh_token(user["id"])
     set_auth_cookies(response, access, refresh)
 
@@ -336,7 +374,7 @@ async def refresh_token(request: Request, response: Response):
     user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=401, detail="Utente non trovato")
-    access = create_access_token(user["id"], user["email"], user["role"])
+    access = create_access_token(user["id"], user["email"], user["role"], user.get("tenant_id"))
     response.set_cookie("access_token", access, httponly=True, secure=False, samesite="lax", max_age=12 * 3600, path="/")
     return {"ok": True}
 
@@ -1683,13 +1721,23 @@ async def parent_extra_labs(user=Depends(require_role("parent"))):
 
 
 @api.get("/public/school-profile")
-async def public_school_profile():
-    """Public school profile (no auth) for landing/contact info"""
-    doc = await db.school_profile.find_one({"id": "main"}, {"_id": 0})
-    if not doc:
+async def public_school_profile(tenant_slug: Optional[str] = None):
+    """Public school profile (no auth) for landing/contact info. Use ?tenant_slug=demo."""
+    slug = (tenant_slug or "demo").lower()
+    tenant = await raw_db.tenants.find_one({"slug": slug, "status": "active"}, {"_id": 0})
+    if not tenant:
         return {}
-    # Remove logo if very large or just return
-    return doc
+    # Return tenant info as the public profile (logo, name, contact)
+    return {
+        "id": tenant["id"],
+        "slug": tenant["slug"],
+        "name": tenant.get("name", ""),
+        "logo_base64": tenant.get("logo_base64", ""),
+        "email": tenant.get("contact_email", ""),
+        "phone": tenant.get("contact_phone", ""),
+        "address": tenant.get("address", ""),
+        "website": tenant.get("website", ""),
+    }
 
 
 # ============================================================
@@ -1879,15 +1927,20 @@ async def barcodes_pdf(
 
 
 @api.post("/public/enrollment-requests")
-async def public_enrollment_request(payload: EnrollmentRequestIn):
-    """Form pubblico iscrizione (no auth)."""
+async def public_enrollment_request(payload: EnrollmentRequestIn, tenant_slug: Optional[str] = None):
+    """Form pubblico iscrizione (no auth). Tenant identificato via ?tenant_slug=demo. Default: demo tenant."""
+    slug = (tenant_slug or "demo").lower()
+    tenant = await raw_db.tenants.find_one({"slug": slug, "status": "active"}, {"_id": 0})
+    if not tenant:
+        raise HTTPException(404, "Scuola non trovata o non attiva")
     doc = payload.model_dump()
     doc["id"] = gen_id()
+    doc["tenant_id"] = tenant["id"]
     doc["parent_email"] = doc["parent_email"].lower().strip()
-    doc["status"] = "pending"  # pending | approved | rejected
+    doc["status"] = "pending"
     doc["created_at"] = now_iso()
-    await db.enrollment_requests.insert_one(doc)
-    return {"ok": True, "id": doc["id"], "message": "Richiesta inviata. La scuola la valuterà al più presto."}
+    await raw_db.enrollment_requests.insert_one(doc)
+    return {"ok": True, "id": doc["id"], "tenant": tenant["name"], "message": "Richiesta inviata. La scuola la valuterà al più presto."}
 
 
 @api.get("/enrollment-requests")
@@ -2014,22 +2067,243 @@ async def admin_test_email(payload: TestEmailInput, user=Depends(require_role("a
     return {"ok": True, "sent_to": payload.to}
 
 
+# ----------------------------- SUPERADMIN: tenant management -----------------------------
+class TenantIn(BaseModel):
+    name: str
+    slug: str  # url-friendly, lowercase, no spaces
+    contact_email: EmailStr
+    admin_first_name: str = "Direzione"
+    admin_last_name: str = "Scuola"
+    plan: str = "trial"
+    status: str = "active"
+    contact_phone: Optional[str] = ""
+    address: Optional[str] = ""
+    vat_number: Optional[str] = ""
+    website: Optional[str] = ""
+    logo_base64: Optional[str] = ""
+
+
+class TenantPatchIn(BaseModel):
+    name: Optional[str] = None
+    contact_email: Optional[EmailStr] = None
+    contact_phone: Optional[str] = None
+    address: Optional[str] = None
+    vat_number: Optional[str] = None
+    website: Optional[str] = None
+    logo_base64: Optional[str] = None
+    plan: Optional[str] = None
+    status: Optional[str] = None  # "active" | "suspended"
+
+
+def _slugify(s: str) -> str:
+    import re
+    s = (s or "").lower().strip()
+    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+    return s[:64]
+
+
+@api.get("/superadmin/tenants")
+async def sa_list_tenants(user=Depends(require_superadmin)):
+    rows = await raw_db.tenants.find({}, {"_id": 0}).sort("created_at", -1).to_list(None)
+    # Compute simple stats per tenant
+    for t in rows:
+        tid = t["id"]
+        t["stats"] = {
+            "students": await raw_db.students.count_documents({"tenant_id": tid}),
+            "users": await raw_db.users.count_documents({"tenant_id": tid}),
+            "classrooms": await raw_db.classrooms.count_documents({"tenant_id": tid}),
+            "enrollment_requests_pending": await raw_db.enrollment_requests.count_documents({"tenant_id": tid, "status": "pending"}),
+        }
+    return rows
+
+
+@api.get("/superadmin/tenants/{tid}")
+async def sa_get_tenant(tid: str, user=Depends(require_superadmin)):
+    t = await raw_db.tenants.find_one({"id": tid}, {"_id": 0})
+    if not t:
+        raise HTTPException(404, "Scuola non trovata")
+    return t
+
+
+@api.post("/superadmin/tenants")
+async def sa_create_tenant(payload: TenantIn, user=Depends(require_superadmin)):
+    slug = _slugify(payload.slug)
+    if not slug:
+        raise HTTPException(400, "Slug non valido")
+    if await raw_db.tenants.find_one({"slug": slug}):
+        raise HTTPException(400, f"Slug '{slug}' già in uso")
+    admin_email = payload.contact_email.lower().strip()
+    if await raw_db.users.find_one({"email": admin_email}):
+        raise HTTPException(400, f"Email admin '{admin_email}' già in uso")
+
+    tid = gen_id()
+    await raw_db.tenants.insert_one({
+        "id": tid,
+        "slug": slug,
+        "name": payload.name,
+        "contact_email": admin_email,
+        "contact_phone": payload.contact_phone or "",
+        "address": payload.address or "",
+        "vat_number": payload.vat_number or "",
+        "website": payload.website or "",
+        "logo_base64": payload.logo_base64 or "",
+        "plan": payload.plan,
+        "status": payload.status,
+        "created_at": now_iso(),
+    })
+
+    # Create first admin user for the new tenant
+    admin_id = gen_id()
+    await raw_db.users.insert_one({
+        "id": admin_id,
+        "tenant_id": tid,
+        "email": admin_email,
+        "first_name": payload.admin_first_name,
+        "last_name": payload.admin_last_name,
+        "name": f"{payload.admin_first_name} {payload.admin_last_name}".strip(),
+        "role": "admin",
+        "status": "pending",
+        "password_hash": None,
+        "created_at": now_iso(),
+    })
+
+    # Generate invite token + send branded email via Brevo
+    token = secrets.token_urlsafe(32)
+    await raw_db.password_reset_tokens.insert_one({
+        "token": token,
+        "user_id": admin_id,
+        "created_at": now_iso(),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(),
+        "used": False,
+        "purpose": "invite",
+    })
+    invite_link = f"{os.environ.get('FRONTEND_URL', '')}/setup-password/{token}"
+    admin_name = f"{payload.admin_first_name} {payload.admin_last_name}".strip()
+    sent = await send_parent_invite_email(admin_email, admin_name, invite_link, school_name=payload.name)
+    if not sent:
+        logger.info(f"[EMAIL FALLBACK] New tenant admin invite for {admin_email}: {invite_link}")
+
+    return {
+        "ok": True,
+        "tenant_id": tid,
+        "slug": slug,
+        "admin_id": admin_id,
+        "email_sent": sent,
+        "invite_link": invite_link,
+    }
+
+
+@api.patch("/superadmin/tenants/{tid}")
+async def sa_patch_tenant(tid: str, payload: TenantPatchIn, user=Depends(require_superadmin)):
+    t = await raw_db.tenants.find_one({"id": tid}, {"_id": 0})
+    if not t:
+        raise HTTPException(404, "Scuola non trovata")
+    update = {k: v for k, v in payload.model_dump(exclude_none=True).items()}
+    if update:
+        if "contact_email" in update:
+            update["contact_email"] = update["contact_email"].lower().strip()
+        await raw_db.tenants.update_one({"id": tid}, {"$set": update})
+    return await raw_db.tenants.find_one({"id": tid}, {"_id": 0})
+
+
+@api.delete("/superadmin/tenants/{tid}")
+async def sa_delete_tenant(tid: str, user=Depends(require_superadmin)):
+    if tid == DEFAULT_TENANT_ID:
+        raise HTTPException(400, "Impossibile eliminare il tenant demo")
+    t = await raw_db.tenants.find_one({"id": tid}, {"_id": 0})
+    if not t:
+        raise HTTPException(404, "Scuola non trovata")
+    # Cascade delete across all scoped collections
+    from tenant_db import SCOPED_COLLECTIONS as _SC
+    deleted = {}
+    for coll_name in _SC:
+        res = await raw_db[coll_name].delete_many({"tenant_id": tid})
+        deleted[coll_name] = res.deleted_count
+    await raw_db.tenants.delete_one({"id": tid})
+    return {"ok": True, "deleted": deleted}
+
+
 # ----------------------------- SEED -----------------------------
 async def seed():
-    # Indexes
-    await db.users.create_index("email", unique=True)
-    await db.users.create_index("id", unique=True)
-    await db.school_years.create_index("id", unique=True)
-    await db.classrooms.create_index("id", unique=True)
-    await db.students.create_index("id", unique=True)
-    await db.enrollments.create_index([("student_id", 1), ("school_year_id", 1)])
-    await db.parent_links.create_index([("parent_id", 1), ("student_id", 1)])
-    await db.activities.create_index([("student_id", 1), ("date", 1)], unique=True)
-    await db.ai_reports.create_index([("student_id", 1), ("date", 1)], unique=True)
-    await db.password_reset_tokens.create_index("token", unique=True)
-    await db.login_attempts.create_index("identifier", unique=True)
+    # Indexes (use raw_db since seed runs without tenant context)
+    await raw_db.tenants.create_index("id", unique=True)
+    await raw_db.tenants.create_index("slug", unique=True)
+    await raw_db.users.create_index("email", unique=True)
+    await raw_db.users.create_index("id", unique=True)
+    await raw_db.school_years.create_index("id", unique=True)
+    await raw_db.classrooms.create_index("id", unique=True)
+    await raw_db.students.create_index("id", unique=True)
+    await raw_db.enrollments.create_index([("student_id", 1), ("school_year_id", 1)])
+    await raw_db.parent_links.create_index([("parent_id", 1), ("student_id", 1)])
+    await raw_db.activities.create_index([("student_id", 1), ("date", 1)], unique=True)
+    await raw_db.ai_reports.create_index([("student_id", 1), ("date", 1)], unique=True)
+    await raw_db.password_reset_tokens.create_index("token", unique=True)
+    await raw_db.login_attempts.create_index("identifier", unique=True)
 
-    # Seed admin
+    # ---------------- Multi-tenant bootstrap & migration ----------------
+    # 1) Create default tenant (the existing "Scuola Demo")
+    default_tenant = await raw_db.tenants.find_one({"id": DEFAULT_TENANT_ID})
+    if not default_tenant:
+        # Try to inherit name/logo from legacy school_profile (singleton)
+        legacy_profile = await raw_db.school_profile.find_one({}, {"_id": 0}) or {}
+        await raw_db.tenants.insert_one({
+            "id": DEFAULT_TENANT_ID,
+            "slug": "demo",
+            "name": legacy_profile.get("name") or "Scuola Demo",
+            "logo_base64": legacy_profile.get("logo_base64", ""),
+            "contact_email": legacy_profile.get("email", ""),
+            "contact_phone": legacy_profile.get("phone", ""),
+            "address": legacy_profile.get("address", ""),
+            "vat_number": legacy_profile.get("vat_number", ""),
+            "website": legacy_profile.get("website", ""),
+            "social": legacy_profile.get("social", {}),
+            "plan": "demo",
+            "status": "active",
+            "created_at": now_iso(),
+        })
+        logger.info(f"Default tenant created: {DEFAULT_TENANT_ID}")
+
+    # 2) Migrate ALL existing documents in scoped collections: assign DEFAULT_TENANT_ID if missing
+    from tenant_db import SCOPED_COLLECTIONS as _SC
+    for coll_name in _SC:
+        res = await raw_db[coll_name].update_many(
+            {"tenant_id": {"$exists": False}},
+            {"$set": {"tenant_id": DEFAULT_TENANT_ID}}
+        )
+        if res.modified_count:
+            logger.info(f"Migrated {res.modified_count} docs in '{coll_name}' to tenant {DEFAULT_TENANT_ID}")
+
+    # 3) Seed superadmin (no tenant_id, role=superadmin)
+    superadmin_email = os.environ.get("SUPERADMIN_EMAIL", "superadmin@nido.app")
+    superadmin_password = os.environ.get("SUPERADMIN_PASSWORD", "SuperAdmin2026!")
+    sa_existing = await raw_db.users.find_one({"email": superadmin_email})
+    if not sa_existing:
+        await raw_db.users.insert_one({
+            "id": gen_id(),
+            "email": superadmin_email,
+            "first_name": "Super",
+            "last_name": "Admin",
+            "name": "Super Admin",
+            "role": "superadmin",
+            "tenant_id": None,
+            "status": "active",
+            "password_hash": hash_password(superadmin_password),
+            "created_at": now_iso(),
+        })
+        logger.info(f"Superadmin seeded: {superadmin_email}")
+    else:
+        # idempotent: ensure password matches env and role is superadmin
+        if not verify_password(superadmin_password, sa_existing.get("password_hash") or ""):
+            await raw_db.users.update_one(
+                {"email": superadmin_email},
+                {"$set": {"password_hash": hash_password(superadmin_password), "role": "superadmin", "tenant_id": None, "status": "active"}}
+            )
+            logger.info(f"Superadmin password synced for {superadmin_email}")
+
+    # 4) Set tenant context for the rest of the seed (so SmartDB auto-scopes inserts)
+    set_current_tenant(DEFAULT_TENANT_ID)
+
+    # Seed admin (within default tenant)
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@scuolapp.it")
     admin_password = os.environ.get("ADMIN_PASSWORD", "Admin2026!")
     existing = await db.users.find_one({"email": admin_email})
@@ -2047,7 +2321,7 @@ async def seed():
         })
         logger.info(f"Admin seeded: {admin_email}")
     else:
-        # idempotent: ensure password matches env (helpful in dev)
+        # idempotent: ensure password matches env and tenant_id is set
         if not verify_password(admin_password, existing["password_hash"]):
             await db.users.update_one({"email": admin_email}, {"$set": {"password_hash": hash_password(admin_password), "status": "active", "role": "admin"}})
             logger.info(f"Admin password synced for {admin_email}")
@@ -2307,6 +2581,9 @@ async def seed():
         })
 
         logger.info("Demo data seeded (incl. STEP 1h)")
+
+    # Clear tenant context after seed (safety; contextvars are per-task anyway)
+    set_current_tenant(None)
 
 
 # ----------------------------- App wiring -----------------------------
