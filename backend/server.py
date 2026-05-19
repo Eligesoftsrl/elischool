@@ -346,6 +346,11 @@ async def login(payload: LoginInput, response: Response):
     set_auth_cookies(response, access, refresh)
 
     user_safe = clean_doc(dict(user))
+    # Enrich with tenant data (for branding on the frontend)
+    if user.get("role") != "superadmin" and user.get("tenant_id"):
+        t = await raw_db.tenants.find_one({"id": user["tenant_id"]}, {"_id": 0})
+        if t:
+            user_safe["tenant"] = t
     return {"user": user_safe, "access_token": access}
 
 

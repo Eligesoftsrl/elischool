@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CheckCircle2, ArrowLeft, Heart, Sparkles, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -12,20 +12,22 @@ const empty = {
 };
 
 export default function PublicEnrollment() {
+  const { slug } = useParams();
+  const tenantSlug = slug || "demo";
   const [form, setForm] = useState(empty);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [school, setSchool] = useState(null);
 
   useEffect(() => {
-    (async () => { try { const { data } = await api.get("/public/school-profile"); setSchool(data); } catch (_) {} })();
-  }, []);
+    (async () => { try { const { data } = await api.get("/public/school-profile", { params: { tenant_slug: tenantSlug } }); setSchool(data); } catch (_) {} })();
+  }, [tenantSlug]);
 
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true);
     try {
-      await api.post("/public/enrollment-requests", form);
+      await api.post("/public/enrollment-requests", form, { params: { tenant_slug: tenantSlug } });
       setDone(true);
     } catch (err) { toast.error(apiErrorMessage(err)); }
     finally { setBusy(false); }

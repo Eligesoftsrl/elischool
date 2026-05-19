@@ -75,10 +75,17 @@ export default function StaffLayout() {
               <MenuIcon className="h-5 w-5" />
             </button>
             <Link to="/s" className="flex items-center gap-2 font-display font-bold text-stone-900">
-              <span className="h-9 w-9 rounded-2xl bg-[#FF8C6B] flex items-center justify-center shadow-sm">
-                <Heart className="h-4 w-4 text-white" fill="white" />
+              {user?.tenant?.logo_base64 ? (
+                <img src={`data:image/png;base64,${user.tenant.logo_base64}`} alt={user.tenant.name} className="h-9 w-9 rounded-2xl object-cover shadow-sm"/>
+              ) : (
+                <span className="h-9 w-9 rounded-2xl bg-[#FF8C6B] flex items-center justify-center shadow-sm">
+                  <Heart className="h-4 w-4 text-white" fill="white" />
+                </span>
+              )}
+              <span className="hidden sm:flex flex-col leading-tight">
+                <span className="text-[15px] truncate max-w-[180px]" data-testid="staff-tenant-name">{user?.tenant?.name || "nido."}</span>
+                <span className="text-[10px] font-normal text-stone-500 -mt-0.5">powered by nido<span className="text-brand">.</span></span>
               </span>
-              <span className="hidden sm:block">nido<span className="text-brand">.</span></span>
             </Link>
           </div>
 

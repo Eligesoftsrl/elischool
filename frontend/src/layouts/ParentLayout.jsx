@@ -23,12 +23,16 @@ export default function ParentLayout() {
         <header className="glass sticky top-0 z-30">
           <div className="px-5 h-16 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="h-9 w-9 rounded-2xl bg-[#FF8C6B] flex items-center justify-center shadow-sm">
-                <Heart className="h-4 w-4 text-white" fill="white" />
-              </span>
+              {user?.tenant?.logo_base64 ? (
+                <img src={`data:image/png;base64,${user.tenant.logo_base64}`} alt={user.tenant.name} className="h-9 w-9 rounded-2xl object-cover shadow-sm"/>
+              ) : (
+                <span className="h-9 w-9 rounded-2xl bg-[#FF8C6B] flex items-center justify-center shadow-sm">
+                  <Heart className="h-4 w-4 text-white" fill="white" />
+                </span>
+              )}
               <div className="leading-tight">
                 <p className="text-[10px] uppercase tracking-wider font-bold text-stone-400">Ciao</p>
-                <p className="text-sm font-bold text-stone-800">{user?.first_name || "Genitore"}</p>
+                <p className="text-sm font-bold text-stone-800" data-testid="parent-tenant-name">{user?.first_name || "Genitore"}</p>
               </div>
             </div>
             <button

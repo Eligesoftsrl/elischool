@@ -31,6 +31,10 @@ import StaffBarcodePrint from "@/pages/staff/BarcodePrint";
 import StaffEnrollmentRequests from "@/pages/staff/EnrollmentRequests";
 import PublicEnrollment from "@/pages/PublicEnrollment";
 
+import SuperAdminLayout from "@/layouts/SuperAdminLayout";
+import SuperAdminTenants from "@/pages/superadmin/Tenants";
+import SuperAdminNewTenant from "@/pages/superadmin/NewTenant";
+
 import ParentLayout from "@/layouts/ParentLayout";
 import ParentHome from "@/pages/parent/Home";
 import ParentTimeline from "@/pages/parent/Timeline";
@@ -50,6 +54,7 @@ function Protected({ roles, children }) {
   }
   if (!user) return <Navigate to="/login" replace />;
   if (roles && !roles.includes(user.role)) {
+    if (user.role === "superadmin") return <Navigate to="/superadmin" replace />;
     if (user.role === "parent") return <Navigate to="/g" replace />;
     return <Navigate to="/s" replace />;
   }
@@ -60,6 +65,7 @@ function HomeRedirect() {
   const { user, bootDone } = useAuth();
   if (!bootDone) return null;
   if (!user) return <Landing />;
+  if (user.role === "superadmin") return <Navigate to="/superadmin" replace />;
   if (user.role === "parent") return <Navigate to="/g" replace />;
   return <Navigate to="/s" replace />;
 }
@@ -81,6 +87,20 @@ function App() {
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/setup-password/:token" element={<SetupPassword />} />
           <Route path="/iscrizione" element={<PublicEnrollment />} />
+          <Route path="/iscrizione/:slug" element={<PublicEnrollment />} />
+
+          {/* SUPER ADMIN */}
+          <Route
+            path="/superadmin"
+            element={
+              <Protected roles={["superadmin"]}>
+                <SuperAdminLayout />
+              </Protected>
+            }
+          >
+            <Route index element={<SuperAdminTenants />} />
+            <Route path="tenants/new" element={<SuperAdminNewTenant />} />
+          </Route>
 
           {/* STAFF */}
           <Route

@@ -1,0 +1,49 @@
+{
+  "summary": "Iteration 6 — Multi-tenant SuperAdmin UI + E2E. Backend: 12/12 pytest in /app/backend/tests/test_iter6_multitenant.py covering superadmin auth (403 admin/parent, 401 no-auth), tenants CRUD (list w/ stats nested, create returns invite_link, suspend/reactivate via PATCH status, delete), public enrollment with explicit ?tenant_slug=<new>, 404 on invalid slug, /api/public/school-profile default + explicit slug. Frontend Playwright E2E 8/8 GREEN: (1) superadmin login → /superadmin with demo tenant card; (2) create new tenant via wizard (nt-name, nt-slug auto, nt-admin-first/last/email contact_email, nt-plan, nt-submit) → success screen with new-tenant-invite-link; (3) returns to list, new tenant appears with stats card; (4) suspend → 'sospesa' badge appears, reactivate works; (5) public /iscrizione/<new-slug> form submits richiesta and shows success; (6) admin@scuolapp.it login → /s with staff-tenant-name='L'Albero della Vita' (NOT 'nido.'); (7) parent login → /g landing OK; (8) delete tenant with 2 consecutive window.confirm() (handled via page.on('dialog', accept)) → tenant card disappears, toast 'Scuola eliminata'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/superadmin/tenants", "issue": "Field for admin email is named 'contact_email' in TenantIn but the frontend testid is 'nt-admin-email'. Naming mismatch is confusing; the same field is used both as the tenant's contact email AND as the first admin user's email. Consider renaming to 'admin_email' or splitting into two fields for clarity."},
+      {"endpoint": "GET /api/superadmin/tenants", "issue": "Stats are nested under 'stats' (students/users/classrooms/enrollment_requests_pending). Naming is fine, but worth documenting in OpenAPI."},
+      {"endpoint": "POST /api/superadmin/tenants", "issue": "invite_link built from os.environ.get('FRONTEND_URL','')—same robustness note as iter5: falls back to empty string if env missing; consider request.base_url fallback. Currently resolves correctly to preview URL in this env."},
+      {"endpoint": "POST /api/public/enrollment-requests?tenant_slug=X", "issue": "Returns 404 'Scuola non trovata' for invalid slug (good). No rate-limit/captcha (carryover from iter5)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "SuperAdmin Tenants list", "issues": ["The stat card titled 'IN AT TESA' is rendered as uppercase Italian and looks visually broken — it's 'In attesa' (awaiting). Consider lowercase or 'In Attesa' with capitalize CSS to read properly. Cosmetic only."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter6_multitenant.py",
+    "/app/test_reports/pytest/iter6_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Rename TenantIn.contact_email → admin_email OR add separate admin_email field, and rename the form input label/testid accordingly for clarity.",
+    "(Optional) Tighten the 'In attesa' stat label CSS in SuperAdmin Tenants card (currently displayed as 'IN AT TESA' due to letter-spacing/uppercase).",
+    "(Optional) Add request.base_url fallback for invite_link when FRONTEND_URL env missing."
+  ],
+  "critical_code_review_comments": [
+    "tenant_db.SmartDB + contextvar approach for auto-scoping is clean; superadmin bypass via set_current_tenant(None) is correctly handled in get_current_user (lines 124-139).",
+    "Login endpoint blocks suspended tenants with 403 (line 341) — good defense-in-depth, separate from the get_current_user guard.",
+    "sa_create_tenant creates both tenant + first admin user + invite token atomically (no transaction). If Brevo email fails, it falls back to logger.info — invite_link is always returned in the response, so the UI can show it. Good.",
+    "NewTenant.jsx form uses controlled inputs with auto-slugify; success screen exposes the invite link in data-testid=new-tenant-invite-link — ready for testing.",
+    "Tenants.jsx uses window.confirm() for toggle/delete (2× for delete) — tests must wire page.on('dialog', accept) BEFORE click. Future agents: take note.",
+    "StaffLayout falls back to 'nido.' only when user.tenant is missing — confirmed admin demo shows 'L'Albero della Vita' from token-enriched user.tenant.",
+    "Public /iscrizione/:slug uses useParams and passes tenant_slug as query param — confirmed working with new tenant.",
+    "server.py still ~2617 lines — modularization remains overdue (carry-over).",
+    "No MongoDB _id leakage observed in any superadmin or public endpoint."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter6_multitenant.py"
+  ],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "100% (8/8 E2E scenarios)"},
+  "test_credentials": "superadmin@nido.app/SuperAdmin2026!, admin@scuolapp.it/Admin2026!, genitore@scuolapp.it/Genitore2026! — all verified working",
+  "seed_data_creation": "Tests create ephemeral TEST_-prefixed tenants and enrollment requests; teardown deletes via DELETE /api/superadmin/tenants/{id}. E2E test deletes its own tenant at the end. No leftover test data expected.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run with: `export $(grep -v '^#' /app/frontend/.env | xargs) && pytest /app/backend/tests/test_iter6_multitenant.py -v` (~3s). REACT_APP_BACKEND_URL is REQUIRED. The TenantIn schema requires 'contact_email' (not 'admin_email') even though the form testid is 'nt-admin-email'. The list endpoint returns stats nested as t.stats.{students,users,classrooms,enrollment_requests_pending}. Create response shape: {ok, tenant_id, slug, admin_id, email_sent, invite_link} — NO nested 'tenant' object. Delete is double window.confirm — use page.on('dialog', accept) to handle ALL dialogs in sequence. Parent landing URL is /g (not /p). Admin landing URL is /s (root, no further path).",
+  "rca of the issue": "N/A — no bugs found. All flows in review request pass."
+}
