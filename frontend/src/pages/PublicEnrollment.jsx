@@ -1,14 +1,17 @@
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle2, ArrowLeft, Heart, Sparkles, Send } from "lucide-react";
+import { CheckCircle2, ArrowLeft, Heart, Sparkles, Send, IdCard } from "lucide-react";
 import { toast } from "sonner";
 import api, { apiErrorMessage } from "@/lib/api";
+import { ComuniAutocomplete } from "@/components/ComuniAutocomplete";
+
+const CF_RE = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/;
 
 const empty = {
-  student_first_name: "", student_last_name: "", student_birth_date: "",
+  student_first_name: "", student_last_name: "", student_birth_date: "", student_fiscal_code: "",
   parent_first_name: "", parent_last_name: "", parent_email: "", parent_phone: "",
-  address: "", notes: "",
+  city_residence: "", address: "", notes: "",
 };
 
 export default function PublicEnrollment() {
@@ -25,9 +28,16 @@ export default function PublicEnrollment() {
 
   const submit = async (e) => {
     e.preventDefault();
+    const cf = (form.student_fiscal_code || "").toUpperCase().replace(/\s/g, "");
+    if (!CF_RE.test(cf)) {
+      toast.error("Codice Fiscale del bambino non valido (16 caratteri, formato es. RSSMRA85M01H501Z)");
+      return;
+    }
     setBusy(true);
     try {
-      await api.post("/public/enrollment-requests", form, { params: { tenant_slug: tenantSlug } });
+      const payload = { ...form, student_fiscal_code: cf };
+      if (!payload.parent_email) delete payload.parent_email;
+      await api.post("/public/enrollment-requests", payload, { params: { tenant_slug: tenantSlug } });
       setDone(true);
     } catch (err) { toast.error(apiErrorMessage(err)); }
     finally { setBusy(false); }
@@ -83,20 +93,39 @@ export default function PublicEnrollment() {
               <Heart className="h-3 w-3 text-brand" /> Il bambino / la bambina
             </p>
             <div className="grid sm:grid-cols-2 gap-3">
-              <Field label="Nome"><Input value={form.student_first_name} onChange={(v) => setForm({ ...form, student_first_name: v })} required testid="enr-student-first" /></Field>
-              <Field label="Cognome"><Input value={form.student_last_name} onChange={(v) => setForm({ ...form, student_last_name: v })} required testid="enr-student-last" /></Field>
-              <Field label="Data di nascita" full><Input type="date" value={form.student_birth_date} onChange={(v) => setForm({ ...form, student_birth_date: v })} required testid="enr-birth" /></Field>
+              <Field label="Nome *"><Input value={form.student_first_name} onChange={(v) => setForm({ ...form, student_first_name: v })} required testid="enr-student-first" /></Field>
+              <Field label="Cognome *"><Input value={form.student_last_name} onChange={(v) => setForm({ ...form, student_last_name: v })} required testid="enr-student-last" /></Field>
+              <Field label="Data di nascita *"><Input type="date" value={form.student_birth_date} onChange={(v) => setForm({ ...form, student_birth_date: v })} required testid="enr-birth" /></Field>
+              <Field label="Codice Fiscale *" hint="16 caratteri · es. RSSMRA85M01H501Z">
+                <div className="relative">
+                  <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400 pointer-events-none" />
+                  <input type="text" required value={form.student_fiscal_code}
+                    onChange={(e) => setForm({ ...form, student_fiscal_code: e.target.value.toUpperCase().replace(/\s/g, "") })}
+                    maxLength={16} placeholder="RSSMRA85M01H501Z"
+                    autoComplete="off"
+                    className="w-full h-12 pl-10 pr-4 rounded-2xl bg-stone-50 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand/30 tracking-wider font-mono uppercase"
+                    data-testid="enr-cf" />
+                </div>
+              </Field>
             </div>
           </section>
 
           <section>
             <p className="text-xs uppercase tracking-wider font-bold text-stone-400 mb-3">Genitore di riferimento</p>
             <div className="grid sm:grid-cols-2 gap-3">
-              <Field label="Nome"><Input value={form.parent_first_name} onChange={(v) => setForm({ ...form, parent_first_name: v })} required testid="enr-parent-first" /></Field>
-              <Field label="Cognome"><Input value={form.parent_last_name} onChange={(v) => setForm({ ...form, parent_last_name: v })} required testid="enr-parent-last" /></Field>
-              <Field label="Email"><Input type="email" value={form.parent_email} onChange={(v) => setForm({ ...form, parent_email: v })} required testid="enr-email" /></Field>
-              <Field label="Telefono"><Input value={form.parent_phone} onChange={(v) => setForm({ ...form, parent_phone: v })} testid="enr-phone" /></Field>
-              <Field label="Indirizzo di residenza" full><Input value={form.address} onChange={(v) => setForm({ ...form, address: v })} testid="enr-address" /></Field>
+              <Field label="Nome *"><Input value={form.parent_first_name} onChange={(v) => setForm({ ...form, parent_first_name: v })} required testid="enr-parent-first" /></Field>
+              <Field label="Cognome *"><Input value={form.parent_last_name} onChange={(v) => setForm({ ...form, parent_last_name: v })} required testid="enr-parent-last" /></Field>
+              <Field label="Cellulare *" hint="Verrai contattato/a a questo numero"><Input type="tel" value={form.parent_phone} onChange={(v) => setForm({ ...form, parent_phone: v })} required testid="enr-phone" /></Field>
+              <Field label="Email (opzionale)" hint="Riceverai qui la conferma di iscrizione"><Input type="email" value={form.parent_email} onChange={(v) => setForm({ ...form, parent_email: v })} testid="enr-email" /></Field>
+              <Field label="Città di residenza *" full hint="Inizia a digitare, ti aiutiamo noi ✨">
+                <ComuniAutocomplete
+                  value={form.city_residence}
+                  onChange={(v) => setForm({ ...form, city_residence: v })}
+                  required
+                  testid="enr-city"
+                />
+              </Field>
+              <Field label="Indirizzo (via, numero civico)" full><Input value={form.address} onChange={(v) => setForm({ ...form, address: v })} testid="enr-address" /></Field>
             </div>
           </section>
 
@@ -123,13 +152,15 @@ export default function PublicEnrollment() {
   );
 }
 
-function Field({ label, children, full }) {
+function Field({ label, children, full, hint }) {
   return <label className={`block ${full ? "sm:col-span-2" : ""}`}>
     <span className="text-xs font-bold uppercase tracking-wider text-stone-500">{label}</span>
     <div className="mt-1">{children}</div>
+    {hint && <span className="text-[10px] text-stone-400 mt-1 block leading-snug">{hint}</span>}
   </label>;
 }
-function Input({ value, onChange, type = "text", required, testid }) {
+function Input({ value, onChange, type = "text", required, testid, placeholder }) {
   return <input type={type} required={required} value={value} onChange={(e) => onChange(e.target.value)}
+    placeholder={placeholder} autoComplete="off"
     className="w-full h-12 px-4 rounded-2xl bg-stone-50 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand/30" data-testid={testid} />;
 }

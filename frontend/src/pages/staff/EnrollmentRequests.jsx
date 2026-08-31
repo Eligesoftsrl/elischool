@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, X, Clock, Mail, Phone, MapPin, Copy, Sparkles } from "lucide-react";
+import { CheckCircle2, X, Clock, Mail, Phone, MapPin, Copy, Sparkles, IdCard } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
 
@@ -87,11 +87,15 @@ export default function EnrollmentRequests() {
                   </div>
                   <p className="font-display text-lg font-bold">{r.student_first_name} {r.student_last_name}</p>
                   <p className="text-xs text-stone-500 mb-2">nato/a il {r.student_birth_date}</p>
+                  {r.student_fiscal_code && (
+                    <p className="text-xs text-stone-500 mb-2 font-mono flex items-center gap-1"><IdCard className="h-3 w-3"/> {r.student_fiscal_code}</p>
+                  )}
                   <div className="grid sm:grid-cols-2 gap-y-1 gap-x-4 text-sm text-stone-600">
                     <p className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-stone-400" /> {r.parent_first_name} {r.parent_last_name}</p>
-                    <p className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-stone-400" />{r.parent_email}</p>
+                    {r.parent_email && <p className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-stone-400" />{r.parent_email}</p>}
                     {r.parent_phone && <p className="flex items-center gap-2"><Phone className="h-3.5 w-3.5 text-stone-400" />{r.parent_phone}</p>}
-                    {r.address && <p className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-stone-400" />{r.address}</p>}
+                    {r.city_residence && <p className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-stone-400" />{r.city_residence}</p>}
+                    {r.address && <p className="flex items-center gap-2 sm:col-span-2"><MapPin className="h-3.5 w-3.5 text-stone-400" />{r.address}</p>}
                   </div>
                   {r.notes && <p className="mt-3 p-3 rounded-2xl bg-stone-50 text-sm text-stone-700">{r.notes}</p>}
                 </div>

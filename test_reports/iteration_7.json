@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 7 — CF obbligatorio + città residenza (comuni autocomplete). Backend: 18/18 pytest GREEN in /app/backend/tests/test_iter7_cf_city.py covering (a) GET /public/comuni: q=mila → Milano+Milazzo with {nome,sigla,cap}; q<2 → []; empty→[]; q inesistente→[]; no auth required; (b) POST /public/enrollment-requests?tenant_slug=demo: CF 'INVALID'→400, CF valido VRDGNN90A41F205X + all required→201 ok, duplicate same CF→400 'attesa', missing city_residence→422, missing parent_phone→422; (c) POST /students admin: fiscal_code invalido→400, CF duplicato ROSALI22A01H501A (Alice)→400, CF nuovo BNCMRC22A01H501X + city Roma→200 (verified via GET); (d) Approve enrollment: no parent_email → placeholder email 'noemail+xxx@placeholder.local' + email_sent=false + mock_invite_link=null; with parent_email → mock_invite_link contains /setup-password/ token; created student has fiscal_code + city_residence copied from request. Regression: superadmin, admin dashboard, parent children all 200. Frontend Playwright E2E GREEN: /iscrizione/demo — CF onChange uppercases 'vrdgnn90a41f205x'→'VRDGNN90A41F205X', maxLength=16 enforced (extra chars truncated), ComuniAutocomplete typing 'mila' → 2 options (Milano MI, Milazzo ME) → click enr-city-option-0 populates 'Milano (MI)', invalid CF 'INVALIDCF' submit → toast 'Codice Fiscale del bambino non valido…', valid CF TSTFRN80A01H501Z (no email) → success screen 'Richiesta inviata!'. Admin login → /s/iscrizioni shows the new request with TSTFRN80A01H501Z CF (mono font), Milano city, 'TESTGio TestVerdi' name; Approva button click → tab switches to 'Approvate' with 'Approvata' badge. /s/alunni → Nuovo alunno drawer opens, form-fiscal-code required uppercase max16, ComuniAutocomplete form-city works, invalid CF submit → 'Codice Fiscale non valido' toast, valid TSTAAA80A01H501B + Roma (RM) → 'Alunno creato' toast, card 'TESTUi Ui' appears (bambini count 6→7).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/public/comuni", "issue": "No rate limiting on unauth endpoint; iterates linearly over ~7900 in-memory comuni per call. Acceptable at current scale but consider prefix index (trie) or DB-side query if list grows or if abused."},
+      {"endpoint": "POST /api/public/enrollment-requests", "issue": "CF uniqueness enforced only against students+pending requests within same tenant. Approved requests remain in DB with duplicate CF (correct, since student now owns uniqueness). Behavior is intentional but worth documenting."},
+      {"endpoint": "POST /api/enrollment-requests/{rid}/approve", "issue": "When parent_email is empty, the created placeholder user has email 'noemail+xxx@placeholder.local' with status=pending — this email cannot be used for login but is a valid unique identifier. Admin must manually update it from /s/genitori. UI note (out of scope for this iteration) may need a badge highlighting these placeholders."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "PublicEnrollment /iscrizione/demo", "issues": ["Date input uses browser default picker (mm/dd/yyyy on some locales) instead of a localized/italian date picker or shadcn Calendar. Cosmetic — acceptable for MVP."]},
+      {"screen": "ComuniAutocomplete dropdown option", "issues": ["Suggestion row renders 'MilanoMI · 20121' — the sigla is glued to the name (no space) when text is scraped, but visually there's a gap via justify-between. Text-content readouts show 'MilanoMI' which may look off in copy/paste; consider a middle dot or explicit space."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter7_cf_city.py",
+    "/app/test_reports/pytest/iter7_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Fix visual gap between city name and sigla in ComuniAutocomplete option (add explicit space or middle-dot separator).",
+    "(Optional) Consider trie or DB-backed search for /api/public/comuni if scale/abuse becomes a concern.",
+    "(Optional) In /s/genitori, mark placeholder emails (@placeholder.local) with a badge 'Email mancante' + quick-edit action to fill it and resend invite."
+  ],
+  "critical_code_review_comments": [
+    "CF validation (regex + normalize_cf) is centralized in helpers (server.py:96-106) — reused in /students POST/PATCH and /public/enrollment-requests, good DRY.",
+    "MongoDB partial unique index on (tenant_id, fiscal_code) exists at server.py:2361 — enforces uniqueness at DB level, complementing app-level check. Solid.",
+    "server.py is now 2742 lines — modularization long overdue (routers for /students, /enrollment-requests, /public, /superadmin etc). Carry-over.",
+    "Duplicate-CF response text ('Un alunno con questo Codice Fiscale è già iscritto') exposes existence of another CF; low-risk for admin endpoint but consider generic message on public endpoint to avoid CF enumeration.",
+    "Placeholder email pattern for parents without email is functional but not indexed uniquely — two enrollments without emails will produce two distinct placeholder users, which is correct. No _id leakage in any response.",
+    "PublicEnrollment.jsx correctly deletes parent_email from payload if empty (line 39), avoiding EmailStr Pydantic validation failure on '' — solid.",
+    "ComuniAutocomplete uses onMouseDown+preventDefault to pick before input blur — correct pattern for autocomplete UX."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter7_cf_city.py"
+  ],
+  "success_rate": {"backend": "100% (18/18)", "frontend": "100% (public form + admin iscrizioni + admin alunni all GREEN)"},
+  "test_credentials": "admin@scuolapp.it/Admin2026!, genitore@scuolapp.it/Genitore2026!, superadmin@nido.app/SuperAdmin2026!",
+  "seed_data_creation": "Test flow left 1 approved enrollment request (TSTFRN80A01H501Z → 'TESTGio TestVerdi') and 1 new student 'TESTUi Ui' with CF TSTAAA80A01H501B in demo tenant. Pytest test data is cleaned up in-suite. Admin should ignore or delete these 2 TEST rows for a clean UI screenshot.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iter7 fully green. Next agent: (1) any regression on students/enrollment endpoints should re-run test_iter7_cf_city.py; (2) TSTFRN80A01H501Z is a leftover approved student in demo tenant — safe to delete or ignore; (3) autocomplete debounce is 180ms — tests should wait_for_selector on '[data-testid=\"...-list\"]' rather than timing. CF regex: /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/. Use CF like TSTXXX80A01H501Z for new inserts (16 chars, structural only — no checksum validation)."
+}

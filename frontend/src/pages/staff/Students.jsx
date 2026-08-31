@@ -4,8 +4,10 @@ import { toast } from "sonner";
 import { Plus, Search, Trash2, Pencil, X, GraduationCap, ArrowRightLeft, Cake } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
+import { ComuniAutocomplete } from "@/components/ComuniAutocomplete";
 
-const empty = { first_name: "", last_name: "", birth_date: "", fiscal_code: "", residence: "", allergies: "", notes: "" };
+const CF_RE = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/;
+const empty = { first_name: "", last_name: "", birth_date: "", fiscal_code: "", city_residence: "", residence: "", allergies: "", notes: "" };
 
 export default function StaffStudents() {
   const { activeYear } = useOutletContext();
@@ -34,12 +36,18 @@ export default function StaffStudents() {
 
   const submit = async (e) => {
     e.preventDefault();
+    const cf = (form.fiscal_code || "").toUpperCase().replace(/\s/g, "");
+    if (!CF_RE.test(cf)) {
+      toast.error("Codice Fiscale non valido (16 caratteri, es. RSSMRA85M01H501Z)");
+      return;
+    }
     try {
+      const payload = { ...form, fiscal_code: cf };
       if (editId) {
-        await api.patch(`/students/${editId}`, form);
+        await api.patch(`/students/${editId}`, payload);
         toast.success("Alunno aggiornato");
       } else {
-        await api.post("/students", form);
+        await api.post("/students", payload);
         toast.success("Alunno creato");
       }
       setOpen(false); setForm(empty); setEditId(null);
@@ -142,8 +150,8 @@ export default function StaffStudents() {
                   </button>
                   <button
                     onClick={() => {
-                      const { first_name, last_name, birth_date, fiscal_code, residence, allergies, notes } = s;
-                      setForm({ first_name, last_name, birth_date: birth_date || "", fiscal_code, residence, allergies, notes });
+                      const { first_name, last_name, birth_date, fiscal_code, city_residence, residence, allergies, notes } = s;
+                      setForm({ first_name, last_name, birth_date: birth_date || "", fiscal_code: fiscal_code || "", city_residence: city_residence || "", residence: residence || "", allergies: allergies || "", notes: notes || "" });
                       setEditId(s.id); setOpen(true);
                     }}
                     className="h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-xs font-semibold flex items-center justify-center gap-1.5"
@@ -169,11 +177,20 @@ export default function StaffStudents() {
       {open && (
         <Modal onClose={() => setOpen(false)} title={editId ? "Modifica alunno" : "Nuovo alunno"}>
           <form onSubmit={submit} className="space-y-3">
-            <Row><Field label="Nome"><Input value={form.first_name} onChange={(v) => setForm({ ...form, first_name: v })} required testid="form-first-name" /></Field>
-            <Field label="Cognome"><Input value={form.last_name} onChange={(v) => setForm({ ...form, last_name: v })} required testid="form-last-name" /></Field></Row>
-            <Row><Field label="Data nascita"><Input type="date" value={form.birth_date} onChange={(v) => setForm({ ...form, birth_date: v })} testid="form-birth-date" /></Field>
-            <Field label="Codice fiscale"><Input value={form.fiscal_code} onChange={(v) => setForm({ ...form, fiscal_code: v })} /></Field></Row>
-            <Field label="Residenza"><Input value={form.residence} onChange={(v) => setForm({ ...form, residence: v })} /></Field>
+            <Row><Field label="Nome *"><Input value={form.first_name} onChange={(v) => setForm({ ...form, first_name: v })} required testid="form-first-name" /></Field>
+            <Field label="Cognome *"><Input value={form.last_name} onChange={(v) => setForm({ ...form, last_name: v })} required testid="form-last-name" /></Field></Row>
+            <Row><Field label="Data nascita *"><Input type="date" value={form.birth_date} onChange={(v) => setForm({ ...form, birth_date: v })} required testid="form-birth-date" /></Field>
+            <Field label="Codice Fiscale *">
+              <input type="text" required value={form.fiscal_code}
+                onChange={(e) => setForm({ ...form, fiscal_code: e.target.value.toUpperCase().replace(/\s/g, "") })}
+                maxLength={16} placeholder="RSSMRA85M01H501Z"
+                className="w-full h-12 px-4 rounded-2xl bg-stone-50 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand/30 font-mono tracking-wider uppercase"
+                data-testid="form-fiscal-code" />
+            </Field></Row>
+            <Field label="Città di residenza *">
+              <ComuniAutocomplete value={form.city_residence} onChange={(v) => setForm({ ...form, city_residence: v })} required testid="form-city" />
+            </Field>
+            <Field label="Indirizzo (via, numero)"><Input value={form.residence} onChange={(v) => setForm({ ...form, residence: v })} /></Field>
             <Field label="Allergie"><Input value={form.allergies} onChange={(v) => setForm({ ...form, allergies: v })} /></Field>
             <Field label="Note"><Textarea value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} /></Field>
 

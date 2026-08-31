@@ -98,6 +98,15 @@ Allineamento al DB MySQL reale dell'utente. Aggiunte:
 - Palinsesto a 5 colonne (giorni)
 - Lazy load delle foto (singolo GET /media/{id} on demand)
 
+### Iteration 9 (19/02/2026) — CF + Città residenza (Autocomplete Comuni) ✅
+Rafforzata l'anagrafica alunni per compliance italiana. Test 100% verde (backend 18/18 pytest + frontend E2E completo):
+- **Codice Fiscale obbligatorio** su tutti gli alunni (nuovi e da iscrizione pubblica). Validazione formato (regex 16 char alfanumerici) + normalize automatica (uppercase, strip). Chiave univoca **per tenant** via partial unique index `(tenant_id, fiscal_code)`.
+- **Comuni italiani** — 7904 records da `matteocontrini/comuni-json` bundlati in `/app/backend/comuni.json`. Nuovo endpoint pubblico `GET /api/public/comuni?q=<prefix>` con caricamento lazy in memoria + fallback substring match.
+- **Componente riusabile** `<ComuniAutocomplete>` con debounce 180ms, navigazione tastiera (arrow + enter + escape), match prefix, cap+sigla mostrati inline.
+- **Campi obbligatori aggiornati**: Bambino (Nome+Cognome+Data nascita+**CF**); Genitore (Nome+Cognome+**Cellulare**); **Città residenza**. Email genitore ora **opzionale** — se assente il parent user viene creato con placeholder email (@placeholder.local) e nessun invito viene inviato; l'admin dovrà completare l'email da `/s/genitori` per attivare il login.
+- **Prevention duplicate**: sia in `POST /public/enrollment-requests` (check contro students esistenti + richieste pending stesso tenant) sia in `POST /students` (check contro tutti gli students del tenant).
+- **Backfill seed**: gli alunni pre-esistenti hanno ricevuto CF sintetici (`ROSALI22A01H501A`, `VERMAR22A01H501B`, ecc.) + città (Milano/Roma/Torino/…).
+
 ### Iteration 8 (19/02/2026) — Multi-tenant Frontend (Fase 1B + 1C) ✅
 Cablato il frontend per il SaaS multi-tenant. Test 100% verde (backend 12/12 + frontend 8/8 E2E):
 - **Layout SuperAdmin** dark, separato dal layout staff (`/app/frontend/src/layouts/SuperAdminLayout.jsx`)

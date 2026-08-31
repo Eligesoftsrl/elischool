@@ -93,6 +93,41 @@ def gen_id() -> str:
     return str(uuid.uuid4())
 
 
+CF_REGEX = __import__("re").compile(r"^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$")
+
+
+def normalize_cf(cf: str) -> str:
+    """Uppercase and strip spaces. Returns '' if empty."""
+    return (cf or "").strip().upper().replace(" ", "")
+
+
+def validate_cf(cf: str) -> bool:
+    """Basic structural CF validation (16 chars, alternating letters/digits pattern)."""
+    return bool(CF_REGEX.match(normalize_cf(cf)))
+
+
+# ------ Italian comuni (cached from bundled JSON at startup) ------
+_COMUNI: List[dict] = []
+
+
+def _load_comuni() -> None:
+    global _COMUNI
+    if _COMUNI:
+        return
+    try:
+        import json as _json
+        path = ROOT_DIR / "comuni.json"
+        with open(path, "r", encoding="utf-8") as f:
+            data = _json.load(f)
+        _COMUNI = [
+            {"nome": c["nome"], "sigla": c.get("sigla", ""), "cap": (c.get("cap") or [""])[0]}
+            for c in data
+        ]
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"Comuni load failed: {e}")
+        _COMUNI = []
+
+
 def clean_doc(doc):
     if doc is None:
         return None
@@ -192,8 +227,9 @@ class ClassroomIn(BaseModel):
 class StudentIn(BaseModel):
     first_name: str
     last_name: str
-    birth_date: Optional[str] = None
-    fiscal_code: Optional[str] = ""
+    birth_date: str
+    fiscal_code: str
+    city_residence: str
     residence: Optional[str] = ""
     allergies: Optional[str] = ""
     notes: Optional[str] = ""
@@ -551,6 +587,12 @@ async def get_student(sid: str, school_year_id: Optional[str] = None, user=Depen
 @api.post("/students")
 async def create_student(payload: StudentIn, user=Depends(require_role("admin", "teacher"))):
     doc = payload.model_dump()
+    cf = normalize_cf(doc.get("fiscal_code", ""))
+    if not validate_cf(cf):
+        raise HTTPException(400, "Codice Fiscale non valido (formato atteso: 16 caratteri alfanumerici)")
+    if await db.students.find_one({"fiscal_code": cf}):
+        raise HTTPException(400, "Un alunno con questo Codice Fiscale è già iscritto")
+    doc["fiscal_code"] = cf
     doc["id"] = gen_id()
     doc["created_at"] = now_iso()
     await db.students.insert_one(doc)
@@ -559,7 +601,16 @@ async def create_student(payload: StudentIn, user=Depends(require_role("admin", 
 
 @api.patch("/students/{sid}")
 async def update_student(sid: str, payload: StudentIn, user=Depends(require_role("admin", "teacher"))):
-    await db.students.update_one({"id": sid}, {"$set": payload.model_dump()})
+    data = payload.model_dump()
+    cf = normalize_cf(data.get("fiscal_code", ""))
+    if not validate_cf(cf):
+        raise HTTPException(400, "Codice Fiscale non valido")
+    # uniqueness (excluding current record)
+    dup = await db.students.find_one({"fiscal_code": cf, "id": {"$ne": sid}})
+    if dup:
+        raise HTTPException(400, "Un altro alunno usa già questo Codice Fiscale")
+    data["fiscal_code"] = cf
+    await db.students.update_one({"id": sid}, {"$set": data})
     return await db.students.find_one({"id": sid}, {"_id": 0})
 
 
@@ -1753,10 +1804,12 @@ class EnrollmentRequestIn(BaseModel):
     student_first_name: str
     student_last_name: str
     student_birth_date: str
+    student_fiscal_code: str
     parent_first_name: str
     parent_last_name: str
-    parent_email: EmailStr
-    parent_phone: Optional[str] = ""
+    parent_phone: str
+    parent_email: Optional[EmailStr] = None
+    city_residence: str
     address: Optional[str] = ""
     notes: Optional[str] = ""
 
@@ -1931,6 +1984,30 @@ async def barcodes_pdf(
     )
 
 
+@api.get("/public/comuni")
+async def public_comuni(q: str = "", limit: int = 12):
+    """Autocomplete comuni italiani (no auth). Returns matches starting with q."""
+    _load_comuni()
+    qn = (q or "").strip().lower()
+    if len(qn) < 2:
+        return []
+    matches = []
+    for c in _COMUNI:
+        nome_lower = c["nome"].lower()
+        if nome_lower.startswith(qn):
+            matches.append(c)
+            if len(matches) >= limit:
+                break
+    # fallback: substring match if no prefix hits
+    if not matches:
+        for c in _COMUNI:
+            if qn in c["nome"].lower():
+                matches.append(c)
+                if len(matches) >= limit:
+                    break
+    return matches
+
+
 @api.post("/public/enrollment-requests")
 async def public_enrollment_request(payload: EnrollmentRequestIn, tenant_slug: Optional[str] = None):
     """Form pubblico iscrizione (no auth). Tenant identificato via ?tenant_slug=demo. Default: demo tenant."""
@@ -1938,10 +2015,26 @@ async def public_enrollment_request(payload: EnrollmentRequestIn, tenant_slug: O
     tenant = await raw_db.tenants.find_one({"slug": slug, "status": "active"}, {"_id": 0})
     if not tenant:
         raise HTTPException(404, "Scuola non trovata o non attiva")
+    # Validate CF
+    cf = normalize_cf(payload.student_fiscal_code)
+    if not validate_cf(cf):
+        raise HTTPException(400, "Codice Fiscale non valido (formato atteso: 16 caratteri alfanumerici)")
+    # Enforce uniqueness of CF within this tenant (students + pending requests)
+    dup_student = await raw_db.students.find_one({"tenant_id": tenant["id"], "fiscal_code": cf})
+    if dup_student:
+        raise HTTPException(400, "Un alunno con questo Codice Fiscale è già iscritto")
+    dup_req = await raw_db.enrollment_requests.find_one({
+        "tenant_id": tenant["id"], "student_fiscal_code": cf, "status": "pending"
+    })
+    if dup_req:
+        raise HTTPException(400, "Esiste già una richiesta di iscrizione in attesa per questo CF")
+
     doc = payload.model_dump()
     doc["id"] = gen_id()
     doc["tenant_id"] = tenant["id"]
-    doc["parent_email"] = doc["parent_email"].lower().strip()
+    doc["student_fiscal_code"] = cf
+    if doc.get("parent_email"):
+        doc["parent_email"] = doc["parent_email"].lower().strip()
     doc["status"] = "pending"
     doc["created_at"] = now_iso()
     await raw_db.enrollment_requests.insert_one(doc)
@@ -1965,65 +2058,90 @@ async def approve_enrollment(rid: str, user=Depends(require_role("admin", "teach
     if req["status"] != "pending":
         raise HTTPException(400, f"Richiesta già {req['status']}")
 
-    # Create student
+    # Create student (CF + city_residence from the enrollment request)
     student_id = gen_id()
     await db.students.insert_one({
         "id": student_id,
         "first_name": req["student_first_name"],
         "last_name": req["student_last_name"],
         "birth_date": req["student_birth_date"],
-        "fiscal_code": "",
+        "fiscal_code": req.get("student_fiscal_code", ""),
+        "city_residence": req.get("city_residence", ""),
         "residence": req.get("address", ""),
         "allergies": "",
         "notes": req.get("notes", ""),
         "created_at": now_iso(),
     })
 
-    # Create parent (pending - they'll receive invite)
-    parent_email = req["parent_email"].lower().strip()
-    existing = await db.users.find_one({"email": parent_email})
-    if existing:
-        parent_id = existing["id"]
-    else:
+    # Create parent (pending - they'll receive invite if email provided)
+    parent_email = (req.get("parent_email") or "").lower().strip()
+    parent_phone = req.get("parent_phone", "")
+    parent_first = req.get("parent_first_name", "")
+    parent_last = req.get("parent_last_name", "")
+
+    if not parent_email:
+        # No email → cannot create a login user; create a "shadow" parent record linked via phone
+        # Admin will fill email later from /s/genitori and resend invite
         parent_id = gen_id()
         await db.users.insert_one({
             "id": parent_id,
-            "email": parent_email,
-            "first_name": req["parent_first_name"],
-            "last_name": req["parent_last_name"],
-            "name": f"{req['parent_first_name']} {req['parent_last_name']}",
-            "phone": req.get("parent_phone", ""),
-            "notes": "",
+            "email": f"noemail+{parent_id[:8]}@placeholder.local",
+            "first_name": parent_first,
+            "last_name": parent_last,
+            "name": f"{parent_first} {parent_last}".strip(),
+            "phone": parent_phone,
+            "notes": "Genitore senza email — inserirla per inviare invito",
             "role": "parent",
             "status": "pending",
             "password_hash": None,
             "created_at": now_iso(),
         })
+        invite_link = None
+        sent = False
+    else:
+        existing = await db.users.find_one({"email": parent_email})
+        if existing:
+            parent_id = existing["id"]
+        else:
+            parent_id = gen_id()
+            await db.users.insert_one({
+                "id": parent_id,
+                "email": parent_email,
+                "first_name": parent_first,
+                "last_name": parent_last,
+                "name": f"{parent_first} {parent_last}".strip(),
+                "phone": parent_phone,
+                "notes": "",
+                "role": "parent",
+                "status": "pending",
+                "password_hash": None,
+                "created_at": now_iso(),
+            })
+
+        # Generate invite token
+        token = secrets.token_urlsafe(32)
+        await db.password_reset_tokens.insert_one({
+            "token": token,
+            "user_id": parent_id,
+            "created_at": now_iso(),
+            "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+            "used": False,
+            "purpose": "invite",
+        })
+        invite_link = f"{os.environ.get('FRONTEND_URL', '')}/setup-password/{token}"
+        # Send branded enrollment-approved email via Brevo
+        school_doc = await db.school_profile.find_one({}, {"_id": 0})
+        school_name = (school_doc or {}).get("name") or "la scuola"
+        parent_name = f"{parent_first} {parent_last}".strip()
+        student_name = f"{req['student_first_name']} {req['student_last_name']}".strip()
+        sent = await send_enrollment_approved_email(parent_email, parent_name, student_name, invite_link, school_name)
+        if not sent:
+            logger.info(f"[EMAIL FALLBACK] Approved enrollment for {parent_email}: {invite_link}")
 
     # Link parent to student
     await db.parent_links.insert_one({
         "id": gen_id(), "parent_id": parent_id, "student_id": student_id, "created_at": now_iso()
     })
-
-    # Generate invite token
-    token = secrets.token_urlsafe(32)
-    await db.password_reset_tokens.insert_one({
-        "token": token,
-        "user_id": parent_id,
-        "created_at": now_iso(),
-        "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
-        "used": False,
-        "purpose": "invite",
-    })
-    invite_link = f"{os.environ.get('FRONTEND_URL', '')}/setup-password/{token}"
-    # Send branded enrollment-approved email via Brevo
-    school_doc = await db.school_profile.find_one({}, {"_id": 0})
-    school_name = (school_doc or {}).get("name") or "la scuola"
-    parent_name = f"{req['parent_first_name']} {req['parent_last_name']}".strip()
-    student_name = f"{req['student_first_name']} {req['student_last_name']}".strip()
-    sent = await send_enrollment_approved_email(parent_email, parent_name, student_name, invite_link, school_name)
-    if not sent:
-        logger.info(f"[EMAIL FALLBACK] Approved enrollment for {parent_email}: {invite_link}")
 
     await db.enrollment_requests.update_one(
         {"id": rid},
@@ -2238,6 +2356,12 @@ async def seed():
     await raw_db.school_years.create_index("id", unique=True)
     await raw_db.classrooms.create_index("id", unique=True)
     await raw_db.students.create_index("id", unique=True)
+    # Unique CF per tenant (partial: only indexes docs where fiscal_code is a non-empty string)
+    await raw_db.students.create_index(
+        [("tenant_id", 1), ("fiscal_code", 1)],
+        unique=True,
+        partialFilterExpression={"fiscal_code": {"$type": "string", "$gt": ""}},
+    )
     await raw_db.enrollments.create_index([("student_id", 1), ("school_year_id", 1)])
     await raw_db.parent_links.create_index([("parent_id", 1), ("student_id", 1)])
     await raw_db.activities.create_index([("student_id", 1), ("date", 1)], unique=True)
@@ -2608,6 +2732,7 @@ logger = logging.getLogger(__name__)
 
 @app.on_event("startup")
 async def on_start():
+    _load_comuni()
     await seed()
 
 
