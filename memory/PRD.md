@@ -98,6 +98,11 @@ Allineamento al DB MySQL reale dell'utente. Aggiunte:
 - Palinsesto a 5 colonne (giorni)
 - Lazy load delle foto (singolo GET /media/{id} on demand)
 
+### Iteration 10 (19/02/2026) — UX Presenze & Ricerca Alunni ✅
+Migliorata l'usabilità delle 2 sezioni backoffice più usate quotidianamente:
+- **Presenze multi-sezione** (`/s/presenze`): l'admin può ora selezionare N sezioni contemporaneamente tramite pill toggleable con icona checkbox. Bottone "Seleziona/Deseleziona tutte" per rapidità. Gli alunni vengono raggruppati per sezione con percentuale presenza inline (0%, 100%, ecc.). Fetch parallela via `Promise.all` per performance.
+- **Ricerca alunni** (`/s/alunni`): campo di ricerca live, filtra su nome, cognome, "nome cognome", CF, città e sezione. Bottone X per pulire. Contatore dinamico "N di M bambini". EmptyState dedicato quando nessun risultato.
+
 ### Iteration 9 (19/02/2026) — CF + Città residenza (Autocomplete Comuni) ✅
 Rafforzata l'anagrafica alunni per compliance italiana. Test 100% verde (backend 18/18 pytest + frontend E2E completo):
 - **Codice Fiscale obbligatorio** su tutti gli alunni (nuovi e da iscrizione pubblica). Validazione formato (regex 16 char alfanumerici) + normalize automatica (uppercase, strip). Chiave univoca **per tenant** via partial unique index `(tenant_id, fiscal_code)`.

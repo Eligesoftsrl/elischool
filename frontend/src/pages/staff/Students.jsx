@@ -70,6 +70,22 @@ export default function StaffStudents() {
     return c?.name;
   };
 
+  // Ricerca live: nome, cognome, "nome cognome", CF, città
+  const qn = q.trim().toLowerCase();
+  const filtered = qn
+    ? students.filter((s) => {
+        const full = `${s.first_name || ""} ${s.last_name || ""}`.toLowerCase();
+        return (
+          (s.first_name || "").toLowerCase().includes(qn) ||
+          (s.last_name || "").toLowerCase().includes(qn) ||
+          full.includes(qn) ||
+          (s.fiscal_code || "").toLowerCase().includes(qn) ||
+          (s.city_residence || "").toLowerCase().includes(qn) ||
+          (getClassroomName(s) || "").toLowerCase().includes(qn)
+        );
+      })
+    : students;
+
   const onTransfer = async (sid, toClassroomId) => {
     try {
       await api.post("/enrollments/transfer", {
@@ -85,7 +101,7 @@ export default function StaffStudents() {
     <div>
       <PageHeader
         title="Alunni"
-        subtitle={`${students.length} bambini`}
+        subtitle={qn ? `${filtered.length} di ${students.length} bambini` : `${students.length} bambini`}
         right={
           <button
             onClick={() => { setForm(empty); setEditId(null); setOpen(true); }}
@@ -101,21 +117,39 @@ export default function StaffStudents() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-stone-400" />
         <input
           value={q} onChange={(e) => setQ(e.target.value)}
-          placeholder="Cerca per nome o cognome…"
-          className="w-full pl-12 pr-4 h-14 rounded-2xl bg-white border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand/30"
+          placeholder="Cerca per nome, cognome, CF, città o sezione…"
+          className="w-full pl-12 pr-12 h-14 rounded-2xl bg-white border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand/30"
           data-testid="search-student-input"
         />
+        {q && (
+          <button
+            type="button"
+            onClick={() => setQ("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center"
+            data-testid="clear-search-btn"
+            aria-label="Cancella ricerca"
+          >
+            <X className="h-4 w-4 text-stone-500" />
+          </button>
+        )}
       </div>
 
-      {students.length === 0 ? (
-        <EmptyState
-          title="Nessun alunno"
-          description="Aggiungi il primo alunno per iniziare."
-          imageUrl="https://static.prod-images.emergentagent.com/jobs/96ad60f7-372f-4730-9be4-769e965e5107/images/ff88168c79f5a887e58508be26ea3e4f7ae859628398e0d781e9ee508232af3c.png"
-        />
+      {filtered.length === 0 ? (
+        qn ? (
+          <EmptyState
+            title="Nessun risultato"
+            description={`Nessun alunno corrisponde a "${q}".`}
+          />
+        ) : (
+          <EmptyState
+            title="Nessun alunno"
+            description="Aggiungi il primo alunno per iniziare."
+            imageUrl="https://static.prod-images.emergentagent.com/jobs/96ad60f7-372f-4730-9be4-769e965e5107/images/ff88168c79f5a887e58508be26ea3e4f7ae859628398e0d781e9ee508232af3c.png"
+          />
+        )
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {students.map((s) => {
+          {filtered.map((s) => {
             const cName = getClassroomName(s);
             return (
               <Card key={s.id} className="hover:shadow-md transition-all" data-testid={`student-card-${s.id}`}>
