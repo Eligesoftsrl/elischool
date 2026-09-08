@@ -98,6 +98,18 @@ Allineamento al DB MySQL reale dell'utente. Aggiunte:
 - Palinsesto a 5 colonne (giorni)
 - Lazy load delle foto (singolo GET /media/{id} on demand)
 
+### Iteration 11 (19/02/2026) — Alunni senza sezione + Ritiri strutturati ✅
+Migliorata la gestione anagrafica con visibilità e ciclo di vita completo dell'alunno:
+- **Banner "senza sezione"** in cima a `/s/alunni` (giallo, cliccabile → filtra) + **pill filtri** rapidi: `Tutti (N)` `Da assegnare (N)` `Ritirati (N)` con conteggi live
+- **Ritiro alunno strutturato**: modal con motivo dropdown (Trasferimento / Non rinnovo / Trasloco / Diplomato / Altro) + data + note. Backend: `POST /students/{id}/withdraw` con validazione motivo + rimozione enrollments correnti (attività storiche restano).
+- **Ripristino**: `POST /students/{id}/reactivate` — l'alunno torna attivo, va riassegnato a una sezione
+- **Ricerca intelligente**: quando cerchi qualcuno tra gli attivi e nessun risultato ma c'è un match tra i ritirati, appare sotto "Trovati tra i ritirati (N)" con quick action **Ripristina** inline
+- **Alunni ritirati nascosti da default**: `GET /students` filtra per default `status=active` (accetta anche legacy docs senza campo). Query param `?status=withdrawn` per solo ritirati, `?status=all` per tutti.
+- **Card visivamente distinta**: ritirati bordo tratteggiato + icona `UserX` grigia + badge "Ritirato il DD/MM/YYYY" + motivo mostrato in card
+- **Dashboard admin**: 2 nuove card alert cliccabili — "N alunni senza sezione" (giallo) + "N ritiri questo mese" (grigio) con contatore totale
+- **Compleanni**: escludono automaticamente i ritirati
+- **Bonus UX**: alunno senza sezione ha bottone "Assegna" (invece di "Sposta") con colore ambra + bordo giallo sulla card per attirare l'occhio; distinzione chiara tra "Ritira" (archivia, arancio, reversibile) vs "🗑️ Elimina" (rosso, definitivo, con warning esplicito)
+
 ### Iteration 10 (19/02/2026) — UX Presenze & Ricerca Alunni ✅
 Migliorata l'usabilità delle 2 sezioni backoffice più usate quotidianamente:
 - **Presenze multi-sezione** (`/s/presenze`): l'admin può ora selezionare N sezioni contemporaneamente tramite pill toggleable con icona checkbox. Bottone "Seleziona/Deseleziona tutte" per rapidità. Gli alunni vengono raggruppati per sezione con percentuale presenza inline (0%, 100%, ecc.). Fetch parallela via `Promise.all` per performance.

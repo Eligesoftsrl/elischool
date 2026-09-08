@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Search, Trash2, Pencil, X, GraduationCap, ArrowRightLeft, Cake } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, X, GraduationCap, ArrowRightLeft, Cake, AlertTriangle, UserX, RefreshCw, Ban, Send } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
 import { ComuniAutocomplete } from "@/components/ComuniAutocomplete";
@@ -9,22 +9,38 @@ import { ComuniAutocomplete } from "@/components/ComuniAutocomplete";
 const CF_RE = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/;
 const empty = { first_name: "", last_name: "", birth_date: "", fiscal_code: "", city_residence: "", residence: "", allergies: "", notes: "" };
 
+const WITHDRAW_REASONS = [
+  { value: "transfer", label: "Trasferimento ad altra scuola" },
+  { value: "no_renewal", label: "Non rinnovo iscrizione" },
+  { value: "moving", label: "Trasloco famiglia" },
+  { value: "graduated", label: "Diplomato (fine ciclo)" },
+  { value: "other", label: "Altro" },
+];
+const REASON_LABEL = Object.fromEntries(WITHDRAW_REASONS.map(r => [r.value, r.label]));
+
 export default function StaffStudents() {
   const { activeYear } = useOutletContext();
-  const [students, setStudents] = useState([]);
+  const [active, setActiveList] = useState([]);
+  const [withdrawn, setWithdrawn] = useState([]);
   const [classrooms, setClassrooms] = useState([]);
   const [q, setQ] = useState("");
+  const [filter, setFilter] = useState("all"); // 'all' | 'unassigned' | 'withdrawn'
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState(null);
   const [transferOpen, setTransferOpen] = useState(null);
+  const [withdrawOpen, setWithdrawOpen] = useState(null);
+  const [withdrawForm, setWithdrawForm] = useState({ reason: "transfer", withdrawn_at: new Date().toISOString().slice(0, 10), notes: "" });
 
   const load = async () => {
     try {
-      const params = activeYear ? { school_year_id: activeYear.id } : {};
-      if (q) params.q = q;
-      const { data } = await api.get("/students", { params });
-      setStudents(data);
+      const yearParam = activeYear ? { school_year_id: activeYear.id } : {};
+      const [a, w] = await Promise.all([
+        api.get("/students", { params: { ...yearParam, status: "active" } }),
+        api.get("/students", { params: { status: "withdrawn" } }),
+      ]);
+      setActiveList(a.data);
+      setWithdrawn(w.data);
       if (classrooms.length === 0 && activeYear) {
         const { data: cs } = await api.get("/classrooms", { params: { school_year_id: activeYear.id } });
         setClassrooms(cs);
@@ -32,7 +48,7 @@ export default function StaffStudents() {
     } catch (e) { toast.error(apiErrorMessage(e)); }
   };
 
-  useEffect(() => { if (activeYear) load(); /* eslint-disable-next-line */ }, [activeYear, q]);
+  useEffect(() => { if (activeYear) load(); /* eslint-disable-next-line */ }, [activeYear]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -55,36 +71,65 @@ export default function StaffStudents() {
     } catch (e) { toast.error(apiErrorMessage(e)); }
   };
 
-  const remove = async (id) => {
-    if (!confirm("Eliminare l'alunno?")) return;
-    try {
-      await api.delete(`/students/${id}`);
-      toast.success("Eliminato");
-      await load();
-    } catch (e) { toast.error(apiErrorMessage(e)); }
-  };
-
   const getClassroomName = (s) => {
     const cid = s.enrollment?.classroom_id;
     const c = classrooms.find((x) => x.id === cid);
     return c?.name;
   };
 
-  // Ricerca live: nome, cognome, "nome cognome", CF, città
+  const remove = async (id) => {
+    if (!confirm("Eliminare DEFINITIVAMENTE l'alunno? Questa azione cancella tutti i dati (attività, presenze, foto). Se invece vuoi archiviarlo temporaneamente usa 'Ritira'.")) return;
+    try {
+      await api.delete(`/students/${id}`);
+      toast.success("Eliminato definitivamente");
+      await load();
+    } catch (e) { toast.error(apiErrorMessage(e)); }
+  };
+
+  const submitWithdraw = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post(`/students/${withdrawOpen.id}/withdraw`, withdrawForm);
+      toast.success(`${withdrawOpen.first_name} ${withdrawOpen.last_name} ritirato/a`);
+      setWithdrawOpen(null);
+      setWithdrawForm({ reason: "transfer", withdrawn_at: new Date().toISOString().slice(0, 10), notes: "" });
+      await load();
+    } catch (e) { toast.error(apiErrorMessage(e)); }
+  };
+
+  const reactivate = async (s) => {
+    if (!confirm(`Ripristinare ${s.first_name} ${s.last_name} come alunno attivo? Dovrai riassegnare la sezione.`)) return;
+    try {
+      await api.post(`/students/${s.id}/reactivate`);
+      toast.success("Alunno ripristinato");
+      await load();
+    } catch (e) { toast.error(apiErrorMessage(e)); }
+  };
+
+  // Ricerca live
   const qn = q.trim().toLowerCase();
-  const filtered = qn
-    ? students.filter((s) => {
-        const full = `${s.first_name || ""} ${s.last_name || ""}`.toLowerCase();
-        return (
-          (s.first_name || "").toLowerCase().includes(qn) ||
-          (s.last_name || "").toLowerCase().includes(qn) ||
-          full.includes(qn) ||
-          (s.fiscal_code || "").toLowerCase().includes(qn) ||
-          (s.city_residence || "").toLowerCase().includes(qn) ||
-          (getClassroomName(s) || "").toLowerCase().includes(qn)
-        );
-      })
-    : students;
+  const matches = (s) => {
+    if (!qn) return true;
+    const full = `${s.first_name || ""} ${s.last_name || ""}`.toLowerCase();
+    return (
+      (s.first_name || "").toLowerCase().includes(qn) ||
+      (s.last_name || "").toLowerCase().includes(qn) ||
+      full.includes(qn) ||
+      (s.fiscal_code || "").toLowerCase().includes(qn) ||
+      (s.city_residence || "").toLowerCase().includes(qn) ||
+      (getClassroomName(s) || "").toLowerCase().includes(qn)
+    );
+  };
+
+  const unassignedCount = useMemo(() => active.filter((s) => !s.enrollment?.classroom_id).length, [active]);
+  const withdrawnMatchingSearch = useMemo(() => (qn ? withdrawn.filter(matches) : []), [withdrawn, qn]); // eslint-disable-line
+
+  const displayed = useMemo(() => {
+    if (filter === "withdrawn") return withdrawn.filter(matches);
+    if (filter === "unassigned") return active.filter((s) => !s.enrollment?.classroom_id).filter(matches);
+    return active.filter(matches);
+    // eslint-disable-next-line
+  }, [active, withdrawn, filter, qn]);
 
   const onTransfer = async (sid, toClassroomId) => {
     try {
@@ -101,7 +146,15 @@ export default function StaffStudents() {
     <div>
       <PageHeader
         title="Alunni"
-        subtitle={qn ? `${filtered.length} di ${students.length} bambini` : `${students.length} bambini`}
+        subtitle={
+          filter === "withdrawn"
+            ? `${displayed.length} ritirat${displayed.length === 1 ? "o" : "i"}`
+            : filter === "unassigned"
+              ? `${displayed.length} da assegnare`
+              : qn
+                ? `${displayed.length} di ${active.length} bambini`
+                : `${active.length} bambini attivi`
+        }
         right={
           <button
             onClick={() => { setForm(empty); setEditId(null); setOpen(true); }}
@@ -113,7 +166,27 @@ export default function StaffStudents() {
         }
       />
 
-      <div className="mb-5 relative">
+      {/* Banner alunni senza sezione */}
+      {unassignedCount > 0 && filter !== "unassigned" && (
+        <button
+          onClick={() => setFilter("unassigned")}
+          className="w-full mb-4 rounded-2xl p-4 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-left flex items-center gap-3 transition-all group"
+          data-testid="unassigned-banner"
+        >
+          <span className="h-11 w-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+            <AlertTriangle className="h-5 w-5" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="font-display font-bold text-stone-900">
+              {unassignedCount} {unassignedCount === 1 ? "alunno" : "alunni"} senza sezione
+            </p>
+            <p className="text-xs text-amber-800/80">Assegnali a una sezione per iniziare a raccogliere attività e presenze.</p>
+          </div>
+          <span className="text-xs font-bold uppercase tracking-wider text-amber-700 group-hover:underline">Assegna →</span>
+        </button>
+      )}
+
+      <div className="mb-4 relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-stone-400" />
         <input
           value={q} onChange={(e) => setQ(e.target.value)}
@@ -134,12 +207,30 @@ export default function StaffStudents() {
         )}
       </div>
 
-      {filtered.length === 0 ? (
+      {/* Pill filtri */}
+      <div className="flex gap-2 overflow-x-auto hide-scrollbar mb-5 -mx-1 px-1">
+        <FilterPill active={filter === "all"} onClick={() => setFilter("all")} testid="filter-all">
+          Tutti <span className="ml-1 opacity-70">({active.length})</span>
+        </FilterPill>
+        {unassignedCount > 0 && (
+          <FilterPill active={filter === "unassigned"} onClick={() => setFilter("unassigned")} color="amber" testid="filter-unassigned">
+            <AlertTriangle className="h-3.5 w-3.5" /> Da assegnare <span className="ml-1 opacity-70">({unassignedCount})</span>
+          </FilterPill>
+        )}
+        {withdrawn.length > 0 && (
+          <FilterPill active={filter === "withdrawn"} onClick={() => setFilter("withdrawn")} color="stone" testid="filter-withdrawn">
+            <Ban className="h-3.5 w-3.5" /> Ritirati <span className="ml-1 opacity-70">({withdrawn.length})</span>
+          </FilterPill>
+        )}
+      </div>
+
+      {displayed.length === 0 ? (
         qn ? (
-          <EmptyState
-            title="Nessun risultato"
-            description={`Nessun alunno corrisponde a "${q}".`}
-          />
+          <EmptyState title="Nessun risultato" description={`Nessun alunno corrisponde a "${q}".`} />
+        ) : filter === "unassigned" ? (
+          <EmptyState title="Tutti assegnati!" description="Nessun alunno attende una sezione. Ottimo lavoro!" />
+        ) : filter === "withdrawn" ? (
+          <EmptyState title="Nessun alunno ritirato" description="I ritiri appariranno qui." />
         ) : (
           <EmptyState
             title="Nessun alunno"
@@ -149,61 +240,137 @@ export default function StaffStudents() {
         )
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((s) => {
+          {displayed.map((s) => {
             const cName = getClassroomName(s);
+            const isWithdrawn = s.status === "withdrawn";
+            const isUnassigned = !isWithdrawn && !cName;
             return (
-              <Card key={s.id} className="hover:shadow-md transition-all" data-testid={`student-card-${s.id}`}>
+              <Card
+                key={s.id}
+                className={`hover:shadow-md transition-all ${isWithdrawn ? "bg-stone-50 opacity-80 border-dashed" : isUnassigned ? "border-amber-300" : ""}`}
+                data-testid={`student-card-${s.id}`}
+              >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-2xl bg-stone-100 flex items-center justify-center">
-                      <GraduationCap className="h-5 w-5 text-stone-600" />
+                    <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${isWithdrawn ? "bg-stone-200" : "bg-stone-100"}`}>
+                      {isWithdrawn ? <UserX className="h-5 w-5 text-stone-500" /> : <GraduationCap className="h-5 w-5 text-stone-600" />}
                     </div>
                     <div>
-                      <p className="font-display font-bold text-stone-900">{s.first_name} {s.last_name}</p>
+                      <p className={`font-display font-bold ${isWithdrawn ? "text-stone-500" : "text-stone-900"}`}>{s.first_name} {s.last_name}</p>
                       <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                        {cName ? <Pill color="brand">{cName}</Pill> : <Pill>Non assegnato</Pill>}
-                        {s.birth_date && (
+                        {isWithdrawn ? (
+                          <Pill color="stone"><Ban className="h-3 w-3" /> Ritirato {s.withdrawn_at ? `il ${s.withdrawn_at}` : ""}</Pill>
+                        ) : cName ? (
+                          <Pill color="brand">{cName}</Pill>
+                        ) : (
+                          <Pill color="amber"><AlertTriangle className="h-3 w-3" /> Da assegnare</Pill>
+                        )}
+                        {s.birth_date && !isWithdrawn && (
                           <Pill color="stone"><Cake className="h-3 w-3" /> {s.birth_date}</Pill>
                         )}
                       </div>
                     </div>
                   </div>
                 </div>
-                {s.allergies && (
-                  <p className="mt-3 text-xs text-rose-600 font-semibold">
-                    ⚠ Allergie: {s.allergies}
+                {isWithdrawn && s.withdrawal_reason && (
+                  <p className="mt-3 text-xs text-stone-500">
+                    <b>Motivo:</b> {REASON_LABEL[s.withdrawal_reason] || s.withdrawal_reason}
+                    {s.withdrawal_notes ? <> · {s.withdrawal_notes}</> : null}
                   </p>
                 )}
-                <div className="mt-4 grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => setTransferOpen(s)}
-                    className="h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-xs font-semibold flex items-center justify-center gap-1.5"
-                    data-testid={`transfer-student-${s.id}`}
-                  >
-                    <ArrowRightLeft className="h-3.5 w-3.5" /> Sposta
-                  </button>
-                  <button
-                    onClick={() => {
-                      const { first_name, last_name, birth_date, fiscal_code, city_residence, residence, allergies, notes } = s;
-                      setForm({ first_name, last_name, birth_date: birth_date || "", fiscal_code: fiscal_code || "", city_residence: city_residence || "", residence: residence || "", allergies: allergies || "", notes: notes || "" });
-                      setEditId(s.id); setOpen(true);
-                    }}
-                    className="h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-xs font-semibold flex items-center justify-center gap-1.5"
-                    data-testid={`edit-student-${s.id}`}
-                  >
-                    <Pencil className="h-3.5 w-3.5" /> Modifica
-                  </button>
-                  <button
-                    onClick={() => remove(s.id)}
-                    className="h-10 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold flex items-center justify-center gap-1.5"
-                    data-testid={`delete-student-${s.id}`}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                {s.allergies && !isWithdrawn && (
+                  <p className="mt-3 text-xs text-rose-600 font-semibold">⚠ Allergie: {s.allergies}</p>
+                )}
+
+                {isWithdrawn ? (
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => reactivate(s)}
+                      className="h-10 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold flex items-center justify-center gap-1.5"
+                      data-testid={`reactivate-student-${s.id}`}
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" /> Ripristina
+                    </button>
+                    <button
+                      onClick={() => remove(s.id)}
+                      className="h-10 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold flex items-center justify-center gap-1.5"
+                      data-testid={`delete-student-${s.id}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Elimina def.
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-4 grid grid-cols-4 gap-2">
+                    <button
+                      onClick={() => setTransferOpen(s)}
+                      className={`h-10 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 ${isUnassigned ? "bg-amber-100 hover:bg-amber-200 text-amber-800" : "bg-stone-100 hover:bg-stone-200"}`}
+                      data-testid={`transfer-student-${s.id}`}
+                    >
+                      <ArrowRightLeft className="h-3.5 w-3.5" /> {isUnassigned ? "Assegna" : "Sposta"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        const { first_name, last_name, birth_date, fiscal_code, city_residence, residence, allergies, notes } = s;
+                        setForm({ first_name, last_name, birth_date: birth_date || "", fiscal_code: fiscal_code || "", city_residence: city_residence || "", residence: residence || "", allergies: allergies || "", notes: notes || "" });
+                        setEditId(s.id); setOpen(true);
+                      }}
+                      className="h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-xs font-semibold flex items-center justify-center gap-1.5"
+                      data-testid={`edit-student-${s.id}`}
+                    >
+                      <Pencil className="h-3.5 w-3.5" /> Modifica
+                    </button>
+                    <button
+                      onClick={() => setWithdrawOpen(s)}
+                      className="h-10 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold flex items-center justify-center gap-1.5"
+                      data-testid={`withdraw-student-${s.id}`}
+                      title="Ritira dalla scuola (archivia)"
+                    >
+                      <UserX className="h-3.5 w-3.5" /> Ritira
+                    </button>
+                    <button
+                      onClick={() => remove(s.id)}
+                      className="h-10 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold flex items-center justify-center gap-1.5"
+                      data-testid={`delete-student-${s.id}`}
+                      title="Elimina definitivamente"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {/* Ricerca intelligente: ritirati che matchano quando non stai già filtrando "Ritirati" */}
+      {qn && filter !== "withdrawn" && withdrawnMatchingSearch.length > 0 && (
+        <div className="mt-8 pt-6 border-t border-stone-200">
+          <p className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-3 flex items-center gap-1.5">
+            <Ban className="h-3.5 w-3.5" /> Trovati tra i ritirati ({withdrawnMatchingSearch.length})
+          </p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {withdrawnMatchingSearch.map((s) => (
+              <Card key={s.id} className="bg-stone-50 border-dashed opacity-80" data-testid={`withdrawn-hint-${s.id}`}>
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-2xl bg-stone-200 flex items-center justify-center">
+                    <UserX className="h-4 w-4 text-stone-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-stone-600 truncate">{s.first_name} {s.last_name}</p>
+                    <p className="text-xs text-stone-500 truncate">Ritirato il {s.withdrawn_at} · {REASON_LABEL[s.withdrawal_reason] || s.withdrawal_reason}</p>
+                  </div>
+                  <button
+                    onClick={() => reactivate(s)}
+                    className="h-9 px-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold flex items-center gap-1"
+                    data-testid={`quick-reactivate-${s.id}`}
+                  >
+                    <RefreshCw className="h-3 w-3" /> Ripristina
+                  </button>
+                </div>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
 
@@ -253,7 +420,64 @@ export default function StaffStudents() {
           </div>
         </Modal>
       )}
+
+      {withdrawOpen && (
+        <Modal onClose={() => setWithdrawOpen(null)} title={`Ritira ${withdrawOpen.first_name} ${withdrawOpen.last_name}`}>
+          <div className="rounded-2xl bg-orange-50 border border-orange-200 p-4 mb-4">
+            <p className="text-sm text-orange-900">
+              <b>Cosa succede quando ritiri:</b>
+            </p>
+            <ul className="text-xs text-orange-800 mt-2 space-y-1 list-disc list-inside">
+              <li>L'alunno viene archiviato e non compare più nella lista principale</li>
+              <li>Viene rimosso dalle sezioni correnti</li>
+              <li>Attività, presenze e foto storiche restano archiviate</li>
+              <li>Puoi <b>ripristinarlo</b> in qualsiasi momento</li>
+            </ul>
+          </div>
+          <form onSubmit={submitWithdraw} className="space-y-3">
+            <Field label="Motivo del ritiro *">
+              <select
+                value={withdrawForm.reason}
+                onChange={(e) => setWithdrawForm({ ...withdrawForm, reason: e.target.value })}
+                required
+                className="w-full h-12 px-4 rounded-2xl bg-stone-50 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand/30"
+                data-testid="withdraw-reason"
+              >
+                {WITHDRAW_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+              </select>
+            </Field>
+            <Field label="Data del ritiro *">
+              <Input type="date" value={withdrawForm.withdrawn_at} onChange={(v) => setWithdrawForm({ ...withdrawForm, withdrawn_at: v })} required testid="withdraw-date" />
+            </Field>
+            <Field label="Note (facoltativo)">
+              <Textarea value={withdrawForm.notes} onChange={(v) => setWithdrawForm({ ...withdrawForm, notes: v })} />
+            </Field>
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setWithdrawOpen(null)} className="flex-1 h-12 rounded-2xl bg-stone-100 font-semibold">Annulla</button>
+              <button type="submit" className="flex-1 h-12 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold flex items-center justify-center gap-2" data-testid="withdraw-submit">
+                <UserX className="h-4 w-4" /> Ritira alunno
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
+  );
+}
+
+function FilterPill({ active, onClick, children, color = "stone", testid }) {
+  const colorMap = {
+    stone: active ? "bg-stone-900 text-white border-stone-900" : "bg-white text-stone-700 border-stone-200 hover:border-stone-400",
+    amber: active ? "bg-amber-500 text-white border-amber-500" : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100",
+  };
+  return (
+    <button
+      onClick={onClick}
+      className={`shrink-0 h-10 px-4 rounded-full border text-sm font-semibold flex items-center gap-1.5 transition-all ${colorMap[color]}`}
+      data-testid={testid}
+    >
+      {children}
+    </button>
   );
 }
 

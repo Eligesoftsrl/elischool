@@ -556,19 +556,89 @@ async def classroom_students(cid: str, school_year_id: Optional[str] = None, use
 
 # ----------------------------- STUDENTS -----------------------------
 @api.get("/students")
-async def list_students(q: Optional[str] = None, school_year_id: Optional[str] = None, user=Depends(get_current_user)):
+async def list_students(
+    q: Optional[str] = None,
+    school_year_id: Optional[str] = None,
+    status: Optional[str] = "active",  # "active" (default), "withdrawn", "all"
+    user=Depends(get_current_user),
+):
     query = {}
+    if status == "withdrawn":
+        query["status"] = "withdrawn"
+    elif status == "active":
+        # active OR missing (backward compat: legacy docs without status field are considered active)
+        query["$or"] = [{"status": {"$exists": False}}, {"status": {"$in": [None, "", "active"]}}]
+    # status == "all" → no filter
+
     if q:
-        query["$or"] = [
+        text_filters = [
             {"first_name": {"$regex": q, "$options": "i"}},
             {"last_name": {"$regex": q, "$options": "i"}},
+            {"fiscal_code": {"$regex": q, "$options": "i"}},
         ]
+        if "$or" in query:
+            # combine: (status match) AND (text match) → use $and
+            existing_or = query.pop("$or")
+            query["$and"] = [{"$or": existing_or}, {"$or": text_filters}]
+        else:
+            query["$or"] = text_filters
+
     docs = await db.students.find(query, {"_id": 0}).sort("last_name", 1).to_list(1000)
     if school_year_id:
         for d in docs:
             e = await db.enrollments.find_one({"student_id": d["id"], "school_year_id": school_year_id}, {"_id": 0})
             d["enrollment"] = e
     return docs
+
+
+class WithdrawIn(BaseModel):
+    reason: str  # "transfer" | "no_renewal" | "moving" | "graduated" | "other"
+    withdrawn_at: Optional[str] = None  # ISO date; default today
+    notes: Optional[str] = ""
+
+
+VALID_WITHDRAW_REASONS = {"transfer", "no_renewal", "moving", "graduated", "other"}
+
+
+@api.post("/students/{sid}/withdraw")
+async def withdraw_student(sid: str, payload: WithdrawIn, user=Depends(require_role("admin"))):
+    s = await db.students.find_one({"id": sid})
+    if not s:
+        raise HTTPException(404, "Alunno non trovato")
+    if s.get("status") == "withdrawn":
+        raise HTTPException(400, "Alunno già ritirato")
+    if payload.reason not in VALID_WITHDRAW_REASONS:
+        raise HTTPException(400, "Motivo non valido")
+    when = payload.withdrawn_at or now_iso()[:10]
+    await db.students.update_one(
+        {"id": sid},
+        {"$set": {
+            "status": "withdrawn",
+            "withdrawn_at": when,
+            "withdrawal_reason": payload.reason,
+            "withdrawal_notes": payload.notes or "",
+            "withdrawn_by": user["id"],
+        }},
+    )
+    # Remove current enrollments (keep history? For simplicity we delete future/current enrollments)
+    # Note: attendance / activities / reports remain (historical data)
+    await db.enrollments.delete_many({"student_id": sid})
+    return await db.students.find_one({"id": sid}, {"_id": 0})
+
+
+@api.post("/students/{sid}/reactivate")
+async def reactivate_student(sid: str, user=Depends(require_role("admin"))):
+    s = await db.students.find_one({"id": sid})
+    if not s:
+        raise HTTPException(404, "Alunno non trovato")
+    if s.get("status") != "withdrawn":
+        raise HTTPException(400, "L'alunno non è ritirato")
+    await db.students.update_one(
+        {"id": sid},
+        {"$set": {"status": "active"},
+         "$unset": {"withdrawn_at": "", "withdrawal_reason": "", "withdrawal_notes": "", "withdrawn_by": ""}},
+    )
+    return await db.students.find_one({"id": sid}, {"_id": 0})
 
 
 @api.get("/students/{sid}")
@@ -1218,7 +1288,21 @@ async def delete_news(nid: str, user=Depends(require_role("admin", "teacher"))):
 @api.get("/dashboard/stats")
 async def dashboard_stats(user=Depends(require_role("admin", "teacher"))):
     active_year = await db.school_years.find_one({"is_active": True}, {"_id": 0})
-    total_students = await db.students.count_documents({})
+    active_filter = {"$or": [{"status": {"$exists": False}}, {"status": {"$in": [None, "", "active"]}}]}
+    total_students = await db.students.count_documents(active_filter)
+    withdrawn_students = await db.students.count_documents({"status": "withdrawn"})
+    # Withdrawn this month
+    month_start = date.today().replace(day=1).isoformat()
+    withdrawn_this_month = await db.students.count_documents({"status": "withdrawn", "withdrawn_at": {"$gte": month_start}})
+    # Unassigned: active students without enrollment in the active year
+    unassigned_students = 0
+    if active_year:
+        active_ids = [s["id"] async for s in db.students.find(active_filter, {"id": 1})]
+        if active_ids:
+            enrolled_ids = set()
+            async for e in db.enrollments.find({"student_id": {"$in": active_ids}, "school_year_id": active_year["id"]}, {"student_id": 1}):
+                enrolled_ids.add(e["student_id"])
+            unassigned_students = len(active_ids) - len(enrolled_ids)
     total_parents = await db.users.count_documents({"role": "parent"})
     total_teachers = await db.users.count_documents({"role": {"$in": ["teacher", "admin"]}})
     total_classes = await db.classrooms.count_documents({"school_year_id": active_year["id"]} if active_year else {})
@@ -1228,6 +1312,9 @@ async def dashboard_stats(user=Depends(require_role("admin", "teacher"))):
     return {
         "active_year": active_year,
         "total_students": total_students,
+        "withdrawn_students": withdrawn_students,
+        "withdrawn_this_month": withdrawn_this_month,
+        "unassigned_students": unassigned_students,
         "total_parents": total_parents,
         "total_teachers": total_teachers,
         "total_classes": total_classes,
@@ -1818,7 +1905,10 @@ class EnrollmentRequestIn(BaseModel):
 async def upcoming_birthdays(days: int = 7, user=Depends(require_role("admin", "teacher"))):
     """Compleanni dei prossimi N giorni (default 7)."""
     today = date.today()
-    students = await db.students.find({"birth_date": {"$ne": ""}}, {"_id": 0}).to_list(2000)
+    students = await db.students.find(
+        {"birth_date": {"$ne": ""}, "$or": [{"status": {"$exists": False}}, {"status": {"$in": [None, "", "active"]}}]},
+        {"_id": 0}
+    ).to_list(2000)
     out = []
     for s in students:
         bd_str = s.get("birth_date")

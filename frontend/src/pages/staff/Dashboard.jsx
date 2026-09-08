@@ -3,7 +3,7 @@ import { Link, useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Users, GraduationCap, ClipboardList, UserCog, UsersRound, ArrowRight,
-  Sparkles, Plus, Bell,
+  Sparkles, Plus, Bell, AlertTriangle, UserX,
 } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { toast } from "sonner";
@@ -65,6 +65,48 @@ export default function StaffDashboard() {
           icon={<UsersRound className="h-4 w-4" />}
         />
       </div>
+
+      {/* Alerts strip: things that need attention */}
+      {(stats?.unassigned_students > 0 || stats?.withdrawn_this_month > 0) && (
+        <div className="mt-5 grid sm:grid-cols-2 gap-3" data-testid="dashboard-alerts">
+          {stats.unassigned_students > 0 && (
+            <Link
+              to="/s/alunni"
+              className="rounded-2xl p-4 bg-amber-50 border border-amber-200 hover:bg-amber-100 flex items-center gap-3 group transition-all"
+              data-testid="dashboard-unassigned-alert"
+            >
+              <span className="h-11 w-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-5 w-5" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-stone-900 text-sm">
+                  {stats.unassigned_students} {stats.unassigned_students === 1 ? "alunno" : "alunni"} senza sezione
+                </p>
+                <p className="text-xs text-amber-800/80 truncate">Assegnali a una sezione per iniziare</p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-amber-700 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          )}
+          {stats.withdrawn_this_month > 0 && (
+            <Link
+              to="/s/alunni"
+              className="rounded-2xl p-4 bg-stone-100 border border-stone-200 hover:bg-stone-200 flex items-center gap-3 group transition-all"
+              data-testid="dashboard-withdrawn-alert"
+            >
+              <span className="h-11 w-11 rounded-2xl bg-stone-500 text-white flex items-center justify-center shrink-0">
+                <UserX className="h-5 w-5" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-stone-900 text-sm">
+                  {stats.withdrawn_this_month} {stats.withdrawn_this_month === 1 ? "ritiro" : "ritiri"} questo mese
+                </p>
+                <p className="text-xs text-stone-600 truncate">Totale ritirati: {stats.withdrawn_students}</p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-stone-700 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          )}
+        </div>
+      )}
 
       <div className="mt-8 grid lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
