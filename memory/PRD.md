@@ -98,6 +98,18 @@ Allineamento al DB MySQL reale dell'utente. Aggiunte:
 - Palinsesto a 5 colonne (giorni)
 - Lazy load delle foto (singolo GET /media/{id} on demand)
 
+### Iteration 12 (19/02/2026) — Menu Riorganizzato + Redirect + Widget compleanni ✅
+Implementata la riorganizzazione completa del menu backoffice richiesta da documento cliente (Nursery_Smart_Riorganizzazione_Menu):
+- **7 gruppi collapsible** in `StaffLayout.jsx`: HOME · OGNI GIORNO · DIDATTICA · ANAGRAFICHE · COMUNICAZIONE · SEGRETERIA · CONFIGURAZIONE (ordinati per frequenza d'uso)
+- **HOME + OGNI GIORNO aperti di default**, altri chiusi. Stato persistente per utente in `localStorage["nav_groups_open"]`. Il gruppo contenente la pagina attiva si apre automaticamente. Transizioni animate framer-motion. Chevron rotante.
+- **Rinomine**: `/s/attivita` → **`/s/diario`** (voce "Diario"), `/s/menu` → **`/s/menu-mensa`** (voce "Menu mensa"). Redirect automatici da vecchi URL per preservare bookmark/PWA
+- **Rimozioni dal menu principale + integrazione**:
+  - "Compleanni" → nuovo **widget "Prossimi compleanni"** sulla Dashboard (top 5 nei prossimi 30 giorni, con badge "Oggi 🎉" / "Domani" / "Tra N giorni", CTA "Vedi tutti" verso `/s/compleanni` che resta accessibile)
+  - "Tesserini" → pagina resta accessibile ma non nel nav (accessibile ancora via `/s/tesserini`)
+- **Permessi ruolo**: gruppi SEGRETERIA e CONFIGURAZIONE **completamente nascosti alle maestre** (marker `admin: true` sul gruppo). Menu maestra ora conta 5 gruppi vs 7 per admin.
+- **Passaggio anno "safe"**: bottone apre modal di conferma con riepilogo + **input digitazione obbligatoria dell'anno di destinazione** (es. deve digitare esattamente "2026/2027") prima di poter eseguire. Icona AlertTriangle in rosso, tema rosa per l'azione irreversibile.
+- Aggiornati anche i link interni (Dashboard CTA "Registra giornata" ora punta a `/s/diario`)
+
 ### Iteration 11 (19/02/2026) — Alunni senza sezione + Ritiri strutturati ✅
 Migliorata la gestione anagrafica con visibilità e ciclo di vita completo dell'alunno:
 - **Banner "senza sezione"** in cima a `/s/alunni` (giallo, cliccabile → filtra) + **pill filtri** rapidi: `Tutti (N)` `Da assegnare (N)` `Ritirati (N)` con conteggi live

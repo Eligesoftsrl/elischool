@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowRight, ArrowRightLeft, Sparkles, Check } from "lucide-react";
+import { ArrowRight, ArrowRightLeft, Sparkles, Check, AlertTriangle } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill, SectionLabel } from "@/components/Primitives";
 
@@ -13,6 +13,8 @@ export default function YearTransition() {
   const [mapping, setMapping] = useState({}); // {from_id: to_id}
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [typedYear, setTypedYear] = useState("");
 
   useEffect(() => { (async () => {
     try { const { data } = await api.get("/school-years"); setYears(data); } catch (e) { toast.error(apiErrorMessage(e)); }
@@ -34,13 +36,24 @@ export default function YearTransition() {
     })();
   }, [to]);
 
+  const targetYear = years.find((y) => y.id === to);
+  const targetLabel = targetYear?.label || "";
+
+  const openConfirm = () => {
+    const entries = Object.entries(mapping).filter(([_, v]) => v);
+    if (entries.length === 0) { toast.error("Imposta almeno una corrispondenza"); return; }
+    if (!targetYear) { toast.error("Scegli l'anno di destinazione"); return; }
+    setTypedYear("");
+    setConfirmOpen(true);
+  };
+
   const run = async () => {
     setBusy(true);
     try {
       const entries = Object.entries(mapping).filter(([_, v]) => v).map(([from_classroom_id, to_classroom_id]) => ({ from_classroom_id, to_classroom_id }));
-      if (entries.length === 0) { toast.error("Imposta almeno una corrispondenza"); setBusy(false); return; }
       const { data } = await api.post("/year-transition", { from_year_id: from, to_year_id: to, mapping: entries });
       setDone(data);
+      setConfirmOpen(false);
       toast.success(`${data.moved} alunni promossi`);
     } catch (e) { toast.error(apiErrorMessage(e)); }
     finally { setBusy(false); }
@@ -87,7 +100,7 @@ export default function YearTransition() {
               ))}
 
               <button
-                onClick={run} disabled={busy}
+                onClick={openConfirm} disabled={busy}
                 className="w-full h-14 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2"
                 data-testid="run-transition-button"
               >
@@ -102,6 +115,66 @@ export default function YearTransition() {
             </div>
           )}
         </Card>
+      )}
+
+      {/* Modal di conferma con digitazione anno */}
+      {confirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/50 p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="h-12 w-12 rounded-2xl bg-rose-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-6 w-6 text-rose-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display text-xl font-bold text-stone-900">Conferma passaggio anno</h3>
+                <p className="text-sm text-stone-500 mt-1">Operazione irreversibile</p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-rose-50 border border-rose-200 p-4 mb-4 text-sm text-rose-900">
+              <p className="font-bold mb-2">Riepilogo:</p>
+              <ul className="space-y-1 text-xs list-disc list-inside">
+                <li>Da anno: <b>{years.find(y=>y.id===from)?.label}</b></li>
+                <li>Verso anno: <b>{targetLabel}</b></li>
+                <li>Sezioni mappate: <b>{Object.values(mapping).filter(Boolean).length}</b></li>
+                <li>Gli alunni saranno spostati nelle sezioni del nuovo anno</li>
+                <li>L'anno di destinazione diventerà quello attivo</li>
+              </ul>
+            </div>
+
+            <label className="block mb-4">
+              <span className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                Per confermare, digita l'anno di destinazione: <b className="text-rose-600 font-mono">{targetLabel}</b>
+              </span>
+              <input
+                type="text"
+                value={typedYear}
+                onChange={(e) => setTypedYear(e.target.value)}
+                placeholder={targetLabel}
+                autoFocus
+                className="mt-2 w-full h-12 px-4 rounded-2xl bg-stone-50 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-300 font-mono tracking-wider"
+                data-testid="year-confirm-input"
+              />
+            </label>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmOpen(false)}
+                className="flex-1 h-12 rounded-2xl bg-stone-100 hover:bg-stone-200 font-semibold text-sm"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={run}
+                disabled={typedYear.trim() !== targetLabel || busy}
+                className="flex-1 h-12 rounded-2xl bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm flex items-center justify-center gap-2"
+                data-testid="year-confirm-run"
+              >
+                {busy ? "Promozione…" : "Conferma passaggio"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

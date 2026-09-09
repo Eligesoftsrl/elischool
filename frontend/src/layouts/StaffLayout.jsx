@@ -3,33 +3,85 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import {
   Home, Users, GraduationCap, UserCog, UsersRound, ClipboardList,
   Utensils, Megaphone, CalendarRange, ArrowRightLeft, LogOut, Menu as MenuIcon, X, ChevronDown, Heart,
-  BookOpen, Sparkles, Building2, Scan, Image as ImageIcon, CalendarDays, Cake, QrCode, Inbox,
+  BookOpen, Sparkles, Building2, Scan, Image as ImageIcon, CalendarDays, Inbox, NotebookPen,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 
-const NAV = [
-  { to: "/s", icon: Home, label: "Dashboard", end: true },
-  { to: "/s/presenze", icon: Scan, label: "Presenze" },
-  { to: "/s/attivita", icon: ClipboardList, label: "Attività" },
-  { to: "/s/alunni", icon: GraduationCap, label: "Alunni" },
-  { to: "/s/sezioni", icon: Users, label: "Sezioni" },
-  { to: "/s/piano", icon: BookOpen, label: "Piano didattico" },
-  { to: "/s/laboratori", icon: Sparkles, label: "Laboratori" },
-  { to: "/s/comunicazioni", icon: Megaphone, label: "Comunicazioni" },
-  { to: "/s/eventi", icon: CalendarDays, label: "Eventi" },
-  { to: "/s/galleria", icon: ImageIcon, label: "Galleria" },
-  { to: "/s/compleanni", icon: Cake, label: "Compleanni" },
-  { to: "/s/menu", icon: Utensils, label: "Menu" },
-  { to: "/s/genitori", icon: UsersRound, label: "Genitori" },
-  { to: "/s/iscrizioni", icon: Inbox, label: "Iscrizioni", admin: true },
-  { to: "/s/tesserini", icon: QrCode, label: "Tesserini", admin: true },
-  { to: "/s/maestre", icon: UserCog, label: "Maestre", admin: true },
-  { to: "/s/scuola", icon: Building2, label: "Profilo Scuola", admin: true },
-  { to: "/s/anni", icon: CalendarRange, label: "Anni scolastici", admin: true },
-  { to: "/s/passaggio-anno", icon: ArrowRightLeft, label: "Passaggio anno", admin: true },
+// Menu grouped by frequency of use. Each group is collapsible.
+// `admin: true` hides the item for non-admin roles.
+const NAV_GROUPS = [
+  {
+    key: "home",
+    label: "Home",
+    defaultOpen: true,
+    items: [{ to: "/s", icon: Home, label: "Dashboard", end: true }],
+  },
+  {
+    key: "daily",
+    label: "Ogni giorno",
+    defaultOpen: true,
+    items: [
+      { to: "/s/presenze", icon: Scan, label: "Presenze" },
+      { to: "/s/diario", icon: NotebookPen, label: "Diario" },
+    ],
+  },
+  {
+    key: "didattica",
+    label: "Didattica",
+    items: [
+      { to: "/s/piano", icon: BookOpen, label: "Piano didattico" },
+      { to: "/s/laboratori", icon: Sparkles, label: "Laboratori" },
+    ],
+  },
+  {
+    key: "anagrafiche",
+    label: "Anagrafiche",
+    items: [
+      { to: "/s/alunni", icon: GraduationCap, label: "Alunni" },
+      { to: "/s/sezioni", icon: Users, label: "Sezioni" },
+      { to: "/s/genitori", icon: UsersRound, label: "Genitori" },
+      { to: "/s/maestre", icon: UserCog, label: "Maestre", admin: true },
+    ],
+  },
+  {
+    key: "comunicazione",
+    label: "Comunicazione",
+    items: [
+      { to: "/s/comunicazioni", icon: Megaphone, label: "Comunicazioni" },
+      { to: "/s/eventi", icon: CalendarDays, label: "Eventi" },
+      { to: "/s/galleria", icon: ImageIcon, label: "Galleria" },
+    ],
+  },
+  {
+    key: "segreteria",
+    label: "Segreteria",
+    admin: true,
+    items: [{ to: "/s/iscrizioni", icon: Inbox, label: "Iscrizioni", admin: true }],
+  },
+  {
+    key: "configurazione",
+    label: "Configurazione",
+    admin: true,
+    items: [
+      { to: "/s/menu-mensa", icon: Utensils, label: "Menu mensa", admin: true },
+      { to: "/s/scuola", icon: Building2, label: "Profilo scuola", admin: true },
+      { to: "/s/anni", icon: CalendarRange, label: "Anni scolastici", admin: true },
+      { to: "/s/passaggio-anno", icon: ArrowRightLeft, label: "Passaggio anno", admin: true, danger: true },
+    ],
+  },
 ];
+
+// Which group contains a given path
+function groupOfPath(pathname) {
+  for (const g of NAV_GROUPS) {
+    for (const it of g.items) {
+      if (it.end ? pathname === it.to : pathname.startsWith(it.to)) return g.key;
+    }
+  }
+  return null;
+}
 
 export default function StaffLayout() {
   const { user, logout } = useAuth();
@@ -59,7 +111,13 @@ export default function StaffLayout() {
     window.dispatchEvent(new CustomEvent("active-year-changed", { detail: y }));
   };
 
-  const filteredNav = NAV.filter((n) => !n.admin || user?.role === "admin");
+  const filteredGroups = NAV_GROUPS
+    .filter((g) => !g.admin || user?.role === "admin")
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((it) => !it.admin || user?.role === "admin"),
+    }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <div className="min-h-screen bg-[#FDFBF7]">
@@ -99,7 +157,7 @@ export default function StaffLayout() {
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10 grid md:grid-cols-[240px_1fr] gap-8">
         {/* Side nav (desktop) */}
         <aside className="hidden md:block sticky top-24 self-start">
-          <SideNav nav={filteredNav} />
+          <SideNav groups={filteredGroups} pathname={loc.pathname} />
         </aside>
 
         {/* Mobile drawer */}
@@ -116,7 +174,7 @@ export default function StaffLayout() {
                 key="drawer"
                 initial={{ x: -320 }} animate={{ x: 0 }} exit={{ x: -320 }}
                 transition={{ type: "spring", damping: 26, stiffness: 240 }}
-                className="fixed inset-y-0 left-0 z-50 w-72 bg-white p-5 md:hidden flex flex-col rounded-r-[2rem] shadow-2xl"
+                className="fixed inset-y-0 left-0 z-50 w-72 bg-white p-5 md:hidden flex flex-col rounded-r-[2rem] shadow-2xl overflow-y-auto"
               >
                 <div className="flex items-center justify-between mb-6">
                   <span className="font-display font-bold text-lg">Menu</span>
@@ -127,7 +185,7 @@ export default function StaffLayout() {
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-                <SideNav nav={filteredNav} />
+                <SideNav groups={filteredGroups} pathname={loc.pathname} />
               </motion.aside>
             </>
           )}
@@ -148,27 +206,87 @@ export default function StaffLayout() {
   );
 }
 
-function SideNav({ nav }) {
+function SideNav({ groups, pathname }) {
+  const activeGroup = groupOfPath(pathname);
+  // Restore state from localStorage, default from group config, and always open the active group
+  const [openMap, setOpenMap] = useState(() => {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem("nav_groups_open") || "{}"); } catch (_) {}
+    const map = {};
+    groups.forEach((g) => {
+      map[g.key] = saved[g.key] !== undefined ? saved[g.key] : !!g.defaultOpen;
+    });
+    return map;
+  });
+
+  useEffect(() => {
+    if (activeGroup && !openMap[activeGroup]) {
+      setOpenMap((m) => ({ ...m, [activeGroup]: true }));
+    }
+    // eslint-disable-next-line
+  }, [activeGroup]);
+
+  useEffect(() => {
+    localStorage.setItem("nav_groups_open", JSON.stringify(openMap));
+  }, [openMap]);
+
+  const toggle = (key) => setOpenMap((m) => ({ ...m, [key]: !m[key] }));
+
   return (
     <nav className="space-y-1">
-      {nav.map((n) => (
-        <NavLink
-          key={n.to}
-          to={n.to}
-          end={n.end}
-          className={({ isActive }) =>
-            `flex items-center gap-3 h-12 px-4 rounded-2xl text-sm font-semibold transition-all ${
-              isActive
-                ? "bg-[#FFF3EF] text-[#FF7A54] shadow-sm"
-                : "text-stone-700 hover:bg-stone-100"
-            }`
-          }
-          data-testid={`nav-${n.label.toLowerCase().replace(/\s+/g, "-")}`}
-        >
-          <n.icon className="h-4.5 w-4.5 h-[18px] w-[18px]" />
-          {n.label}
-        </NavLink>
-      ))}
+      {groups.map((g) => {
+        const isOpen = !!openMap[g.key];
+        return (
+          <div key={g.key} className="mb-1">
+            <button
+              onClick={() => toggle(g.key)}
+              className="w-full flex items-center justify-between h-9 px-3 rounded-xl text-[10px] uppercase tracking-[.14em] font-bold text-stone-500 hover:text-stone-800 hover:bg-stone-50 transition-colors"
+              data-testid={`nav-group-${g.key}`}
+              aria-expanded={isOpen}
+            >
+              <span>{g.label}</span>
+              <motion.span animate={{ rotate: isOpen ? 0 : -90 }} transition={{ duration: 0.18 }}>
+                <ChevronDown className="h-3.5 w-3.5" />
+              </motion.span>
+            </button>
+            <AnimatePresence initial={false}>
+              {isOpen && (
+                <motion.div
+                  key="body"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-1 pt-1 pb-1">
+                    {g.items.map((n) => (
+                      <NavLink
+                        key={n.to}
+                        to={n.to}
+                        end={n.end}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 h-11 px-4 rounded-2xl text-sm font-semibold transition-all ${
+                            isActive
+                              ? "bg-[#FFF3EF] text-[#FF7A54] shadow-sm"
+                              : n.danger
+                                ? "text-rose-700 hover:bg-rose-50"
+                                : "text-stone-700 hover:bg-stone-100"
+                          }`
+                        }
+                        data-testid={`nav-${n.label.toLowerCase().replace(/\s+/g, "-")}`}
+                      >
+                        <n.icon className="h-[18px] w-[18px]" />
+                        <span className="truncate">{n.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        );
+      })}
     </nav>
   );
 }

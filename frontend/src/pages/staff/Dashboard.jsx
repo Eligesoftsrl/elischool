@@ -14,18 +14,21 @@ export default function StaffDashboard() {
   const [stats, setStats] = useState(null);
   const [news, setNews] = useState([]);
   const [todayActivities, setTodayActivities] = useState([]);
+  const [birthdays, setBirthdays] = useState([]);
 
   useEffect(() => {
     let m = true;
     (async () => {
       try {
-        const [s, n] = await Promise.all([
+        const [s, n, b] = await Promise.all([
           api.get("/dashboard/stats"),
           api.get("/news"),
+          api.get("/birthdays", { params: { days: 30 } }).catch(() => ({ data: [] })),
         ]);
         if (!m) return;
         setStats(s.data);
         setNews(n.data.slice(0, 4));
+        setBirthdays((b.data || []).slice(0, 5));
         const today = new Date().toISOString().slice(0, 10);
         const a = await api.get("/activities", { params: { date_from: today, date_to: today } });
         if (!m) return;
@@ -44,7 +47,7 @@ export default function StaffDashboard() {
         subtitle={activeYear ? `Anno scolastico ${activeYear.label}` : "Configura l'anno scolastico"}
         right={
           <Link
-            to="/s/attivita"
+            to="/s/diario"
             className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 tap-press"
             data-testid="dashboard-cta-activities"
           >
@@ -108,18 +111,49 @@ export default function StaffDashboard() {
         </div>
       )}
 
+      {/* Prossimi compleanni (30 giorni) — sostituisce la vecchia voce di menu */}
+      {birthdays.length > 0 && (
+        <Card className="mt-6" data-testid="dashboard-birthdays">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display text-xl font-bold text-stone-900 flex items-center gap-2">
+              🎂 Prossimi compleanni
+              <span className="text-xs font-normal text-stone-500">· 30 giorni</span>
+            </h3>
+            <Link to="/s/compleanni" className="text-xs font-bold text-brand uppercase tracking-wider flex items-center gap-1" data-testid="birthdays-see-all">
+              Vedi tutti <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="flex gap-3 overflow-x-auto hide-scrollbar -mx-1 px-1 pb-1">
+            {birthdays.map((b) => {
+              const isToday = b.days_until === 0;
+              const isTomorrow = b.days_until === 1;
+              return (
+                <div key={b.id} className={`shrink-0 min-w-[180px] rounded-2xl p-3 border ${isToday ? "bg-rose-50 border-rose-200" : isTomorrow ? "bg-amber-50 border-amber-200" : "bg-stone-50 border-stone-200"}`} data-testid={`birthday-item-${b.id}`}>
+                  <p className="font-display font-bold text-stone-900 truncate">{b.first_name} {b.last_name}</p>
+                  <p className="text-xs text-stone-500 mt-0.5">
+                    {isToday ? "Oggi! 🎉" : isTomorrow ? "Domani" : `Tra ${b.days_until} giorni`}
+                    {b.age_turning ? ` · compie ${b.age_turning}` : ""}
+                  </p>
+                  <p className="text-[11px] text-stone-400 mt-1">{new Date(b.next_birthday).toLocaleDateString("it-IT", { day: "2-digit", month: "long" })}</p>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       <div className="mt-8 grid lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-display text-xl font-bold text-stone-900">Attività di oggi</h3>
-            <Link to="/s/attivita" className="text-xs font-bold text-brand uppercase tracking-wider flex items-center gap-1">
+            <Link to="/s/diario" className="text-xs font-bold text-brand uppercase tracking-wider flex items-center gap-1">
               Vedi tutte <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
           {todayActivities.length === 0 ? (
             <EmptyState
               title="Nessuna attività registrata oggi"
-              description="Vai nella sezione 'Attività' per registrare la giornata dei bambini."
+              description="Vai nella sezione 'Diario' per registrare la giornata dei bambini."
               imageUrl="https://static.prod-images.emergentagent.com/jobs/96ad60f7-372f-4730-9be4-769e965e5107/images/ff88168c79f5a887e58508be26ea3e4f7ae859628398e0d781e9ee508232af3c.png"
             />
           ) : (

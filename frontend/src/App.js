@@ -116,8 +116,10 @@ function App() {
             <Route path="sezioni" element={<StaffClassrooms />} />
             <Route path="maestre" element={<StaffTeachers />} />
             <Route path="genitori" element={<StaffParents />} />
-            <Route path="attivita" element={<StaffActivities />} />
-            <Route path="menu" element={<StaffMenu />} />
+            <Route path="diario" element={<StaffActivities />} />
+            <Route path="attivita" element={<Navigate to="/s/diario" replace />} />
+            <Route path="menu-mensa" element={<StaffMenu />} />
+            <Route path="menu" element={<Navigate to="/s/menu-mensa" replace />} />
             <Route path="news" element={<StaffNews />} />
             <Route path="anni" element={<StaffYears />} />
             <Route path="passaggio-anno" element={<StaffYearTransition />} />
