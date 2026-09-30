@@ -1,13 +1,13 @@
 import { useEffect, useState, useMemo } from "react";
 import { useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Search, Trash2, Pencil, X, GraduationCap, ArrowRightLeft, Cake, AlertTriangle, UserX, RefreshCw, Ban, Send } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, X, GraduationCap, ArrowRightLeft, Cake, AlertTriangle, UserX, RefreshCw, Ban, Send, UsersRound } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
 import { ComuniAutocomplete } from "@/components/ComuniAutocomplete";
 
 const CF_RE = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/;
-const empty = { first_name: "", last_name: "", birth_date: "", fiscal_code: "", city_residence: "", residence: "", allergies: "", notes: "" };
+const empty = { first_name: "", last_name: "", birth_date: "", fiscal_code: "", city_residence: "", residence: "", allergies: "", notes: "", classroom_id: "" };
 
 const WITHDRAW_REASONS = [
   { value: "transfer", label: "Trasferimento ad altra scuola" },
@@ -31,16 +31,28 @@ export default function StaffStudents() {
   const [transferOpen, setTransferOpen] = useState(null);
   const [withdrawOpen, setWithdrawOpen] = useState(null);
   const [withdrawForm, setWithdrawForm] = useState({ reason: "transfer", withdrawn_at: new Date().toISOString().slice(0, 10), notes: "" });
+  const [classFilter, setClassFilter] = useState("all");
+  const [parentLinks, setParentLinks] = useState({}); // {student_id: [{parent_id, parent_name}]}
 
   const load = async () => {
     try {
       const yearParam = activeYear ? { school_year_id: activeYear.id } : {};
-      const [a, w] = await Promise.all([
+      const [a, w, p] = await Promise.all([
         api.get("/students", { params: { ...yearParam, status: "active" } }),
         api.get("/students", { params: { status: "withdrawn" } }),
+        api.get("/parents").catch(() => ({ data: [] })),
       ]);
       setActiveList(a.data);
       setWithdrawn(w.data);
+      // Build map student -> [parents]
+      const linkMap = {};
+      (p.data || []).forEach((par) => {
+        (par.student_ids || []).forEach((sid) => {
+          if (!linkMap[sid]) linkMap[sid] = [];
+          linkMap[sid].push({ id: par.id, name: par.name || `${par.first_name} ${par.last_name}` });
+        });
+      });
+      setParentLinks(linkMap);
       if (classrooms.length === 0 && activeYear) {
         const { data: cs } = await api.get("/classrooms", { params: { school_year_id: activeYear.id } });
         setClassrooms(cs);
@@ -125,11 +137,17 @@ export default function StaffStudents() {
   const withdrawnMatchingSearch = useMemo(() => (qn ? withdrawn.filter(matches) : []), [withdrawn, qn]); // eslint-disable-line
 
   const displayed = useMemo(() => {
-    if (filter === "withdrawn") return withdrawn.filter(matches);
-    if (filter === "unassigned") return active.filter((s) => !s.enrollment?.classroom_id).filter(matches);
-    return active.filter(matches);
+    let list;
+    if (filter === "withdrawn") list = withdrawn.filter(matches);
+    else if (filter === "unassigned") list = active.filter((s) => !s.enrollment?.classroom_id).filter(matches);
+    else list = active.filter(matches);
+    // apply class filter (except when viewing withdrawn or unassigned, which are already filtered)
+    if (classFilter !== "all" && filter !== "withdrawn" && filter !== "unassigned") {
+      list = list.filter((s) => s.enrollment?.classroom_id === classFilter);
+    }
+    return list;
     // eslint-disable-next-line
-  }, [active, withdrawn, filter, qn]);
+  }, [active, withdrawn, filter, qn, classFilter]);
 
   const onTransfer = async (sid, toClassroomId) => {
     try {
@@ -208,7 +226,7 @@ export default function StaffStudents() {
       </div>
 
       {/* Pill filtri */}
-      <div className="flex gap-2 overflow-x-auto hide-scrollbar mb-5 -mx-1 px-1">
+      <div className="flex gap-2 overflow-x-auto hide-scrollbar mb-3 -mx-1 px-1">
         <FilterPill active={filter === "all"} onClick={() => setFilter("all")} testid="filter-all">
           Tutti <span className="ml-1 opacity-70">({active.length})</span>
         </FilterPill>
@@ -223,6 +241,32 @@ export default function StaffStudents() {
           </FilterPill>
         )}
       </div>
+
+      {/* Filtro sezione (nascosto quando si guarda ritirati o solo da assegnare) */}
+      {filter === "all" && classrooms.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar mb-5 -mx-1 px-1" data-testid="class-filter-pills">
+          <button
+            onClick={() => setClassFilter("all")}
+            className={`shrink-0 h-9 px-3 rounded-full border text-xs font-semibold ${classFilter === "all" ? "bg-stone-900 text-white border-stone-900" : "bg-white text-stone-700 border-stone-200"}`}
+            data-testid="class-filter-all"
+          >
+            Tutte le sezioni
+          </button>
+          {classrooms.map((c) => {
+            const count = active.filter((s) => s.enrollment?.classroom_id === c.id).length;
+            return (
+              <button
+                key={c.id}
+                onClick={() => setClassFilter(c.id)}
+                className={`shrink-0 h-9 px-3 rounded-full border text-xs font-semibold ${classFilter === c.id ? "bg-stone-900 text-white border-stone-900" : "bg-white text-stone-700 border-stone-200"}`}
+                data-testid={`class-filter-${c.id}`}
+              >
+                {c.name} <span className="opacity-70">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {displayed.length === 0 ? (
         qn ? (
@@ -281,6 +325,18 @@ export default function StaffStudents() {
                 {s.allergies && !isWithdrawn && (
                   <p className="mt-3 text-xs text-rose-600 font-semibold">⚠ Allergie: {s.allergies}</p>
                 )}
+                {!isWithdrawn && (
+                  parentLinks[s.id]?.length > 0 ? (
+                    <p className="mt-2 text-xs text-purple-700 flex items-center gap-1 font-medium" data-testid={`student-parent-linked-${s.id}`}>
+                      <UsersRound className="h-3 w-3" />
+                      {parentLinks[s.id].map(p => p.name).join(", ")}
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-xs text-amber-700 flex items-center gap-1 font-medium" data-testid={`student-parent-missing-${s.id}`}>
+                      <AlertTriangle className="h-3 w-3" /> Nessun genitore associato
+                    </p>
+                  )
+                )}
 
                 {isWithdrawn ? (
                   <div className="mt-4 grid grid-cols-2 gap-2">
@@ -311,7 +367,7 @@ export default function StaffStudents() {
                     <button
                       onClick={() => {
                         const { first_name, last_name, birth_date, fiscal_code, city_residence, residence, allergies, notes } = s;
-                        setForm({ first_name, last_name, birth_date: birth_date || "", fiscal_code: fiscal_code || "", city_residence: city_residence || "", residence: residence || "", allergies: allergies || "", notes: notes || "" });
+                        setForm({ first_name, last_name, birth_date: birth_date || "", fiscal_code: fiscal_code || "", city_residence: city_residence || "", residence: residence || "", allergies: allergies || "", notes: notes || "", classroom_id: s.enrollment?.classroom_id || "" });
                         setEditId(s.id); setOpen(true);
                       }}
                       className="h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-xs font-semibold flex items-center justify-center gap-1.5"
@@ -390,6 +446,17 @@ export default function StaffStudents() {
             </Field></Row>
             <Field label="Città di residenza *">
               <ComuniAutocomplete value={form.city_residence} onChange={(v) => setForm({ ...form, city_residence: v })} required testid="form-city" />
+            </Field>
+            <Field label="Sezione (anno attivo)">
+              <select
+                value={form.classroom_id}
+                onChange={(e) => setForm({ ...form, classroom_id: e.target.value })}
+                className="w-full h-12 px-4 rounded-2xl bg-stone-50 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand/30"
+                data-testid="form-classroom"
+              >
+                <option value="">— Da assegnare —</option>
+                {classrooms.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.age_band}</option>)}
+              </select>
             </Field>
             <Field label="Indirizzo (via, numero)"><Input value={form.residence} onChange={(v) => setForm({ ...form, residence: v })} /></Field>
             <Field label="Allergie"><Input value={form.allergies} onChange={(v) => setForm({ ...form, allergies: v })} /></Field>

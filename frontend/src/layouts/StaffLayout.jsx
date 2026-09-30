@@ -13,26 +13,13 @@ import api from "@/lib/api";
 // `admin: true` hides the item for non-admin roles.
 const NAV_GROUPS = [
   {
-    key: "home",
-    label: "Home",
-    defaultOpen: true,
-    items: [{ to: "/s", icon: Home, label: "Dashboard", end: true }],
-  },
-  {
-    key: "daily",
-    label: "Ogni giorno",
+    key: "oggi",
+    label: "Oggi",
     defaultOpen: true,
     items: [
+      { to: "/s", icon: Home, label: "Dashboard", end: true },
       { to: "/s/presenze", icon: Scan, label: "Presenze" },
       { to: "/s/diario", icon: NotebookPen, label: "Diario" },
-    ],
-  },
-  {
-    key: "didattica",
-    label: "Didattica",
-    items: [
-      { to: "/s/piano", icon: BookOpen, label: "Piano didattico" },
-      { to: "/s/laboratori", icon: Sparkles, label: "Laboratori" },
     ],
   },
   {
@@ -46,31 +33,36 @@ const NAV_GROUPS = [
     ],
   },
   {
-    key: "comunicazione",
-    label: "Comunicazione",
+    key: "vita",
+    label: "Vita scolastica",
     items: [
+      { to: "/s/piano", icon: BookOpen, label: "Piano didattico" },
+      { to: "/s/laboratori", icon: Sparkles, label: "Laboratori" },
       { to: "/s/comunicazioni", icon: Megaphone, label: "Comunicazioni" },
-      { to: "/s/eventi", icon: CalendarDays, label: "Eventi" },
+      { to: "/s/eventi", icon: CalendarDays, label: "Festività & Chiusure" },
       { to: "/s/galleria", icon: ImageIcon, label: "Galleria" },
     ],
   },
   {
-    key: "segreteria",
-    label: "Segreteria",
-    admin: true,
-    items: [{ to: "/s/iscrizioni", icon: Inbox, label: "Iscrizioni", admin: true }],
-  },
-  {
-    key: "configurazione",
-    label: "Configurazione",
+    key: "gestione",
+    label: "Gestione",
     admin: true,
     items: [
+      { to: "/s/iscrizioni", icon: Inbox, label: "Iscrizioni", admin: true },
       { to: "/s/menu-mensa", icon: Utensils, label: "Menu mensa", admin: true },
       { to: "/s/scuola", icon: Building2, label: "Profilo scuola", admin: true },
       { to: "/s/anni", icon: CalendarRange, label: "Anni scolastici", admin: true },
       { to: "/s/passaggio-anno", icon: ArrowRightLeft, label: "Passaggio anno", admin: true, danger: true },
     ],
   },
+];
+
+// Bottom nav for mobile: 4 quick actions + "Altro" that opens the drawer
+const MOBILE_QUICK = [
+  { to: "/s", icon: Home, label: "Home", end: true },
+  { to: "/s/presenze", icon: Scan, label: "Presenze" },
+  { to: "/s/diario", icon: NotebookPen, label: "Diario" },
+  { to: "/s/alunni", icon: GraduationCap, label: "Alunni" },
 ];
 
 // Which group contains a given path
@@ -191,7 +183,7 @@ export default function StaffLayout() {
           )}
         </AnimatePresence>
 
-        <main className="min-w-0">
+        <main className="min-w-0 pb-20 md:pb-0">
           <motion.div
             key={loc.pathname}
             initial={{ opacity: 0, y: 8 }}
@@ -202,7 +194,47 @@ export default function StaffLayout() {
           </motion.div>
         </main>
       </div>
+
+      {/* Bottom navigation (mobile only) */}
+      <BottomNav pathname={loc.pathname} onOpenMore={() => setOpen(true)} />
     </div>
+  );
+}
+
+function BottomNav({ pathname, onOpenMore }) {
+  return (
+    <nav
+      className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-stone-200 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
+      data-testid="mobile-bottom-nav"
+      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+    >
+      <div className="grid grid-cols-5 h-16">
+        {MOBILE_QUICK.map((n) => (
+          <NavLink
+            key={n.to}
+            to={n.to}
+            end={n.end}
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors ${
+                isActive ? "text-[#FF7A54]" : "text-stone-500 hover:text-stone-800"
+              }`
+            }
+            data-testid={`bnav-${n.label.toLowerCase()}`}
+          >
+            <n.icon className="h-5 w-5" />
+            <span>{n.label}</span>
+          </NavLink>
+        ))}
+        <button
+          onClick={onOpenMore}
+          className="flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold text-stone-500 hover:text-stone-800"
+          data-testid="bnav-more"
+        >
+          <MenuIcon className="h-5 w-5" />
+          <span>Altro</span>
+        </button>
+      </div>
+    </nav>
   );
 }
 

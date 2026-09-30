@@ -132,15 +132,22 @@ export default function StaffActivities() {
     if (!editing) return;
     setSaving(true);
     try {
+      // Auto-fill dei campi checkbox lasciati vuoti (default "tutto sì")
+      // Applicato SOLO se l'utente NON ha modificato NESSUNO dei campi checkbox.
+      // Le note testuali (che possono venire pre-compilate da menu/piano) NON contano come "tocco".
+      const untouched = !form.didattica && !form.motoria && !form.pranzo && !form.merenda && !form.riposo && !form.cacca && !form.pipi;
+      const filled = untouched
+        ? { ...form, didattica: "Partecipato", motoria: "Partecipato", pranzo: "Ha mangiato", merenda: "Si", riposo: "Si", cacca: "Si", pipi: "Si" }
+        : form;
       if (editing.bulk) {
         const { data } = await api.post("/activities/bulk", {
           classroom_id: editing.classroom.id,
           school_year_id: activeYear.id,
           date,
           overwrite_existing: bulkOverwrite,
-          ...form,
+          ...filled,
         });
-        toast.success(`Applicata a ${data.applied} alunni${data.skipped ? ` (${data.skipped} già compilati, saltati)` : ""}`);
+        toast.success(`Applicata a ${data.applied} alunni${data.skipped ? ` (${data.skipped} già compilati, saltati)` : ""}${untouched ? " · valori di default applicati" : ""}`);
         // Reload activities
         const a = await api.get("/activities", { params: { date_from: date, date_to: date, classroom_id: classId, school_year_id: activeYear.id } });
         const map = {};
@@ -148,9 +155,9 @@ export default function StaffActivities() {
         setActivities(map);
         setEditing(null);
       } else {
-        const { data } = await api.post("/activities", { student_id: editing.id, date, ...form });
+        const { data } = await api.post("/activities", { student_id: editing.id, date, ...filled });
         setActivities({ ...activities, [editing.id]: data });
-        toast.success("Salvato");
+        toast.success(untouched ? "Salvato con valori di default (tutto sì)" : "Salvato");
         setEditing(null);
       }
     } catch (e) { toast.error(apiErrorMessage(e)); }

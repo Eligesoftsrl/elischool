@@ -98,6 +98,26 @@ Allineamento al DB MySQL reale dell'utente. Aggiunte:
 - Palinsesto a 5 colonne (giorni)
 - Lazy load delle foto (singolo GET /media/{id} on demand)
 
+### Iteration 13 (19/02/2026) — 9 Modifiche + Menu 4 gruppi + BottomNav mobile ✅
+Grande batch di miglioramenti UX/anagrafica su richiesta cliente:
+- **Sezione nella scheda alunno**: campo Sezione (dropdown) in form nuovo/modifica alunno → crea/aggiorna enrollment automaticamente sull'anno attivo. Backend: `StudentIn.classroom_id`
+- **Filtro sezione su `/s/alunni`**: pill orizzontali "Tutte le sezioni · Coccinelle (3) · Farfalle (1) · …" con contatore live. Nascoste quando si guarda "Ritirati" o "Da assegnare"
+- **Badge genitore su card alunno**: 👥 "Nome Cognome" in viola se linkato / ⚠ "Nessun genitore associato" in ambra se no
+- **Abbinamento genitore→bambino con autocomplete**: sostituita la lista pill con un search field. Ogni suggerimento mostra nome + CF (font mono) + sezione (badge). Filtra su nome/cognome/CF/sezione. Selezionati come chip rimovibili con CF visibile.
+- **CF nella scheda Genitore** (facoltativo, validato con regex se compilato). Visualizzato sulla card + su ogni chip figlio collegato
+- **Campo Note** già presente su Alunni/Genitori/Maestre/Sezioni (verificato)
+- **Rinomina "Eventi" → "Festività & Chiusure"** su menu voce, PageHeader e subtitle
+- **Piano didattico multi-sezione**: campo `classroom_ids: List[str]` sul model. Nuovo form con tasto esplicito **"Tutte le sezioni della scuola"** (violaceo) + multi-select alternativa. `[]` = tutte, altrimenti solo sezioni specifiche. Backward-compat con vecchio `classroom_id` singolo.
+- **Diario auto-fill "tutto sì"**: se l'utente salva la scheda giornaliera **senza toccare NESSUN checkbox** (didattica/motoria/pranzo/merenda/riposo/cacca/pipì), applico i default `Partecipato/Ha mangiato/Sì` in automatico. Se ha toccato anche solo un campo, il resto resta vuoto. Toast informativo.
+
+**Menu riorganizzato in 4 gruppi (A+C combinato):**
+- OGGI (default open): Dashboard · Presenze · Diario
+- ANAGRAFICHE: Alunni · Sezioni · Genitori · Maestre
+- VITA SCOLASTICA: Piano · Laboratori · Comunicazioni · Festività & Chiusure · Galleria
+- GESTIONE (admin only): Iscrizioni · Menu mensa · Profilo scuola · Anni · Passaggio anno
+
+**BottomNav su mobile**: bar fissa in basso con 5 shortcut (Home · Presenze · Diario · Alunni · Altro→drawer). `safe-area-inset-bottom` per iOS. Padding-bottom su `<main>` per non nascondere l'ultimo contenuto.
+
 ### Iteration 12 (19/02/2026) — Menu Riorganizzato + Redirect + Widget compleanni ✅
 Implementata la riorganizzazione completa del menu backoffice richiesta da documento cliente (Nursery_Smart_Riorganizzazione_Menu):
 - **7 gruppi collapsible** in `StaffLayout.jsx`: HOME · OGNI GIORNO · DIDATTICA · ANAGRAFICHE · COMUNICAZIONE · SEGRETERIA · CONFIGURAZIONE (ordinati per frequenza d'uso)

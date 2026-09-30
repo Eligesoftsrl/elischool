@@ -233,6 +233,7 @@ class StudentIn(BaseModel):
     residence: Optional[str] = ""
     allergies: Optional[str] = ""
     notes: Optional[str] = ""
+    classroom_id: Optional[str] = None  # se presente crea/aggiorna l'enrollment nell'anno attivo
 
 
 class EnrollmentIn(BaseModel):
@@ -268,6 +269,7 @@ class ParentIn(BaseModel):
     last_name: str
     email: EmailStr
     phone: Optional[str] = ""
+    fiscal_code: Optional[str] = ""
     notes: Optional[str] = ""
     student_ids: List[str] = []  # children
 
@@ -657,6 +659,7 @@ async def get_student(sid: str, school_year_id: Optional[str] = None, user=Depen
 @api.post("/students")
 async def create_student(payload: StudentIn, user=Depends(require_role("admin", "teacher"))):
     doc = payload.model_dump()
+    classroom_id = doc.pop("classroom_id", None)
     cf = normalize_cf(doc.get("fiscal_code", ""))
     if not validate_cf(cf):
         raise HTTPException(400, "Codice Fiscale non valido (formato atteso: 16 caratteri alfanumerici)")
@@ -666,21 +669,45 @@ async def create_student(payload: StudentIn, user=Depends(require_role("admin", 
     doc["id"] = gen_id()
     doc["created_at"] = now_iso()
     await db.students.insert_one(doc)
+    # If classroom specified, create enrollment for the active year
+    if classroom_id:
+        active = await db.school_years.find_one({"is_active": True}, {"_id": 0})
+        if active:
+            await db.enrollments.insert_one({
+                "id": gen_id(), "student_id": doc["id"],
+                "classroom_id": classroom_id, "school_year_id": active["id"],
+                "created_at": now_iso(),
+            })
     return clean_doc(doc)
 
 
 @api.patch("/students/{sid}")
 async def update_student(sid: str, payload: StudentIn, user=Depends(require_role("admin", "teacher"))):
     data = payload.model_dump()
+    classroom_id = data.pop("classroom_id", None)
     cf = normalize_cf(data.get("fiscal_code", ""))
     if not validate_cf(cf):
         raise HTTPException(400, "Codice Fiscale non valido")
-    # uniqueness (excluding current record)
     dup = await db.students.find_one({"fiscal_code": cf, "id": {"$ne": sid}})
     if dup:
         raise HTTPException(400, "Un altro alunno usa già questo Codice Fiscale")
     data["fiscal_code"] = cf
     await db.students.update_one({"id": sid}, {"$set": data})
+    # Handle classroom change on active year
+    active = await db.school_years.find_one({"is_active": True}, {"_id": 0})
+    if active:
+        current = await db.enrollments.find_one({"student_id": sid, "school_year_id": active["id"]})
+        if classroom_id:
+            if current:
+                await db.enrollments.update_one({"id": current["id"]}, {"$set": {"classroom_id": classroom_id}})
+            else:
+                await db.enrollments.insert_one({
+                    "id": gen_id(), "student_id": sid,
+                    "classroom_id": classroom_id, "school_year_id": active["id"],
+                    "created_at": now_iso(),
+                })
+        elif classroom_id is None and current is None:
+            pass  # leave as-is (no explicit unset)
     return await db.students.find_one({"id": sid}, {"_id": 0})
 
 
@@ -822,6 +849,7 @@ async def create_parent(payload: ParentIn, user=Depends(require_role("admin", "t
         "last_name": payload.last_name,
         "name": f"{payload.first_name} {payload.last_name}",
         "phone": payload.phone,
+        "fiscal_code": normalize_cf(payload.fiscal_code) if payload.fiscal_code else "",
         "notes": payload.notes,
         "role": "parent",
         "status": "pending",  # will become active when password is set
@@ -865,6 +893,7 @@ async def update_parent(pid: str, payload: ParentIn, user=Depends(require_role("
         "last_name": payload.last_name,
         "name": f"{payload.first_name} {payload.last_name}",
         "phone": payload.phone,
+        "fiscal_code": normalize_cf(payload.fiscal_code) if payload.fiscal_code else "",
         "notes": payload.notes,
         "email": payload.email.lower().strip(),
     }})
@@ -1460,7 +1489,8 @@ async def refresh_report(sid: str, date_str: Optional[str] = None, user=Depends(
 
 # --- Models ---
 class LessonPlanIn(BaseModel):
-    classroom_id: str
+    classroom_id: Optional[str] = None  # LEGACY: se presente, singola sezione
+    classroom_ids: List[str] = []  # NEW: [] = tutte le sezioni della scuola; altrimenti sezioni specifiche
     school_year_id: Optional[str] = None
     date_from: str  # YYYY-MM-DD
     date_to: str
@@ -1536,10 +1566,16 @@ async def list_lesson_plans(
     user=Depends(require_role("admin", "teacher")),
 ):
     q = {}
-    if classroom_id:
-        q["classroom_id"] = classroom_id
     if school_year_id:
         q["school_year_id"] = school_year_id
+    if classroom_id:
+        # match legacy single classroom_id OR new classroom_ids array containing this id OR empty (all)
+        q["$or"] = [
+            {"classroom_id": classroom_id},
+            {"classroom_ids": classroom_id},
+            {"classroom_ids": {"$in": [[], None]}},
+            {"classroom_ids": {"$exists": False}, "classroom_id": {"$in": [None, ""]}},
+        ]
     docs = await db.lesson_plans.find(q, {"_id": 0}).sort("date_from", -1).to_list(500)
     return docs
 
@@ -1554,13 +1590,19 @@ async def create_lesson_plan(payload: LessonPlanIn, user=Depends(require_role("a
         active = await db.school_years.find_one({"is_active": True}, {"_id": 0})
         if active:
             doc["school_year_id"] = active["id"]
+    # Normalize: if classroom_ids provided, ignore legacy classroom_id
+    if doc.get("classroom_ids"):
+        doc["classroom_id"] = None
     await db.lesson_plans.insert_one(doc)
     return clean_doc(doc)
 
 
 @api.patch("/lesson-plans/{pid}")
 async def update_lesson_plan(pid: str, payload: LessonPlanIn, user=Depends(require_role("admin", "teacher"))):
-    await db.lesson_plans.update_one({"id": pid}, {"$set": payload.model_dump()})
+    data = payload.model_dump()
+    if data.get("classroom_ids"):
+        data["classroom_id"] = None
+    await db.lesson_plans.update_one({"id": pid}, {"$set": data})
     return await db.lesson_plans.find_one({"id": pid}, {"_id": 0})
 
 

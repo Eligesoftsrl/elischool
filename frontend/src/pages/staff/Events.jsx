@@ -36,7 +36,7 @@ export default function Events() {
 
   return (
     <div>
-      <PageHeader title="Calendario eventi" subtitle={`${items.length} eventi`}
+      <PageHeader title="Festività & Chiusure" subtitle={`${items.length} ricorrenze`}
         right={
           <button onClick={() => { setForm(empty); setEditId(null); setOpen(true); }}
             className="h-12 px-5 rounded-2xl bg-[#FF8C6B] text-white font-semibold text-sm flex items-center gap-2" data-testid="add-event-button">

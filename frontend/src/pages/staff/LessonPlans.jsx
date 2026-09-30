@@ -5,7 +5,7 @@ import { Plus, X, BookOpen, Pencil, Trash2, CalendarRange } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
 
-const empty = { classroom_id: "", date_from: "", date_to: "", title: "", body: "" };
+const empty = { classroom_ids: [], date_from: "", date_to: "", title: "", body: "" };
 
 export default function LessonPlans() {
   const { activeYear } = useOutletContext();
@@ -66,7 +66,7 @@ export default function LessonPlans() {
         subtitle="Cosa imparano i bambini settimana per settimana"
         right={
           <button
-            onClick={() => { setForm({ ...empty, classroom_id: classId }); setEditId(null); setOpen(true); }}
+            onClick={() => { setForm({ ...empty, classroom_ids: classId ? [classId] : [] }); setEditId(null); setOpen(true); }}
             className="h-12 px-5 rounded-2xl bg-[#FF8C6B] text-white font-semibold text-sm flex items-center gap-2 tap-press"
             data-testid="add-lesson-plan-button"
           >
@@ -98,7 +98,13 @@ export default function LessonPlans() {
                   <div className="h-12 w-12 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0"><BookOpen className="h-5 w-5 text-amber-600" /></div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <Pill color="brand">{classroomName(p.classroom_id)}</Pill>
+                      {(p.classroom_ids && p.classroom_ids.length > 0) ? (
+                        p.classroom_ids.map((cid) => <Pill key={cid} color="brand">{classroomName(cid)}</Pill>)
+                      ) : p.classroom_id ? (
+                        <Pill color="brand">{classroomName(p.classroom_id)}</Pill>
+                      ) : (
+                        <Pill color="purple">Tutte le sezioni</Pill>
+                      )}
                       <span className="text-xs text-stone-500 flex items-center gap-1"><CalendarRange className="h-3 w-3" /> {p.date_from} → {p.date_to}</span>
                     </div>
                     <p className="font-display text-lg font-bold text-stone-900">{p.title}</p>
@@ -106,7 +112,7 @@ export default function LessonPlans() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-1 shrink-0">
-                  <button onClick={() => { setForm({ classroom_id: p.classroom_id, date_from: p.date_from, date_to: p.date_to, title: p.title, body: p.body }); setEditId(p.id); setOpen(true); }} className="h-10 w-10 rounded-xl bg-stone-100"><Pencil className="h-4 w-4 mx-auto" /></button>
+                  <button onClick={() => { setForm({ classroom_ids: (p.classroom_ids && p.classroom_ids.length > 0) ? p.classroom_ids : (p.classroom_id ? [p.classroom_id] : []), date_from: p.date_from, date_to: p.date_to, title: p.title, body: p.body }); setEditId(p.id); setOpen(true); }} className="h-10 w-10 rounded-xl bg-stone-100"><Pencil className="h-4 w-4 mx-auto" /></button>
                   <button onClick={() => remove(p.id)} className="h-10 w-10 rounded-xl bg-rose-50 text-rose-700"><Trash2 className="h-4 w-4 mx-auto" /></button>
                 </div>
               </div>
@@ -118,12 +124,36 @@ export default function LessonPlans() {
       {open && (
         <Modal title={editId ? "Modifica piano" : "Nuovo piano"} onClose={() => setOpen(false)}>
           <form onSubmit={submit} className="space-y-3">
-            <Field label="Sezione">
-              <select value={form.classroom_id} onChange={(e) => setForm({ ...form, classroom_id: e.target.value })} required
-                className="w-full h-12 px-4 rounded-2xl bg-stone-50 border border-stone-200" data-testid="lp-classroom">
-                <option value="">Seleziona…</option>
-                {classrooms.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+            <Field label="Sezioni destinatarie *">
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, classroom_ids: [] })}
+                  className={`w-full h-12 rounded-2xl border font-semibold text-sm flex items-center justify-center gap-2 transition-all ${form.classroom_ids.length === 0 ? "bg-purple-600 text-white border-purple-600" : "bg-white border-stone-200 text-stone-700 hover:border-purple-400"}`}
+                  data-testid="lp-all-classrooms"
+                >
+                  {form.classroom_ids.length === 0 ? "✓ " : ""}Tutte le sezioni della scuola
+                </button>
+                <p className="text-[11px] text-stone-500 text-center">— oppure —</p>
+                <div className="flex flex-wrap gap-2 p-2 rounded-2xl bg-stone-50 border border-stone-200">
+                  {classrooms.map((c) => {
+                    const sel = form.classroom_ids.includes(c.id);
+                    return (
+                      <button key={c.id} type="button"
+                        onClick={() => setForm({ ...form, classroom_ids: sel ? form.classroom_ids.filter((x) => x !== c.id) : [...form.classroom_ids, c.id] })}
+                        className={`px-3 py-2 rounded-xl text-xs font-semibold border ${sel ? "bg-[#FFF3EF] border-[#FF8C6B] text-[#FF7A54]" : "bg-white border-stone-200 text-stone-700"}`}
+                        data-testid={`lp-classroom-${c.id}`}>
+                        {sel ? "✓ " : ""}{c.name}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-stone-500">
+                  {form.classroom_ids.length === 0
+                    ? "Il piano sarà visibile a tutte le sezioni della scuola"
+                    : `Il piano sarà associato a ${form.classroom_ids.length} sezion${form.classroom_ids.length === 1 ? "e" : "i"}`}
+                </p>
+              </div>
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Dal"><Input type="date" value={form.date_from} onChange={(v) => setForm({ ...form, date_from: v })} required testid="lp-from" /></Field>
