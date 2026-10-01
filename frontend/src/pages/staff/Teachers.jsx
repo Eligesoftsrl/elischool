@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, X, UserCog, Pencil, Trash2, Shield, KeyRound, AtSign, Copy, Check } from "lucide-react";
+import { Plus, X, UserCog, Pencil, Trash2, Shield, KeyRound, AtSign, Copy, Check, RotateCw, MailCheck, MailX } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
@@ -23,7 +23,9 @@ export default function StaffTeachers() {
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(empty);
   const [showPassword, setShowPassword] = useState(false);
-  const [createdInfo, setCreatedInfo] = useState(null); // { email, password } shown after creation
+  const [createdInfo, setCreatedInfo] = useState(null); // { email, password, email_sent }
+  const [resetInfo, setResetInfo] = useState(null);     // { email, password, email_sent, name }
+  const [resetting, setResetting] = useState(null);     // teacher id being reset
   const [copied, setCopied] = useState("");
 
   const load = async () => {
@@ -43,13 +45,32 @@ export default function StaffTeachers() {
           toast.error("Imposta una password di almeno 6 caratteri");
           return;
         }
-        await api.post("/teachers", form);
+        const { data } = await api.post("/teachers", form);
         toast.success("Maestra creata");
-        // Show the credentials panel so admin can share them
-        setCreatedInfo({ email: form.email, password: form.password });
+        setCreatedInfo({ email: form.email, password: form.password, email_sent: data?.email_sent });
       }
       await load();
     } catch (e) { toast.error(apiErrorMessage(e)); }
+  };
+
+  const resetPassword = async (teacher) => {
+    if (!window.confirm(`Rigenerare la password di ${teacher.first_name} ${teacher.last_name}?\n\nLa password attuale smetterà di funzionare immediatamente.`)) return;
+    setResetting(teacher.id);
+    try {
+      const { data } = await api.post(`/teachers/${teacher.id}/reset-password`);
+      setResetInfo({
+        email: data.email,
+        password: data.password,
+        email_sent: data.email_sent,
+        name: `${teacher.first_name} ${teacher.last_name}`,
+      });
+      if (data.email_sent) {
+        toast.success("Password rigenerata e inviata via email");
+      } else {
+        toast.success("Password rigenerata — email non inviata, condividila manualmente");
+      }
+    } catch (e) { toast.error(apiErrorMessage(e)); }
+    finally { setResetting(null); }
   };
 
   const closeAndReset = () => {
@@ -95,26 +116,62 @@ export default function StaffTeachers() {
                 <div className="h-12 w-12 rounded-2xl bg-violet-50 flex items-center justify-center">
                   {t.role === "admin" ? <Shield className="h-5 w-5 text-violet-600" /> : <UserCog className="h-5 w-5 text-violet-600" />}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="font-display font-bold truncate">{t.first_name} {t.last_name}</p>
+                  <p className="text-xs text-stone-600 font-mono truncate mt-0.5" title={t.email}>{t.email}</p>
                   <Pill color={t.role === "admin" ? "rose" : "purple"} className="mt-1">{t.role === "admin" ? "Amministratore" : "Maestra"}</Pill>
                 </div>
               </div>
-              <div className="mt-3 rounded-xl bg-stone-50 border border-stone-100 px-3 py-2">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-stone-500 flex items-center gap-1"><AtSign className="h-3 w-3" /> Nome utente per il login</p>
-                <p className="text-xs font-mono text-stone-800 truncate mt-0.5" title={t.email}>{t.email}</p>
-              </div>
-              {t.phone && <p className="text-xs text-stone-500 mt-2">{t.phone}</p>}
-              <div className="mt-4 grid grid-cols-2 gap-2">
+              {t.phone && <p className="text-xs text-stone-500 mt-3">{t.phone}</p>}
+              <div className="mt-4 grid grid-cols-3 gap-2">
                 <button onClick={() => { setForm({ first_name: t.first_name, last_name: t.last_name, email: t.email, phone: t.phone || "", role: t.role, password: "", notes: t.notes || "" }); setEditId(t.id); setCreatedInfo(null); setShowPassword(false); setOpen(true); }}
-                  className="h-10 rounded-xl bg-stone-100 text-xs font-semibold flex items-center justify-center gap-1.5" data-testid={`edit-teacher-${t.id}`}><Pencil className="h-3.5 w-3.5" /> Modifica</button>
+                  className="h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-xs font-semibold flex items-center justify-center gap-1.5" data-testid={`edit-teacher-${t.id}`} title="Modifica">
+                  <Pencil className="h-3.5 w-3.5" /><span className="hidden sm:inline">Modifica</span>
+                </button>
+                <button onClick={() => resetPassword(t)} disabled={resetting === t.id}
+                  className="h-10 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"
+                  data-testid={`reset-pwd-${t.id}`} title="Rigenera password">
+                  <RotateCw className={`h-3.5 w-3.5 ${resetting === t.id ? "animate-spin" : ""}`} /><span className="hidden sm:inline">Reset pwd</span>
+                </button>
                 <button onClick={() => remove(t.id)}
-                  className="h-10 rounded-xl bg-rose-50 text-rose-700 text-xs font-semibold flex items-center justify-center gap-1.5" data-testid={`delete-teacher-${t.id}`}><Trash2 className="h-3.5 w-3.5" /> Elimina</button>
+                  className="h-10 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold flex items-center justify-center gap-1.5" data-testid={`delete-teacher-${t.id}`} title="Elimina">
+                  <Trash2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">Elimina</span>
+                </button>
               </div>
             </Card>
           ))}
         </div>
       }
+
+      {/* Reset password result modal */}
+      {resetInfo && (
+        <Modal
+          title="Password rigenerata ✓"
+          onClose={() => setResetInfo(null)}
+          footer={(
+            <button type="button" onClick={() => setResetInfo(null)} className="w-full h-12 rounded-2xl bg-stone-900 hover:bg-stone-800 text-white font-semibold" data-testid="reset-close">
+              Chiudi
+            </button>
+          )}
+        >
+          <div className="space-y-4" data-testid="reset-credentials-panel">
+            <div className={`rounded-2xl p-4 border ${resetInfo.email_sent ? "bg-emerald-50 border-emerald-200 text-emerald-900" : "bg-amber-50 border-amber-200 text-amber-900"}`}>
+              <div className="flex items-start gap-2">
+                {resetInfo.email_sent ? <MailCheck className="h-5 w-5 shrink-0 mt-0.5" /> : <MailX className="h-5 w-5 shrink-0 mt-0.5" />}
+                <div className="text-sm">
+                  <b>{resetInfo.name}</b> — nuova password impostata.<br />
+                  {resetInfo.email_sent
+                    ? <>Un'email con le nuove credenziali è stata inviata a <code className="font-mono text-xs">{resetInfo.email}</code>.</>
+                    : <>L'invio email ha avuto un problema. <b>Copia e condividi manualmente</b> le credenziali qui sotto.</>
+                  }
+                </div>
+              </div>
+            </div>
+            <CredentialRow icon={<AtSign className="h-4 w-4" />} label="Nome utente (email)" value={resetInfo.email} copyKey="r-email" copied={copied} onCopy={copyToClipboard} />
+            <CredentialRow icon={<KeyRound className="h-4 w-4" />} label="Nuova password" value={resetInfo.password} copyKey="r-pwd" copied={copied} onCopy={copyToClipboard} mono />
+          </div>
+        </Modal>
+      )}
 
       {open && (
         <Modal
@@ -135,14 +192,20 @@ export default function StaffTeachers() {
         >
           {createdInfo ? (
             <div className="space-y-4" data-testid="teacher-credentials-panel">
-              <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4">
-                <p className="text-sm text-emerald-900 font-semibold">
-                  Account creato con successo. Condividi queste credenziali con la maestra: potrà accedere subito dalla pagina di login.
-                </p>
+              <div className={`rounded-2xl p-4 border ${createdInfo.email_sent ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
+                <div className="flex items-start gap-2">
+                  {createdInfo.email_sent ? <MailCheck className="h-5 w-5 text-emerald-700 shrink-0 mt-0.5" /> : <MailX className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />}
+                  <p className={`text-sm font-semibold ${createdInfo.email_sent ? "text-emerald-900" : "text-amber-900"}`}>
+                    {createdInfo.email_sent
+                      ? <>Account creato e credenziali inviate via email a <code className="font-mono text-xs">{createdInfo.email}</code>.</>
+                      : <>Account creato con successo. L'invio email non è riuscito: <b>condividi manualmente</b> le credenziali qui sotto.</>
+                    }
+                  </p>
+                </div>
               </div>
               <CredentialRow icon={<AtSign className="h-4 w-4" />} label="Nome utente (email)" value={createdInfo.email} copyKey="email" copied={copied} onCopy={copyToClipboard} />
               <CredentialRow icon={<KeyRound className="h-4 w-4" />} label="Password iniziale" value={createdInfo.password} copyKey="pwd" copied={copied} onCopy={copyToClipboard} mono />
-              <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+              <div className="rounded-xl bg-stone-50 border border-stone-200 p-3 text-xs text-stone-700">
                 <b>Suggerisci alla maestra</b> di cambiare la password dal menu <i>Profilo</i> dopo il primo accesso.
               </div>
             </div>

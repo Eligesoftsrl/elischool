@@ -162,6 +162,64 @@ async def send_enrollment_approved_email(to_email: str, parent_name: str, studen
     text = f"Ciao {parent_name},\n\nIscrizione approvata per {student_name}. Attiva il tuo account: {invite_link}\n\nLink valido 7 giorni."
     return await _send(to_email, parent_name, subject, html, text)
 
+async def send_credentials_email(to_email: str, full_name: str, login_email: str, password: str, login_url: str, school_name: str = "la scuola", kind: str = "created") -> bool:
+    """Send login credentials (email+password) to a teacher/admin.
+    kind='created' → first-time welcome. kind='reset' → password reset by admin.
+    """
+    if kind == "reset":
+        subject = f"La tua password è stata reimpostata · {school_name}"
+        title = "Nuova password di accesso"
+        intro = (
+            f"Ciao <b>{full_name or ''}</b>,<br/><br/>"
+            f"la direzione di <b>{school_name}</b> ha reimpostato la tua password. "
+            "Qui sotto trovi le nuove credenziali per accedere alla tua area riservata."
+        )
+    else:
+        subject = f"Benvenuta in {school_name} · le tue credenziali"
+        title = "Il tuo account è pronto"
+        intro = (
+            f"Ciao <b>{full_name or ''}</b>,<br/><br/>"
+            f"il tuo account presso <b>{school_name}</b> è stato creato. "
+            "Qui sotto trovi le credenziali per il primo accesso."
+        )
+
+    creds_block = f"""
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#faf7f2;border:1px solid #f1ebe2;border-radius:18px;margin:4px 0 20px;">
+      <tr><td style="padding:16px 20px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:#a8a29e;text-transform:uppercase;">Nome utente (email)</div>
+        <div style="font-size:15px;color:#1c1917;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;margin-top:4px;word-break:break-all;">{login_email}</div>
+      </td></tr>
+      <tr><td style="padding:0 20px 16px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:#a8a29e;text-transform:uppercase;">Password iniziale</div>
+        <div style="font-size:15px;color:#1c1917;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;margin-top:4px;">{password}</div>
+      </td></tr>
+    </table>
+    """
+    outro = (
+        creds_block +
+        "Al primo accesso, ti consigliamo di cambiare la password dal menu <b>Profilo</b>. "
+        "Conserva queste credenziali in un posto sicuro e non condividerle con altri."
+    )
+    html = _wrap_html(
+        title=title,
+        intro=intro,
+        cta_url=login_url,
+        cta_label="Accedi ora",
+        outro=outro,
+    )
+    text = (
+        f"Ciao {full_name},\n\n"
+        f"Credenziali di accesso a {school_name}:\n"
+        f"Email: {login_email}\n"
+        f"Password: {password}\n\n"
+        f"Accedi da: {login_url}\n\n"
+        "Ti consigliamo di cambiare la password dopo il primo accesso."
+    )
+    return await _send(to_email, full_name, subject, html, text)
+
+
+
+
 
 async def send_test_email(to_email: str) -> bool:
     """Used by /api/admin/email/test to verify Brevo config."""

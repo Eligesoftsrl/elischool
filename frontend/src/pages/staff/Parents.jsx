@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
-import { Plus, X, UsersRound, Pencil, Trash2, Link as LinkIcon, Copy, Send, CheckCircle2, Clock, Search as SearchIcon, IdCard } from "lucide-react";
+import { Plus, X, UsersRound, Pencil, Trash2, Link as LinkIcon, Copy, Send, CheckCircle2, Clock, Search as SearchIcon, IdCard, AtSign } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
 
@@ -119,7 +119,9 @@ export default function StaffParents() {
                   <div className="h-12 w-12 rounded-2xl bg-stone-100 flex items-center justify-center"><UsersRound className="h-5 w-5 text-stone-600" /></div>
                   <div className="min-w-0">
                     <p className="font-display font-bold truncate">{p.first_name} {p.last_name}</p>
-                    <p className="text-xs text-stone-500 truncate">{p.email}</p>
+                    <p className="text-xs text-stone-600 font-mono truncate flex items-center gap-1 mt-0.5" title={p.email} data-testid={`parent-login-${p.id}`}>
+                      <AtSign className="h-3 w-3 text-stone-400 shrink-0" />{p.email}
+                    </p>
                   </div>
                 </div>
                 {p.status === "active"

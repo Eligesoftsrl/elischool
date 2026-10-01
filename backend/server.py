@@ -24,6 +24,7 @@ from email_service import (
     send_password_reset_email,
     send_enrollment_approved_email,
     send_test_email,
+    send_credentials_email,
 )
 from tenant_db import SmartDB, set_current_tenant
 
@@ -803,7 +804,51 @@ async def create_teacher(payload: TeacherIn, user=Depends(require_role("admin"))
         "created_at": now_iso(),
     }
     await db.users.insert_one(doc)
-    return clean_doc(dict(doc))
+    # Fire-and-forget welcome email with credentials
+    email_sent = await _send_credentials_mail(email, doc["name"], pwd, kind="created")
+    out = clean_doc(dict(doc))
+    out["email_sent"] = email_sent
+    return out
+
+
+@api.post("/teachers/{tid}/reset-password")
+async def reset_teacher_password(tid: str, user=Depends(require_role("admin"))):
+    """Generate a new random password for a teacher/admin, store the hash, email the credentials."""
+    teacher = await db.users.find_one({"id": tid})
+    if not teacher or teacher.get("role") not in ("teacher", "admin"):
+        raise HTTPException(404, "Maestra non trovata")
+    new_pwd = _generate_readable_password()
+    await db.users.update_one({"id": tid}, {"$set": {"password_hash": hash_password(new_pwd)}})
+    email_sent = await _send_credentials_mail(teacher["email"], teacher.get("name") or teacher["email"], new_pwd, kind="reset")
+    return {"ok": True, "email": teacher["email"], "password": new_pwd, "email_sent": email_sent}
+
+
+def _generate_readable_password() -> str:
+    """3-word + 3-digit + '!' password, Italian-flavoured, generated server-side."""
+    words = ["Sole", "Luna", "Prato", "Mare", "Cielo", "Fiore", "Nido", "Nuvola", "Albero", "Stella", "Melodia", "Arcobaleno"]
+    w1 = secrets.choice(words)
+    w2 = secrets.choice(words)
+    num = secrets.randbelow(900) + 100
+    return f"{w1}{w2}{num}!"
+
+
+async def _send_credentials_mail(to_email: str, full_name: str, password: str, kind: str) -> bool:
+    try:
+        tenant = await raw_db.tenants.find_one({"id": _current_tenant_id_safe()}, {"_id": 0}) if _current_tenant_id_safe() else None
+        school_name = (tenant or {}).get("name") or "la scuola"
+        login_url = (os.environ.get("FRONTEND_URL", "") or "") + "/login"
+        return await send_credentials_email(to_email, full_name, to_email, password, login_url, school_name=school_name, kind=kind)
+    except Exception as e:
+        logger.error(f"[CREDS EMAIL FAIL] {to_email}: {type(e).__name__}: {e}")
+        return False
+
+
+def _current_tenant_id_safe() -> Optional[str]:
+    try:
+        from tenant_db import get_current_tenant
+        return get_current_tenant()
+    except Exception:
+        return None
 
 
 @api.patch("/teachers/{tid}")
