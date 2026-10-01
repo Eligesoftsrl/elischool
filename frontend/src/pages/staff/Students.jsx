@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Search, Trash2, Pencil, X, GraduationCap, ArrowRightLeft, Cake, AlertTriangle, UserX, RefreshCw, Ban, Send, UsersRound } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, X, GraduationCap, ArrowRightLeft, Cake, AlertTriangle, UserX, RefreshCw, Ban, Send, UsersRound, Mail, Phone, FileText, User } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
 import { ComuniAutocomplete } from "@/components/ComuniAutocomplete";
@@ -33,6 +33,8 @@ export default function StaffStudents() {
   const [withdrawForm, setWithdrawForm] = useState({ reason: "transfer", withdrawn_at: new Date().toISOString().slice(0, 10), notes: "" });
   const [classFilter, setClassFilter] = useState("all");
   const [parentLinks, setParentLinks] = useState({}); // {student_id: [{parent_id, parent_name}]}
+  const [parentsById, setParentsById] = useState({}); // full parent data by id
+  const [parentDetail, setParentDetail] = useState(null); // parent object to show in popup
 
   const load = async () => {
     try {
@@ -44,15 +46,18 @@ export default function StaffStudents() {
       ]);
       setActiveList(a.data);
       setWithdrawn(w.data);
-      // Build map student -> [parents]
+      // Build map student -> [parents] and parentsById
       const linkMap = {};
+      const byId = {};
       (p.data || []).forEach((par) => {
+        byId[par.id] = par;
         (par.student_ids || []).forEach((sid) => {
           if (!linkMap[sid]) linkMap[sid] = [];
           linkMap[sid].push({ id: par.id, name: par.name || `${par.first_name} ${par.last_name}` });
         });
       });
       setParentLinks(linkMap);
+      setParentsById(byId);
       if (classrooms.length === 0 && activeYear) {
         const { data: cs } = await api.get("/classrooms", { params: { school_year_id: activeYear.id } });
         setClassrooms(cs);
@@ -313,6 +318,11 @@ export default function StaffStudents() {
                           <Pill color="stone"><Cake className="h-3 w-3" /> {s.birth_date}</Pill>
                         )}
                       </div>
+                      {s.fiscal_code && !isWithdrawn && (
+                        <p className="mt-1.5 text-[11px] font-mono tracking-wider text-stone-500 uppercase" data-testid={`student-cf-${s.id}`}>
+                          CF: {s.fiscal_code}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -327,10 +337,24 @@ export default function StaffStudents() {
                 )}
                 {!isWithdrawn && (
                   parentLinks[s.id]?.length > 0 ? (
-                    <p className="mt-2 text-xs text-purple-700 flex items-center gap-1 font-medium" data-testid={`student-parent-linked-${s.id}`}>
-                      <UsersRound className="h-3 w-3" />
-                      {parentLinks[s.id].map(p => p.name).join(", ")}
-                    </p>
+                    <div className="mt-2 flex items-center gap-1.5 flex-wrap" data-testid={`student-parent-linked-${s.id}`}>
+                      <UsersRound className="h-3 w-3 text-purple-700 shrink-0" />
+                      {parentLinks[s.id].map((p, i) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            const full = parentsById[p.id];
+                            if (full) setParentDetail(full);
+                          }}
+                          className="text-xs text-purple-700 font-medium hover:text-purple-900 hover:underline underline-offset-2"
+                          data-testid={`student-parent-btn-${s.id}-${p.id}`}
+                          title="Vedi dettaglio genitore"
+                        >
+                          {p.name}{i < parentLinks[s.id].length - 1 ? "," : ""}
+                        </button>
+                      ))}
+                    </div>
                   ) : (
                     <p className="mt-2 text-xs text-amber-700 flex items-center gap-1 font-medium" data-testid={`student-parent-missing-${s.id}`}>
                       <AlertTriangle className="h-3 w-3" /> Nessun genitore associato
@@ -432,8 +456,17 @@ export default function StaffStudents() {
 
       {/* Form drawer */}
       {open && (
-        <Modal onClose={() => setOpen(false)} title={editId ? "Modifica alunno" : "Nuovo alunno"}>
-          <form onSubmit={submit} className="space-y-3">
+        <Modal
+          onClose={() => setOpen(false)}
+          title={editId ? "Modifica alunno" : "Nuovo alunno"}
+          footer={(
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 hover:bg-stone-200 font-semibold" data-testid="form-cancel">Annulla</button>
+              <button type="submit" form="student-form" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold" data-testid="form-submit">Salva</button>
+            </div>
+          )}
+        >
+          <form id="student-form" onSubmit={submit} className="space-y-3">
             <Row><Field label="Nome *"><Input value={form.first_name} onChange={(v) => setForm({ ...form, first_name: v })} required testid="form-first-name" /></Field>
             <Field label="Cognome *"><Input value={form.last_name} onChange={(v) => setForm({ ...form, last_name: v })} required testid="form-last-name" /></Field></Row>
             <Row><Field label="Data nascita *"><Input type="date" value={form.birth_date} onChange={(v) => setForm({ ...form, birth_date: v })} required testid="form-birth-date" /></Field>
@@ -461,11 +494,6 @@ export default function StaffStudents() {
             <Field label="Indirizzo (via, numero)"><Input value={form.residence} onChange={(v) => setForm({ ...form, residence: v })} /></Field>
             <Field label="Allergie"><Input value={form.allergies} onChange={(v) => setForm({ ...form, allergies: v })} /></Field>
             <Field label="Note"><Textarea value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} /></Field>
-
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 font-semibold">Annulla</button>
-              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold" data-testid="form-submit">Salva</button>
-            </div>
           </form>
         </Modal>
       )}
@@ -489,7 +517,18 @@ export default function StaffStudents() {
       )}
 
       {withdrawOpen && (
-        <Modal onClose={() => setWithdrawOpen(null)} title={`Ritira ${withdrawOpen.first_name} ${withdrawOpen.last_name}`}>
+        <Modal
+          onClose={() => setWithdrawOpen(null)}
+          title={`Ritira ${withdrawOpen.first_name} ${withdrawOpen.last_name}`}
+          footer={(
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setWithdrawOpen(null)} className="flex-1 h-12 rounded-2xl bg-stone-100 hover:bg-stone-200 font-semibold">Annulla</button>
+              <button type="submit" form="withdraw-form" className="flex-1 h-12 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold flex items-center justify-center gap-2" data-testid="withdraw-submit">
+                <UserX className="h-4 w-4" /> Ritira alunno
+              </button>
+            </div>
+          )}
+        >
           <div className="rounded-2xl bg-orange-50 border border-orange-200 p-4 mb-4">
             <p className="text-sm text-orange-900">
               <b>Cosa succede quando ritiri:</b>
@@ -501,7 +540,7 @@ export default function StaffStudents() {
               <li>Puoi <b>ripristinarlo</b> in qualsiasi momento</li>
             </ul>
           </div>
-          <form onSubmit={submitWithdraw} className="space-y-3">
+          <form id="withdraw-form" onSubmit={submitWithdraw} className="space-y-3">
             <Field label="Motivo del ritiro *">
               <select
                 value={withdrawForm.reason}
@@ -519,13 +558,72 @@ export default function StaffStudents() {
             <Field label="Note (facoltativo)">
               <Textarea value={withdrawForm.notes} onChange={(v) => setWithdrawForm({ ...withdrawForm, notes: v })} />
             </Field>
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={() => setWithdrawOpen(null)} className="flex-1 h-12 rounded-2xl bg-stone-100 font-semibold">Annulla</button>
-              <button type="submit" className="flex-1 h-12 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold flex items-center justify-center gap-2" data-testid="withdraw-submit">
-                <UserX className="h-4 w-4" /> Ritira alunno
-              </button>
-            </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Parent detail popup */}
+      {parentDetail && (
+        <Modal
+          onClose={() => setParentDetail(null)}
+          title="Dettaglio genitore"
+          footer={(
+            <button type="button" onClick={() => setParentDetail(null)} className="w-full h-12 rounded-2xl bg-stone-900 hover:bg-stone-800 text-white font-semibold" data-testid="parent-detail-close">
+              Chiudi
+            </button>
+          )}
+        >
+          <div className="space-y-4" data-testid="parent-detail-modal">
+            <div className="flex items-center gap-3">
+              <div className="h-14 w-14 rounded-2xl bg-purple-100 flex items-center justify-center shrink-0">
+                <User className="h-6 w-6 text-purple-700" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-display font-bold text-lg text-stone-900">
+                  {parentDetail.name || `${parentDetail.first_name || ""} ${parentDetail.last_name || ""}`.trim()}
+                </p>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  <Pill color={parentDetail.status === "active" ? "green" : "amber"}>
+                    {parentDetail.status === "active" ? "Attivo" : "In attesa invito"}
+                  </Pill>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              {parentDetail.email && (
+                <DetailRow icon={<Mail className="h-4 w-4" />} label="Email">
+                  <a href={`mailto:${parentDetail.email}`} className="text-brand hover:underline break-all">{parentDetail.email}</a>
+                </DetailRow>
+              )}
+              {parentDetail.phone && (
+                <DetailRow icon={<Phone className="h-4 w-4" />} label="Telefono">
+                  <a href={`tel:${parentDetail.phone}`} className="text-brand hover:underline">{parentDetail.phone}</a>
+                </DetailRow>
+              )}
+              {parentDetail.fiscal_code && (
+                <DetailRow icon={<FileText className="h-4 w-4" />} label="Codice Fiscale">
+                  <span className="font-mono tracking-wider uppercase text-stone-800">{parentDetail.fiscal_code}</span>
+                </DetailRow>
+              )}
+              {parentDetail.notes && (
+                <DetailRow icon={<FileText className="h-4 w-4" />} label="Note">
+                  <span className="text-stone-700 whitespace-pre-wrap">{parentDetail.notes}</span>
+                </DetailRow>
+              )}
+              {parentDetail.student_ids?.length > 0 && (
+                <DetailRow icon={<UsersRound className="h-4 w-4" />} label={`Figli (${parentDetail.student_ids.length})`}>
+                  <div className="flex flex-wrap gap-1.5">
+                    {parentDetail.student_ids.map((sid) => {
+                      const s = active.find((x) => x.id === sid) || withdrawn.find((x) => x.id === sid);
+                      if (!s) return null;
+                      return <Pill key={sid} color="brand">{s.first_name} {s.last_name}</Pill>;
+                    })}
+                  </div>
+                </DetailRow>
+              )}
+            </div>
+          </div>
         </Modal>
       )}
     </div>
@@ -548,23 +646,43 @@ function FilterPill({ active, onClick, children, color = "stone", testid }) {
   );
 }
 
-function Modal({ children, title, onClose }) {
+function Modal({ children, title, onClose, footer, maxWidth = "md:max-w-lg" }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-stone-900/40 p-0 md:p-6">
-      <div className="bg-white w-full md:max-w-lg rounded-t-[2rem] md:rounded-[2rem] p-6 max-h-[92vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
+      <div className={`bg-white w-full ${maxWidth} rounded-t-[2rem] md:rounded-[2rem] max-h-[92vh] flex flex-col shadow-xl`}>
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-stone-100 shrink-0">
           <h3 className="font-display text-xl font-bold">{title}</h3>
-          <button onClick={onClose} className="h-10 w-10 rounded-xl bg-stone-100 flex items-center justify-center">
+          <button onClick={onClose} className="h-10 w-10 rounded-xl bg-stone-100 hover:bg-stone-200 flex items-center justify-center" data-testid="modal-close-btn" aria-label="Chiudi">
             <X className="h-4 w-4" />
           </button>
         </div>
-        {children}
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {children}
+        </div>
+        {footer && (
+          <div className="px-6 py-4 border-t border-stone-100 bg-white rounded-b-[2rem] shrink-0" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 function Field({ label, children }) { return <label className="block"><span className="text-xs font-bold uppercase tracking-wider text-stone-500">{label}</span><div className="mt-1">{children}</div></label>; }
 function Row({ children }) { return <div className="grid grid-cols-2 gap-3">{children}</div>; }
+function DetailRow({ icon, label, children }) {
+  return (
+    <div className="flex items-start gap-3 p-3 rounded-2xl bg-stone-50 border border-stone-100">
+      <span className="h-8 w-8 rounded-xl bg-white border border-stone-200 flex items-center justify-center text-stone-600 shrink-0 mt-0.5">
+        {icon}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500">{label}</p>
+        <div className="mt-0.5 text-sm">{children}</div>
+      </div>
+    </div>
+  );
+}
 function Input({ value, onChange, type = "text", required, testid }) {
   return <input type={type} required={required} value={value} onChange={(e) => onChange(e.target.value)}
     className="w-full h-12 px-4 rounded-2xl bg-stone-50 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand/30" data-testid={testid} />;

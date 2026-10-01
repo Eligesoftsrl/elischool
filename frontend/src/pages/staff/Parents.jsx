@@ -151,8 +151,17 @@ export default function StaffParents() {
       }
 
       {open && (
-        <Modal title={editId ? "Modifica genitore" : "Invita genitore"} onClose={() => setOpen(false)}>
-          <form onSubmit={submit} className="space-y-3">
+        <Modal
+          title={editId ? "Modifica genitore" : "Invita genitore"}
+          onClose={() => setOpen(false)}
+          footer={(
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 hover:bg-stone-200 font-semibold" data-testid="parent-cancel">Annulla</button>
+              <button type="submit" form="parent-form" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold" data-testid="parent-submit">{editId ? "Salva" : "Invita"}</button>
+            </div>
+          )}
+        >
+          <form id="parent-form" onSubmit={submit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <Field label="Nome"><Input value={form.first_name} onChange={(v) => setForm({ ...form, first_name: v })} required testid="parent-first" /></Field>
               <Field label="Cognome"><Input value={form.last_name} onChange={(v) => setForm({ ...form, last_name: v })} required testid="parent-last" /></Field>
@@ -242,25 +251,26 @@ export default function StaffParents() {
                 </div>
               )}
             </Field>
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 font-semibold">Annulla</button>
-              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] text-white font-semibold" data-testid="parent-submit">{editId ? "Salva" : "Invita"}</button>
-            </div>
           </form>
         </Modal>
       )}
     </div>
   );
 }
-function Modal({ children, title, onClose }) {
+function Modal({ children, title, onClose, footer }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-stone-900/40 p-0 md:p-6">
-      <div className="bg-white w-full md:max-w-lg rounded-t-[2rem] md:rounded-[2rem] p-6 max-h-[92vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white w-full md:max-w-lg rounded-t-[2rem] md:rounded-[2rem] max-h-[92vh] flex flex-col shadow-xl">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-stone-100 shrink-0">
           <h3 className="font-display text-xl font-bold">{title}</h3>
-          <button onClick={onClose} className="h-10 w-10 rounded-xl bg-stone-100 flex items-center justify-center"><X className="h-4 w-4" /></button>
+          <button onClick={onClose} className="h-10 w-10 rounded-xl bg-stone-100 hover:bg-stone-200 flex items-center justify-center" data-testid="parent-modal-close" aria-label="Chiudi"><X className="h-4 w-4" /></button>
         </div>
-        {children}
+        <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        {footer && (
+          <div className="px-6 py-4 border-t border-stone-100 bg-white rounded-b-[2rem] shrink-0" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

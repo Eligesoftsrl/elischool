@@ -4,7 +4,18 @@ import { Plus, X, Megaphone, Pencil, Trash2, Camera, Image as ImageIcon } from "
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
 
-const empty = { title: "", body: "", type: "comunicazione_classe", classroom_id: null, media_ids: [] };
+const empty = { title: "", body: "", type: "comunicazione_classe", classroom_id: null, media_ids: [], publish_date: "" };
+
+// convert "YYYY-MM-DDTHH:MM:SS..." or Date-like to YYYY-MM-DD for the input
+const toDateInput = (iso) => {
+  if (!iso) return new Date().toISOString().slice(0, 10);
+  try { return new Date(iso).toISOString().slice(0, 10); } catch { return iso.slice(0, 10); }
+};
+// convert YYYY-MM-DD back to a full ISO timestamp (noon UTC to avoid TZ drift)
+const toIsoFromDate = (ymd) => {
+  if (!ymd) return new Date().toISOString();
+  return new Date(`${ymd}T12:00:00Z`).toISOString();
+};
 
 export default function Communications() {
   const [items, setItems] = useState([]);
@@ -53,8 +64,12 @@ export default function Communications() {
   const submit = async (e) => {
     e.preventDefault();
     try {
-      if (editId) await api.patch(`/communications/${editId}`, form);
-      else await api.post("/communications", form);
+      const payload = {
+        ...form,
+        publish_date: toIsoFromDate(form.publish_date),
+      };
+      if (editId) await api.patch(`/communications/${editId}`, payload);
+      else await api.post("/communications", payload);
       toast.success("Salvato"); setOpen(false); setForm(empty); setEditId(null); setNewMedia([]); await load();
     } catch (e) { toast.error(apiErrorMessage(e)); }
   };
@@ -72,7 +87,7 @@ export default function Communications() {
     <div>
       <PageHeader title="Comunicazioni" subtitle={`${items.length} comunicazioni alle famiglie`}
         right={
-          <button onClick={() => { setForm(empty); setEditId(null); setNewMedia([]); setOpen(true); }}
+          <button onClick={() => { setForm({ ...empty, publish_date: new Date().toISOString().slice(0, 10) }); setEditId(null); setNewMedia([]); setOpen(true); }}
             className="h-12 px-5 rounded-2xl bg-[#FF8C6B] text-white font-semibold text-sm flex items-center gap-2" data-testid="add-comm-button">
             <Plus className="h-4 w-4" /> Nuova comunicazione
           </button>}
@@ -102,7 +117,7 @@ export default function Communications() {
                   </div>
                 </div>
                 <div className="flex gap-1 shrink-0">
-                  <button onClick={() => { setForm({ title: n.title, body: n.body, type: n.type, classroom_id: n.classroom_id, media_ids: n.media_ids || [] }); setEditId(n.id); setNewMedia(n.media || []); setOpen(true); }} className="h-10 w-10 rounded-xl bg-stone-100"><Pencil className="h-4 w-4 mx-auto" /></button>
+                  <button onClick={() => { setForm({ title: n.title, body: n.body, type: n.type, classroom_id: n.classroom_id, media_ids: n.media_ids || [], publish_date: toDateInput(n.publish_date) }); setEditId(n.id); setNewMedia(n.media || []); setOpen(true); }} className="h-10 w-10 rounded-xl bg-stone-100"><Pencil className="h-4 w-4 mx-auto" /></button>
                   <button onClick={() => remove(n.id)} className="h-10 w-10 rounded-xl bg-rose-50 text-rose-700"><Trash2 className="h-4 w-4 mx-auto" /></button>
                 </div>
               </div>
@@ -112,20 +127,37 @@ export default function Communications() {
       }
 
       {open && (
-        <Modal title={editId ? "Modifica" : "Nuova comunicazione"} onClose={() => setOpen(false)}>
-          <form onSubmit={submit} className="space-y-3">
+        <Modal
+          title={editId ? "Modifica" : "Nuova comunicazione"}
+          onClose={() => setOpen(false)}
+          footer={(
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 hover:bg-stone-200 font-semibold" data-testid="comm-cancel">Annulla</button>
+              <button type="submit" form="comm-form" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold" data-testid="comm-submit">{editId ? "Salva" : "Pubblica"}</button>
+            </div>
+          )}
+        >
+          <form id="comm-form" onSubmit={submit} className="space-y-3">
             <Field label="Titolo"><Input value={form.title} onChange={(v) => setForm({ ...form, title: v })} required testid="comm-title" /></Field>
-            <Field label="Tipologia">
-              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="w-full h-12 px-4 rounded-2xl bg-stone-50 border border-stone-200">
-                <option value="comunicazione_classe">Comunicazione di Classe</option>
-                <option value="evento_attivita">Evento o Attività</option>
-                <option value="avviso">Avviso</option>
-              </select>
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Tipologia">
+                <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}
+                  className="w-full h-12 px-4 rounded-2xl bg-stone-50 border border-stone-200" data-testid="comm-type">
+                  <option value="comunicazione_classe">Comunicazione di Classe</option>
+                  <option value="evento_attivita">Evento o Attività</option>
+                  <option value="avviso">Avviso</option>
+                </select>
+              </Field>
+              <Field label="Data comunicazione *">
+                <input type="date" required value={form.publish_date}
+                  onChange={(e) => setForm({ ...form, publish_date: e.target.value })}
+                  className="w-full h-12 px-4 rounded-2xl bg-stone-50 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand/30"
+                  data-testid="comm-publish-date" />
+              </Field>
+            </div>
             <Field label="Sezione (vuoto = tutta la scuola)">
               <select value={form.classroom_id || ""} onChange={(e) => setForm({ ...form, classroom_id: e.target.value || null })}
-                className="w-full h-12 px-4 rounded-2xl bg-stone-50 border border-stone-200">
+                className="w-full h-12 px-4 rounded-2xl bg-stone-50 border border-stone-200" data-testid="comm-classroom">
                 <option value="">Tutta la scuola</option>
                 {classrooms.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -151,10 +183,6 @@ export default function Communications() {
                 </div>
               )}
             </Field>
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 font-semibold">Annulla</button>
-              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] text-white font-semibold" data-testid="comm-submit">Pubblica</button>
-            </div>
           </form>
         </Modal>
       )}
@@ -173,13 +201,20 @@ function MediaThumb({ mediaId, filename, className = "h-20 w-20 rounded-xl objec
   return <img src={src} alt={filename} className={className} />;
 }
 
-function Modal({ children, title, onClose }) {
+function Modal({ children, title, onClose, footer }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-stone-900/40 p-0 md:p-6">
-      <div className="bg-white w-full md:max-w-xl rounded-t-[2rem] md:rounded-[2rem] p-6 max-h-[92vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4"><h3 className="font-display text-xl font-bold">{title}</h3>
-          <button onClick={onClose} className="h-10 w-10 rounded-xl bg-stone-100 flex items-center justify-center"><X className="h-4 w-4" /></button>
-        </div>{children}
+      <div className="bg-white w-full md:max-w-xl rounded-t-[2rem] md:rounded-[2rem] max-h-[92vh] flex flex-col shadow-xl">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-stone-100 shrink-0">
+          <h3 className="font-display text-xl font-bold">{title}</h3>
+          <button onClick={onClose} className="h-10 w-10 rounded-xl bg-stone-100 hover:bg-stone-200 flex items-center justify-center" data-testid="comm-modal-close" aria-label="Chiudi"><X className="h-4 w-4" /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        {footer && (
+          <div className="px-6 py-4 border-t border-stone-100 bg-white rounded-b-[2rem] shrink-0" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

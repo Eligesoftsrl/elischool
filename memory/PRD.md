@@ -207,6 +207,12 @@ Aggiunte le 3 ultime feature per parità 100% con Flask/MySQL legacy:
 - [ ] Esportazione PDF resoconto mensile / settimanale
 - [ ] Rate-limit sul POST /api/public/enrollment-requests (anti-spam)
 
+### Iteration — 01/10/2026 (UX anagrafiche)
+- Pulsanti "Annulla/Salva" sticky in tutti i modali anagrafiche (Alunni, Genitori, Ritiro, Comunicazioni) — sempre visibili senza scroll
+- Lista Alunni: visualizzato il Codice Fiscale del bambino sotto nome/sezione
+- Click sul nome genitore nella card alunno → popup "Dettaglio genitore" (nome, status, email cliccabile, telefono cliccabile, CF, note, figli collegati) chiudibile con X o pulsante
+- Nuova comunicazione: aggiunto campo obbligatorio "Data comunicazione" pre-compilato con oggi, modificabile sia in creazione sia in modifica
+
 ### P2
 - [ ] Modifica completa tenant lato superadmin (al momento solo status/plan via PATCH)
 - [ ] Sender email Brevo per-tenant (ogni scuola può configurare il proprio dominio)
