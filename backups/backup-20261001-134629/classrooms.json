@@ -1,0 +1,71 @@
+[
+  {
+    "_id": "6aa022c943c37be3c54de92e",
+    "name": "Pulicini",
+    "age_band": "3 anni",
+    "notes": "",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "teacher_ids": [
+      "f24848f4-56e9-4d6e-b6a5-77ef4488b94d",
+      "85684436-5915-45db-a1e5-1d243e546e06"
+    ],
+    "id": "5658bee9-95fe-49eb-81c1-62203b6f7eb6",
+    "created_at": "2026-09-08T14:59:21.189513+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa022d743c37be3c54de92f",
+    "name": "Orsetti",
+    "age_band": "4 anni",
+    "notes": "",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "teacher_ids": [],
+    "id": "92ab032e-3091-47cc-8f23-c8589af763c9",
+    "created_at": "2026-09-08T14:59:35.146864+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa022e143c37be3c54de930",
+    "name": "Leoncini",
+    "age_band": "5 anni",
+    "notes": "",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "teacher_ids": [],
+    "id": "6b78c51a-129d-4f8e-b786-42b52d812b3f",
+    "created_at": "2026-09-08T14:59:45.657545+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa022f543c37be3c54de931",
+    "name": "Monster",
+    "age_band": "Misti",
+    "notes": "Tremendi",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "teacher_ids": [],
+    "id": "2333c576-85f6-4c10-b012-29538c4a2d9f",
+    "created_at": "2026-09-08T15:00:05.900172+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa0230d43c37be3c54de932",
+    "name": "Chicchi",
+    "age_band": "Nido",
+    "notes": "Piccolini",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "teacher_ids": [],
+    "id": "aa409d17-e020-4b03-881b-50b0a0e44adf",
+    "created_at": "2026-09-08T15:00:29.269564+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa0232243c37be3c54de933",
+    "name": "Gattini",
+    "age_band": "Primavera",
+    "notes": "Bravini",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "teacher_ids": [],
+    "id": "c8ab10e2-2c80-4914-9add-b43862217374",
+    "created_at": "2026-09-08T15:00:50.051489+00:00",
+    "tenant_id": "tenant-demo"
+  }
+]

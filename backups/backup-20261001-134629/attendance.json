@@ -1,0 +1,24 @@
+[
+  {
+    "_id": "6a0c2d8e7e36d6eddf79bcd4",
+    "id": "cf2eb330-1b3d-4e7b-a26e-872a8e06ce3d",
+    "student_id": "8e0a147b-242d-41ed-8332-1ec09a0eb1f8",
+    "action": "in",
+    "ts": "2026-05-19T08:15:00.696534+00:00",
+    "date": "2026-05-19",
+    "note": "",
+    "by_user_id": "85684436-5915-45db-a1e5-1d243e546e06",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6a983956db1459cc379a6b92",
+    "id": "c2e8172e-7c36-498c-9140-2fd2da8047c3",
+    "student_id": "104b24af-5bc2-4282-a2da-38471866d241",
+    "action": "in",
+    "ts": "2026-09-02T14:57:26.418453+00:00",
+    "date": "2026-09-02",
+    "note": "",
+    "by_user_id": "1b48f4bd-a8d2-49e2-8d75-0620cc2b7e78",
+    "tenant_id": "tenant-demo"
+  }
+]

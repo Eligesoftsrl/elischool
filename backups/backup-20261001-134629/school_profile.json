@@ -1,0 +1,19 @@
+[
+  {
+    "_id": "6a0c2d8eba6a42dbf0ea0c2b",
+    "id": "main",
+    "address": "Corso Nazionale, 171 - Scafati (SA)",
+    "email": "alberodellavita2000@alice.it",
+    "facebook": "https://www.facebook.com/lalberodellavita",
+    "instagram": "",
+    "logo_base64": "",
+    "mobile": "3511992918",
+    "name": "L'Albero della Vita",
+    "phone": "0818566418",
+    "updated_at": "2026-05-19T09:29:50.543744+00:00",
+    "vat": "03686240650",
+    "website": "https://www.lalberodellavitascafati.it",
+    "whatsapp": "3921850455",
+    "tenant_id": "tenant-demo"
+  }
+]

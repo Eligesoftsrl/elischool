@@ -1,0 +1,85 @@
+[
+  {
+    "_id": "6aa0233443c37be3c54de934",
+    "id": "411dd032-f78e-4e2c-b8dd-0617cc52760c",
+    "student_id": "74a83ebb-1f73-4074-a6a5-ac9f52840542",
+    "classroom_id": "2333c576-85f6-4c10-b012-29538c4a2d9f",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "created_at": "2026-09-08T15:01:08.218061+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa170b2ac40e0286fb2e5b0",
+    "id": "e1d225e4-79fa-4aec-a83e-6c72ab806d63",
+    "student_id": "01020a79-b4f2-4d85-94f0-7bba53ed86ac",
+    "classroom_id": "5658bee9-95fe-49eb-81c1-62203b6f7eb6",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "created_at": "2026-09-09T14:44:02.030130+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa170b5ac40e0286fb2e5b1",
+    "id": "0988c6e1-16f8-4506-9e05-b148b7996ea5",
+    "student_id": "9b8a65c1-0d71-45a1-ab5b-96c0f879bc03",
+    "classroom_id": "5658bee9-95fe-49eb-81c1-62203b6f7eb6",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "created_at": "2026-09-09T14:44:05.837897+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa170bfac40e0286fb2e5b2",
+    "id": "4747d45f-a2a6-4c4c-8dba-a9b37f931d53",
+    "student_id": "aacb34c3-46f8-4a3d-8def-403008a608a3",
+    "classroom_id": "92ab032e-3091-47cc-8f23-c8589af763c9",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "created_at": "2026-09-09T14:44:15.302581+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa170c3ac40e0286fb2e5b3",
+    "id": "2dbc10bd-c9f3-46b4-a9db-ac79662d9692",
+    "student_id": "76becf6b-7f98-4cff-a9d1-f7249a661ef2",
+    "classroom_id": "5658bee9-95fe-49eb-81c1-62203b6f7eb6",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "created_at": "2026-09-09T14:44:19.536522+00:00",
+    "tenant_id": "tenant-demo",
+    "updated_at": "2026-09-30T14:57:03.797774+00:00"
+  },
+  {
+    "_id": "6aa170c6ac40e0286fb2e5b4",
+    "id": "a73b2de3-23e3-467c-933b-db9150b246d4",
+    "student_id": "d320b8be-8ce4-417a-9944-6a0cb3d8a053",
+    "classroom_id": "c8ab10e2-2c80-4914-9add-b43862217374",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "created_at": "2026-09-09T14:44:22.989515+00:00",
+    "tenant_id": "tenant-demo",
+    "updated_at": "2026-09-09T14:45:02.668021+00:00"
+  },
+  {
+    "_id": "6abe22bad14d8e2d7bd56987",
+    "id": "bd4082c2-92e0-4be8-a3e6-68cc3a5823d1",
+    "student_id": "9a959dc9-7604-42a9-9263-92909a659fc0",
+    "classroom_id": "5658bee9-95fe-49eb-81c1-62203b6f7eb6",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "created_at": "2026-10-01T09:07:06.479217+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6abe255cd14d8e2d7bd5698c",
+    "id": "ada8629d-e50d-4cc8-a617-6d8f399e991b",
+    "student_id": "397b971b-1d4a-451d-b079-39ba9e426968",
+    "classroom_id": "2333c576-85f6-4c10-b012-29538c4a2d9f",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "created_at": "2026-10-01T09:18:20.221654+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6abe2564d14d8e2d7bd5698d",
+    "id": "9f27e908-3e0c-47cd-9772-9443207fb214",
+    "student_id": "0ba5c63b-4873-4ab3-9185-eb74a2ff6412",
+    "classroom_id": "6b78c51a-129d-4f8e-b786-42b52d812b3f",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "created_at": "2026-10-01T09:18:28.456317+00:00",
+    "tenant_id": "tenant-demo"
+  }
+]

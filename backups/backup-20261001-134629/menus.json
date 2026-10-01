@@ -1,0 +1,13 @@
+[
+  {
+    "_id": "6aa16c9d85acbbbef96d076c",
+    "name": "Autunno 2026",
+    "valid_from": "2026-09-07",
+    "valid_to": "2026-12-20",
+    "notes": "",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "id": "865786c9-9cae-4ceb-ab41-aae810f98f8c",
+    "created_at": "2026-09-09T14:26:37.285701+00:00",
+    "tenant_id": "tenant-demo"
+  }
+]

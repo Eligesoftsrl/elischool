@@ -1,0 +1,102 @@
+[
+  {
+    "_id": "6aa16be485acbbbef96d0767",
+    "classroom_id": "2333c576-85f6-4c10-b012-29538c4a2d9f",
+    "day_of_week": "lunedì",
+    "title": "Chitarra",
+    "teacher_name": "",
+    "id": "bf997eb8-f004-4a49-9c03-4e57ad2e668c",
+    "created_at": "2026-09-09T14:23:32.923917+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa16bf485acbbbef96d0768",
+    "classroom_id": "2333c576-85f6-4c10-b012-29538c4a2d9f",
+    "day_of_week": "martedì",
+    "title": "Ginnastica",
+    "teacher_name": "",
+    "id": "0a4bf83b-c8c6-4850-bb74-affccce19837",
+    "created_at": "2026-09-09T14:23:48.668827+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa16c0085acbbbef96d0769",
+    "classroom_id": "2333c576-85f6-4c10-b012-29538c4a2d9f",
+    "day_of_week": "mercoledì",
+    "title": "Danza ",
+    "teacher_name": "",
+    "id": "f6e59873-74a5-4ab9-8797-92b577dccc74",
+    "created_at": "2026-09-09T14:24:00.998624+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa16c1685acbbbef96d076a",
+    "classroom_id": "2333c576-85f6-4c10-b012-29538c4a2d9f",
+    "day_of_week": "giovedì",
+    "title": "Canto",
+    "teacher_name": "",
+    "id": "bff176f4-79a3-4e8d-b38e-96ed10de475f",
+    "created_at": "2026-09-09T14:24:22.497449+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa16c2c85acbbbef96d076b",
+    "classroom_id": "2333c576-85f6-4c10-b012-29538c4a2d9f",
+    "day_of_week": "venerdì",
+    "title": "Yoga",
+    "teacher_name": "",
+    "id": "18b81010-a3f0-466d-92d3-8f5067f41818",
+    "created_at": "2026-09-09T14:24:44.599351+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa174aeac40e0286fb2e5c0",
+    "classroom_id": "5658bee9-95fe-49eb-81c1-62203b6f7eb6",
+    "day_of_week": "lunedì",
+    "title": "Guitar",
+    "teacher_name": "",
+    "id": "ce3773eb-6311-4139-a352-1ab24963e337",
+    "created_at": "2026-09-09T15:01:02.623137+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa174beac40e0286fb2e5c1",
+    "classroom_id": "5658bee9-95fe-49eb-81c1-62203b6f7eb6",
+    "day_of_week": "martedì",
+    "title": "Gym",
+    "teacher_name": "Paco",
+    "id": "464f526d-f342-47f0-bbda-fd6bc2152955",
+    "created_at": "2026-09-09T15:01:18.333344+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa174cfac40e0286fb2e5c2",
+    "classroom_id": "5658bee9-95fe-49eb-81c1-62203b6f7eb6",
+    "day_of_week": "mercoledì",
+    "title": "Dance",
+    "teacher_name": "Filippo",
+    "id": "2f1741c5-761c-4821-9686-4b36ecee4cd2",
+    "created_at": "2026-09-09T15:01:35.089634+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa174edac40e0286fb2e5c3",
+    "classroom_id": "5658bee9-95fe-49eb-81c1-62203b6f7eb6",
+    "day_of_week": "giovedì",
+    "title": "Sing",
+    "teacher_name": "Giuseppe Iervolino",
+    "id": "ce4d2624-7890-4839-86b5-871dc9bf7c75",
+    "created_at": "2026-09-09T15:02:05.183067+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6aa17506ac40e0286fb2e5c4",
+    "classroom_id": "5658bee9-95fe-49eb-81c1-62203b6f7eb6",
+    "day_of_week": "venerdì",
+    "title": "Yogurt",
+    "teacher_name": "Malafronte",
+    "id": "f54c7b00-56cc-42c6-a31b-7a70729c3279",
+    "created_at": "2026-09-09T15:02:30.201018+00:00",
+    "tenant_id": "tenant-demo"
+  }
+]

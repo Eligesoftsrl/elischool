@@ -1,0 +1,24 @@
+[
+  {
+    "_id": "6a0c2d8e7e36d6eddf79bcc0",
+    "id": "0b449247-94ba-44cd-a1df-f9a6e9207141",
+    "title": "Festa di Carnevale",
+    "body": "Martedì 17 febbraio festeggeremo il Carnevale: i bambini possono venire in maschera.",
+    "category": "evento",
+    "classroom_id": null,
+    "publish_date": "2026-05-19T09:29:50.521431+00:00",
+    "author_name": "Direzione",
+    "created_at": "2026-05-19T09:29:50.521439+00:00"
+  },
+  {
+    "_id": "6a0c2d8e7e36d6eddf79bcc1",
+    "id": "388e0496-d0a3-4c5d-929d-b9037cb7653d",
+    "title": "Riunione genitori",
+    "body": "Giovedì alle 17:00 si terrà la riunione con i genitori della sezione Coccinelle.",
+    "category": "avviso",
+    "classroom_id": "ce12e5a9-5a3c-42f9-b37c-28cef4cdd9fb",
+    "publish_date": "2026-05-19T09:29:50.521445+00:00",
+    "author_name": "Direzione",
+    "created_at": "2026-05-19T09:29:50.521447+00:00"
+  }
+]

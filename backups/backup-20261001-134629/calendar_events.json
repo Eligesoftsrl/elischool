@@ -1,0 +1,73 @@
+[
+  {
+    "_id": "6a0c2d8e7e36d6eddf79bcc2",
+    "id": "151287e8-55b6-424c-84d8-bea3e240a0f5",
+    "name": "Inizio anno scolastico",
+    "date": "2025-09-15",
+    "category": "altro",
+    "notes": "",
+    "created_at": "2026-05-19T09:29:50.565657+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6a0c2d8e7e36d6eddf79bcc3",
+    "id": "ecf0a66f-6bb5-4273-b3ed-7743b6878beb",
+    "name": "Chiusura Ognissanti",
+    "date": "2025-11-01",
+    "category": "festivita",
+    "notes": "",
+    "created_at": "2026-05-19T09:29:50.565668+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6a0c2d8e7e36d6eddf79bcc4",
+    "id": "c973a3af-00e9-4479-ad7f-df7744004986",
+    "name": "Chiusura Immacolata",
+    "date": "2025-12-08",
+    "category": "festivita",
+    "notes": "",
+    "created_at": "2026-05-19T09:29:50.565673+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6a0c2d8e7e36d6eddf79bcc5",
+    "id": "94e0ee98-f80d-463d-87a7-86a76658eaee",
+    "name": "Chiusura Natalizie",
+    "date": "2025-12-24",
+    "end_date": "2026-01-06",
+    "category": "chiusura",
+    "notes": "Riapertura 7 gennaio",
+    "created_at": "2026-05-19T09:29:50.565678+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6a0c2d8e7e36d6eddf79bcc6",
+    "id": "7ae77a13-c2ba-4901-a028-e24ab9542916",
+    "name": "Festa di Carnevale",
+    "date": "2026-02-17",
+    "category": "festa",
+    "notes": "Bambini in maschera",
+    "created_at": "2026-05-19T09:29:50.565683+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6a0c2d8e7e36d6eddf79bcc7",
+    "id": "461a0800-0528-40ff-89c4-27f3c8d7b3e8",
+    "name": "Festa dei Nonni",
+    "date": "2025-10-02",
+    "category": "festa",
+    "notes": "",
+    "created_at": "2026-05-19T09:29:50.565687+00:00",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6a0c2d8e7e36d6eddf79bcc8",
+    "id": "27713734-e653-47ba-8bf7-b6000022663f",
+    "name": "Riunione genitori Coccinelle",
+    "date": "2026-05-22",
+    "category": "riunione",
+    "notes": "Ore 17:00",
+    "created_at": "2026-05-19T09:29:50.565691+00:00",
+    "tenant_id": "tenant-demo"
+  }
+]

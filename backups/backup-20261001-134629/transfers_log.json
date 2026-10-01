@@ -1,0 +1,32 @@
+[
+  {
+    "_id": "6a95ac232289f0835dfd217d",
+    "id": "1c0c449b-4ed7-428b-96cb-3104fca0852b",
+    "student_id": "4c044e0d-ec54-40c4-80aa-6ec6f6b06fd9",
+    "from_classroom_id": "ce12e5a9-5a3c-42f9-b37c-28cef4cdd9fb",
+    "to_classroom_id": "c0c2b0e8-195e-4ca5-8454-491f3d5f19ad",
+    "school_year_id": "9b8c239e-6590-4c56-8b9e-9a4472c47745",
+    "moved_at": "2026-08-31T16:30:27.593490+00:00",
+    "by_user_id": "1b48f4bd-a8d2-49e2-8d75-0620cc2b7e78"
+  },
+  {
+    "_id": "6aa170eeac40e0286fb2e5b5",
+    "id": "700b48c0-d615-4c54-b4c5-e7bfb5524465",
+    "student_id": "d320b8be-8ce4-417a-9944-6a0cb3d8a053",
+    "from_classroom_id": "aa409d17-e020-4b03-881b-50b0a0e44adf",
+    "to_classroom_id": "c8ab10e2-2c80-4914-9add-b43862217374",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "moved_at": "2026-09-09T14:45:02.668692+00:00",
+    "by_user_id": "1b48f4bd-a8d2-49e2-8d75-0620cc2b7e78"
+  },
+  {
+    "_id": "6abd233fa4e4a8ba0361aa48",
+    "id": "83dab8d1-d1ba-4b74-9fe3-44ea25b3f661",
+    "student_id": "76becf6b-7f98-4cff-a9d1-f7249a661ef2",
+    "from_classroom_id": "6b78c51a-129d-4f8e-b786-42b52d812b3f",
+    "to_classroom_id": "5658bee9-95fe-49eb-81c1-62203b6f7eb6",
+    "school_year_id": "1ec0030f-30d0-497f-8928-a0f1b5c418ba",
+    "moved_at": "2026-09-30T14:57:03.798340+00:00",
+    "by_user_id": "1b48f4bd-a8d2-49e2-8d75-0620cc2b7e78"
+  }
+]

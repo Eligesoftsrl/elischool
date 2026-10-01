@@ -1,0 +1,58 @@
+[
+  {
+    "_id": "6a0c2d8eba6a42dbf0ea0c31",
+    "student_id": "8e0a147b-242d-41ed-8332-1ec09a0eb1f8",
+    "code": "26051500001",
+    "created_at": "2026-05-19T09:29:50.671741+00:00",
+    "id": "887a626d-c4c6-4a70-8799-094a89174842",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6a0c2d8eba6a42dbf0ea0c33",
+    "student_id": "9112c370-03b9-4046-b3c7-60c3e71428fc",
+    "code": "26051500002",
+    "created_at": "2026-05-19T09:29:50.694626+00:00",
+    "id": "0053dc75-b9e9-487a-9d7f-8985c39625ff",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6a0c2d8eba6a42dbf0ea0c35",
+    "student_id": "57663f4c-351b-4fee-8dae-645522ee12dd",
+    "code": "26051500003",
+    "created_at": "2026-05-19T09:29:50.695082+00:00",
+    "id": "8b75bb9e-f4d4-44bd-a08d-73f217dd490d",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6a0c2d8eba6a42dbf0ea0c37",
+    "student_id": "a228390b-880b-401c-b554-e2e142c9fb6c",
+    "code": "26051500004",
+    "created_at": "2026-05-19T09:29:50.695469+00:00",
+    "id": "f606bddf-542c-4927-84cf-f66fa76b55b6",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6a0c2d8eba6a42dbf0ea0c39",
+    "student_id": "67bc2540-6c16-401d-a973-d1c40c86419a",
+    "code": "26051500005",
+    "created_at": "2026-05-19T09:29:50.695760+00:00",
+    "id": "6f9486a4-f60a-45b1-bbbd-7c604c157ad2",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6a0c2d8eba6a42dbf0ea0c3b",
+    "student_id": "49e33fc5-2d42-4a5b-9b20-df7ba934b8d8",
+    "code": "26051500006",
+    "created_at": "2026-05-19T09:29:50.696036+00:00",
+    "id": "52c789d7-4505-4405-8ad7-ae52d5f75ae5",
+    "tenant_id": "tenant-demo"
+  },
+  {
+    "_id": "6a0c3213ba6a42dbf0ea0e09",
+    "student_id": "c61272e1-500a-42b0-b9f3-fe657e8b6ca8",
+    "code": "260519094907b15e",
+    "created_at": "2026-05-19T09:49:07.182868+00:00",
+    "id": "e0acf336-b650-4381-a91d-dbf468a83e35",
+    "tenant_id": "tenant-demo"
+  }
+]
