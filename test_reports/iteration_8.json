@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 8 — DB wipe verification (Option B: keep logins + tenant + active school year, empty everything else). Backend: 18/18 pytest GREEN in /app/backend/tests/test_iter8_wipe.py: (a) logins — superadmin@nido.app, admin@scuolapp.it, maestra.giulia@scuolapp.it all 200; genitore@scuolapp.it correctly 401/403/404 (parent user deleted); (b) empty collections — GET /students, /classrooms, /parents, /communications, /lesson-plans, /attendance, /calendar-events, /extra-labs, /menus, /news, /enrollment-requests all return []; (c) active school year preserved — GET /school-years returns exactly 1 record with 2026/2027; (d) create flow — POST /classrooms (TEST_Sezione_Iter8, age_band='3-4 anni', school_year_id) → 200, POST /students (TEST_Mario Rossi, CF=RSSMRA85M01H501Z, city_residence='Roma (RM)', classroom_id) → 200 with fiscal_code echoed; (e) unassigned student create (no classroom_id) → 200. Frontend Playwright GREEN: Admin login → /s dashboard KPIs = 0 Alunni, 0 Sezioni, 3 Maestre, 0 Genitori; all 13 /s/* pages render clean empty states ('Nessuna sezione — Crea la prima…', 'Nessuna comunicazione', etc.); /s/anni shows the 1 active year 2026/2027; /s/scuola Profilo Scuola form opens with ALL fields empty (Ragione sociale, P.IVA/C.F., Indirizzo, Email, Sito, Telefoni, WhatsApp, Social) — ready for a fresh save. New-communication modal: 'DATA COMUNICAZIONE *' field is PRESENT, prefilled with today's date 10/01/2026, marked required; Annulla/Pubblica footer visible. Nuovo-alunno modal: all fields render (Nome*, Cognome*, Data nascita*, Codice Fiscale* with placeholder 'RSSMRA85M01H501Z', Città residenza* with placeholder 'Milano', Sezione defaulting to '— Da assegnare —', Indirizzo, Allergie, Note); Annulla/Salva sticky at bottom, visible without scroll at 1920x1080. Invita-genitore modal: all fields render (Nome, Cognome, Email, Telefono, Codice Fiscale facoltativo, Note, Figli collegati search); Annulla/Invita sticky at bottom. UI never crashes on empty DB; all nav items reachable. New-sezione modal pre-fills 'Fascia d'età=3 anni' and lists 3 teachers in Maestre picker.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "New communication modal", "issues": ["Date input uses native HTML <input type=date> (browser locale picker, mm/dd/yyyy on some locales) instead of a localized/Italian shadcn Calendar component — cosmetic, same note carried over from iter7."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter8_wipe.py",
+    "/app/test_reports/pytest/iter8_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Replace native <input type=date> in CommunicationModal + Nuovo alunno 'data nascita' with shadcn Calendar for consistent IT locale UX."
+  ],
+  "critical_code_review_comments": [
+    "Wipe was clean: all 11 content collections empty + exactly 1 school year + tenants preserved. No orphan references, no stale enrollments. ",
+    "Parent user removal is final — login endpoint returns 401 as expected (not 500). Good.",
+    "Zeroed dashboard KPIs render instantly without 'NaN' or loading flashes — Dashboard.jsx null-safe handling confirmed.",
+    "Modals (Students / Communications / Parents) all have sticky footer with Annulla + primary action always visible at 1920x1080 — meets the sticky-footer UX requirement from the request. On short viewports the content area scrolls while footer stays pinned.",
+    "Communications 'publish_date' is correctly marked required with asterisk and prefilled server-side-safe (new Date().toISOString().slice(0,10)) on modal open — good UX.",
+    "Student modal placeholder for CF is 'RSSMRA85M01H501Z' (good signal to the user about the expected format). Fiscal code input appears uppercase-forced per iter7 behavior.",
+    "server.py still at 2874 lines — modularization carry-over from previous iterations (not blocking)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter8_wipe.py"
+  ],
+  "success_rate": {"backend": "100% (18/18)", "frontend": "100% (logins + 13 empty pages + 3 modal sticky footers + publish_date prefill all GREEN)"},
+  "test_credentials": "superadmin@nido.app/SuperAdmin2026! ✓, admin@scuolapp.it/Admin2026! ✓, maestra.giulia@scuolapp.it/Maestra2026! ✓, genitore@scuolapp.it/Genitore2026! → correctly fails (user removed by wipe)",
+  "seed_data_creation": "Backend tests create & delete their own TEST_* classroom/students in-suite (no leftover). No manual seed inserted. DB remains clean as the user requested.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "DB wipe (Option B) verified end-to-end. Backup at /app/backups/backup-20261001-134629. If future iterations re-seed demo data, re-run test_iter7_cf_city.py for CF/city regression and test_iter8_wipe.py's parametrize list to make sure no empty-state regression. All frontend routes are under /s/* (not /staff/*). Required Student fields: first_name, last_name, birth_date, fiscal_code, city_residence (classroom_id optional). Required Classroom fields: name, age_band, school_year_id. Communication requires: title, body, publish_date (new in iter8). Parent login is intentionally broken until a parent is re-invited via UI/API."
+}
