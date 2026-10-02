@@ -40,7 +40,7 @@ export default function StaffNews() {
       <PageHeader title="News e avvisi" subtitle={`${items.length} comunicazioni`}
         right={
           <button onClick={() => { setForm(empty); setEditId(null); setOpen(true); }}
-            className="h-12 px-5 rounded-2xl bg-[#FF8C6B] text-white font-semibold text-sm flex items-center gap-2" data-testid="add-news-button">
+            className="h-12 px-5 rounded-2xl bg-[#2F7D6D] text-white font-semibold text-sm flex items-center gap-2" data-testid="add-news-button">
             <Plus className="h-4 w-4" /> Nuova news
           </button>}
       />
@@ -96,7 +96,7 @@ export default function StaffNews() {
             </Field>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 font-semibold">Annulla</button>
-              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] text-white font-semibold" data-testid="news-submit">Salva</button>
+              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#2F7D6D] text-white font-semibold" data-testid="news-submit">Salva</button>
             </div>
           </form>
         </Modal>

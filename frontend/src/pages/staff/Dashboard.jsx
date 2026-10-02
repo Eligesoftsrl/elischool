@@ -48,7 +48,7 @@ export default function StaffDashboard() {
         right={
           <Link
             to="/s/diario"
-            className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 tap-press"
+            className="h-12 px-5 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] text-white font-semibold text-sm flex items-center gap-2 tap-press"
             data-testid="dashboard-cta-activities"
           >
             <Plus className="h-4 w-4" /> Registra giornata
@@ -57,13 +57,13 @@ export default function StaffDashboard() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard label="Alunni" value={stats?.total_students ?? "—"} accent="#FF8C6B" icon={<GraduationCap className="h-4 w-4" />} />
-        <StatCard label="Sezioni" value={stats?.total_classes ?? "—"} accent="#A2D2FF" icon={<Users className="h-4 w-4" />} />
-        <StatCard label="Maestre" value={stats?.total_teachers ?? "—"} accent="#A7D7C5" icon={<UserCog className="h-4 w-4" />} />
+        <StatCard label="Alunni" value={stats?.total_students ?? "—"} accent="#2F7D6D" icon={<GraduationCap className="h-4 w-4" />} />
+        <StatCard label="Sezioni" value={stats?.total_classes ?? "—"} accent="#D3E8F6" icon={<Users className="h-4 w-4" />} />
+        <StatCard label="Maestre" value={stats?.total_teachers ?? "—"} accent="#D5EDE5" icon={<UserCog className="h-4 w-4" />} />
         <StatCard
           label="Genitori"
           value={stats?.total_parents ?? "—"}
-          accent="#D8B4E2"
+          accent="#DCD6F5"
           hint={stats?.pending_parents ? `${stats.pending_parents} da attivare` : null}
           icon={<UsersRound className="h-4 w-4" />}
         />
@@ -193,7 +193,7 @@ export default function StaffDashboard() {
           ) : (
             <ul className="space-y-3">
               {news.map((n) => (
-                <li key={n.id} className="border-l-2 border-[#FF8C6B] pl-3">
+                <li key={n.id} className="border-l-2 border-[#2F7D6D] pl-3">
                   <p className="text-sm font-bold text-stone-900">{n.title}</p>
                   <p className="text-xs text-stone-500 line-clamp-2">{n.body}</p>
                 </li>

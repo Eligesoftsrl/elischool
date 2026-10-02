@@ -106,7 +106,7 @@ export default function Communications() {
         subtitle={q ? `${displayed.length} di ${items.length} comunicazioni` : `${items.length} comunicazioni alle famiglie`}
         right={
           <button onClick={() => { setForm({ ...empty, publish_date: new Date().toISOString().slice(0, 10) }); setEditId(null); setNewMedia([]); setOpen(true); }}
-            className="h-12 px-5 rounded-2xl bg-[#FF8C6B] text-white font-semibold text-sm flex items-center gap-2" data-testid="add-comm-button">
+            className="h-12 px-5 rounded-2xl bg-[#2F7D6D] text-white font-semibold text-sm flex items-center gap-2" data-testid="add-comm-button">
             <Plus className="h-4 w-4" /> Nuova comunicazione
           </button>}
       />
@@ -158,7 +158,7 @@ export default function Communications() {
           footer={(
             <div className="flex gap-3">
               <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 hover:bg-stone-200 font-semibold" data-testid="comm-cancel">Annulla</button>
-              <button type="submit" form="comm-form" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold" data-testid="comm-submit">{editId ? "Salva" : "Pubblica"}</button>
+              <button type="submit" form="comm-form" className="flex-1 h-12 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] text-white font-semibold" data-testid="comm-submit">{editId ? "Salva" : "Pubblica"}</button>
             </div>
           )}
         >

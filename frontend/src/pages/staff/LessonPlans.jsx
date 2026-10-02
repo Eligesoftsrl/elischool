@@ -84,7 +84,7 @@ export default function LessonPlans() {
         right={
           <button
             onClick={() => { setForm({ ...empty, classroom_ids: classId ? [classId] : [] }); setEditId(null); setOpen(true); }}
-            className="h-12 px-5 rounded-2xl bg-[#FF8C6B] text-white font-semibold text-sm flex items-center gap-2 tap-press"
+            className="h-12 px-5 rounded-2xl bg-[#2F7D6D] text-white font-semibold text-sm flex items-center gap-2 tap-press"
             data-testid="add-lesson-plan-button"
           >
             <Plus className="h-4 w-4" /> Nuovo piano
@@ -166,7 +166,7 @@ export default function LessonPlans() {
                     return (
                       <button key={c.id} type="button"
                         onClick={() => setForm({ ...form, classroom_ids: sel ? form.classroom_ids.filter((x) => x !== c.id) : [...form.classroom_ids, c.id] })}
-                        className={`px-3 py-2 rounded-xl text-xs font-semibold border ${sel ? "bg-[#FFF3EF] border-[#FF8C6B] text-[#FF7A54]" : "bg-white border-stone-200 text-stone-700"}`}
+                        className={`px-3 py-2 rounded-xl text-xs font-semibold border ${sel ? "bg-[#E3F0EC] border-[#2F7D6D] text-[#276A5C]" : "bg-white border-stone-200 text-stone-700"}`}
                         data-testid={`lp-classroom-${c.id}`}>
                         {sel ? "✓ " : ""}{c.name}
                       </button>
@@ -192,7 +192,7 @@ export default function LessonPlans() {
             </Field>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 font-semibold">Annulla</button>
-              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] text-white font-semibold" data-testid="lp-submit">Salva</button>
+              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#2F7D6D] text-white font-semibold" data-testid="lp-submit">Salva</button>
             </div>
           </form>
         </Modal>

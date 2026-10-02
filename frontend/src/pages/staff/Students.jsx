@@ -200,7 +200,7 @@ export default function StaffStudents() {
             />
             <button
               onClick={() => { setForm(empty); setEditId(null); setOpen(true); }}
-              className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 tap-press"
+              className="h-12 px-5 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] text-white font-semibold text-sm flex items-center gap-2 tap-press"
               data-testid="add-student-button"
             >
               <Plus className="h-4 w-4" /> Nuovo alunno
@@ -421,7 +421,7 @@ export default function StaffStudents() {
                     </button>
                     <button
                       onClick={() => setWithdrawOpen(s)}
-                      className="h-10 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold flex items-center justify-center gap-1.5"
+                      className="h-10 rounded-xl bg-brand-light/50 hover:bg-brand-light text-brand-hover text-xs font-semibold flex items-center justify-center gap-1.5"
                       data-testid={`withdraw-student-${s.id}`}
                       title="Ritira dalla scuola (archivia)"
                     >
@@ -482,7 +482,7 @@ export default function StaffStudents() {
           footer={(
             <div className="flex gap-3">
               <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 hover:bg-stone-200 font-semibold" data-testid="form-cancel">Annulla</button>
-              <button type="submit" form="student-form" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold" data-testid="form-submit">Salva</button>
+              <button type="submit" form="student-form" className="flex-1 h-12 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] text-white font-semibold" data-testid="form-submit">Salva</button>
             </div>
           )}
         >
@@ -543,17 +543,17 @@ export default function StaffStudents() {
           footer={(
             <div className="flex gap-3">
               <button type="button" onClick={() => setWithdrawOpen(null)} className="flex-1 h-12 rounded-2xl bg-stone-100 hover:bg-stone-200 font-semibold">Annulla</button>
-              <button type="submit" form="withdraw-form" className="flex-1 h-12 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold flex items-center justify-center gap-2" data-testid="withdraw-submit">
+              <button type="submit" form="withdraw-form" className="flex-1 h-12 rounded-2xl bg-semantic-warning hover:bg-amber-600 text-white font-semibold flex items-center justify-center gap-2" data-testid="withdraw-submit">
                 <UserX className="h-4 w-4" /> Ritira alunno
               </button>
             </div>
           )}
         >
-          <div className="rounded-2xl bg-orange-50 border border-orange-200 p-4 mb-4">
-            <p className="text-sm text-orange-900">
+          <div className="rounded-2xl bg-brand-light/50 border border-brand-light p-4 mb-4">
+            <p className="text-sm text-brand-pressed">
               <b>Cosa succede quando ritiri:</b>
             </p>
-            <ul className="text-xs text-orange-800 mt-2 space-y-1 list-disc list-inside">
+            <ul className="text-xs text-brand-hover mt-2 space-y-1 list-disc list-inside">
               <li>L'alunno viene archiviato e non compare più nella lista principale</li>
               <li>Viene rimosso dalle sezioni correnti</li>
               <li>Attività, presenze e foto storiche restano archiviate</li>

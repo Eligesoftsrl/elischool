@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Shield, Building2, LogOut, Heart } from "lucide-react";
+import { Shield, Building2, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { TiptiiBadge } from "@/components/TiptiiLogo";
 
 export default function SuperAdminLayout() {
   const { user, logout } = useAuth();
@@ -10,12 +11,10 @@ export default function SuperAdminLayout() {
       <header className="sticky top-0 z-40 backdrop-blur bg-white/80 border-b border-stone-200">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
           <Link to="/superadmin" className="flex items-center gap-2 font-display font-bold">
-            <span className="h-9 w-9 rounded-2xl bg-[#FF8C6B] flex items-center justify-center shadow-sm">
-              <Heart className="h-4 w-4 text-white" fill="white" />
-            </span>
-            <span className="text-stone-900 flex items-center gap-1">
-              nido<span className="text-[#FF8C6B]">.</span>
-              <span className="ml-2 text-xs font-bold uppercase tracking-wider bg-stone-900 text-white px-2 py-0.5 rounded-md flex items-center gap-1">
+            <TiptiiBadge size={36} className="shadow-sm" />
+            <span className="text-stone-800 flex items-center gap-1">
+              tiptii
+              <span className="ml-2 text-xs font-bold uppercase tracking-wider bg-stone-800 text-white px-2 py-0.5 rounded-md flex items-center gap-1">
                 <Shield className="h-3 w-3" /> Superadmin
               </span>
             </span>
@@ -25,7 +24,7 @@ export default function SuperAdminLayout() {
               to="/superadmin" end
               className={({ isActive }) =>
                 `h-10 px-4 rounded-2xl text-sm font-semibold flex items-center gap-2 transition-colors ${
-                  isActive ? "bg-[#FF8C6B] text-white shadow-sm" : "text-stone-700 hover:bg-stone-100"
+                  isActive ? "bg-[#2F7D6D] text-white shadow-sm" : "text-stone-700 hover:bg-stone-100"
                 }`
               }
               data-testid="sa-nav-tenants"

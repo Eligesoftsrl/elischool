@@ -91,7 +91,7 @@ export default function StaffClassrooms() {
               testid="export-classrooms"
             />
             <button onClick={() => { setForm({ ...empty, school_year_id: activeYear?.id }); setEditId(null); setOpen(true); }}
-              className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 tap-press"
+              className="h-12 px-5 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] text-white font-semibold text-sm flex items-center gap-2 tap-press"
               data-testid="add-classroom-button">
               <Plus className="h-4 w-4" /> Nuova sezione
             </button>
@@ -116,8 +116,8 @@ export default function StaffClassrooms() {
             <Card key={c.id} data-testid={`classroom-card-${c.id}`}>
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-2xl bg-[#FFF3EF] flex items-center justify-center">
-                    <Users className="h-5 w-5 text-[#FF7A54]" />
+                  <div className="h-12 w-12 rounded-2xl bg-[#E3F0EC] flex items-center justify-center">
+                    <Users className="h-5 w-5 text-[#276A5C]" />
                   </div>
                   <div>
                     <p className="font-display font-bold text-lg text-stone-900">{c.name}</p>
@@ -171,7 +171,7 @@ export default function StaffClassrooms() {
                   return (
                     <button key={t.id} type="button"
                       onClick={() => setForm({ ...form, teacher_ids: sel ? form.teacher_ids.filter((x) => x !== t.id) : [...form.teacher_ids, t.id] })}
-                      className={`px-3 py-2 rounded-2xl text-xs font-semibold border ${sel ? "bg-[#FFF3EF] border-[#FF8C6B] text-[#FF7A54]" : "bg-stone-50 border-stone-200 text-stone-700"}`}>
+                      className={`px-3 py-2 rounded-2xl text-xs font-semibold border ${sel ? "bg-[#E3F0EC] border-[#2F7D6D] text-[#276A5C]" : "bg-stone-50 border-stone-200 text-stone-700"}`}>
                       {t.first_name} {t.last_name}
                     </button>
                   );
@@ -181,7 +181,7 @@ export default function StaffClassrooms() {
             <Field label="Note"><Textarea value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} /></Field>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 font-semibold">Annulla</button>
-              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] text-white font-semibold" data-testid="form-classroom-submit">Salva</button>
+              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#2F7D6D] text-white font-semibold" data-testid="form-classroom-submit">Salva</button>
             </div>
           </form>
         </Modal>

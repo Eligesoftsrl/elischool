@@ -89,7 +89,7 @@ export default function SuperAdminTenants() {
             />
             <Link
               to="/superadmin/tenants/new"
-              className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 tap-press shadow-sm"
+              className="h-12 px-5 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] text-white font-semibold text-sm flex items-center gap-2 tap-press shadow-sm"
               data-testid="sa-new-tenant-btn"
             >
               <Plus className="h-4 w-4" /> Nuova scuola
@@ -132,11 +132,11 @@ export default function SuperAdminTenants() {
               <Card className={t.status === "suspended" ? "border-rose-200 bg-rose-50/50" : ""}>
                 <div className="flex items-start gap-3">
                   <div className={`h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden ${
-                    t.status === "suspended" ? "bg-rose-100" : "bg-orange-50"
+                    t.status === "suspended" ? "bg-rose-100" : "bg-brand-light/50"
                   }`}>
                     {t.logo_base64
                       ? <img src={t.logo_base64.startsWith("data:") ? t.logo_base64 : `data:image/png;base64,${t.logo_base64}`} alt="" className="h-full w-full object-cover" />
-                      : <School className={`h-6 w-6 ${t.status === "suspended" ? "text-rose-600" : "text-[#FF8C6B]"}`} />}
+                      : <School className={`h-6 w-6 ${t.status === "suspended" ? "text-rose-600" : "text-[#2F7D6D]"}`} />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">

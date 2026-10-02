@@ -101,7 +101,7 @@ export default function YearTransition() {
 
               <button
                 onClick={openConfirm} disabled={busy}
-                className="w-full h-14 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2"
+                className="w-full h-14 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2"
                 data-testid="run-transition-button"
               >
                 <Sparkles className="h-5 w-5" /> {busy ? "Promozione…" : "Esegui passaggio"}

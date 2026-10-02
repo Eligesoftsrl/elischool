@@ -118,7 +118,7 @@ export default function StaffParents() {
               testid="export-parents"
             />
             <button onClick={() => { setForm(empty); setEditId(null); setOpen(true); }}
-              className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 tap-press"
+              className="h-12 px-5 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] text-white font-semibold text-sm flex items-center gap-2 tap-press"
               data-testid="add-parent-button">
               <Plus className="h-4 w-4" /> Invita genitore
             </button>
@@ -203,7 +203,7 @@ export default function StaffParents() {
           footer={(
             <div className="flex gap-3">
               <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 hover:bg-stone-200 font-semibold" data-testid="parent-cancel">Annulla</button>
-              <button type="submit" form="parent-form" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold" data-testid="parent-submit">{editId ? "Salva" : "Invita"}</button>
+              <button type="submit" form="parent-form" className="flex-1 h-12 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] text-white font-semibold" data-testid="parent-submit">{editId ? "Salva" : "Invita"}</button>
             </div>
           )}
         >
@@ -237,7 +237,7 @@ export default function StaffParents() {
                   {form.student_ids.map((sid) => {
                     const sd = studentDetails(sid);
                     return (
-                      <span key={sid} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#FFF3EF] text-[#FF7A54] text-xs font-semibold border border-[#FF8C6B]/30">
+                      <span key={sid} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#E3F0EC] text-[#276A5C] text-xs font-semibold border border-[#2F7D6D]/30">
                         {sd.name}
                         <span className="text-stone-400 font-mono">· {sd.cf}</span>
                         <button type="button" onClick={() => setForm({ ...form, student_ids: form.student_ids.filter((x) => x !== sid) })} data-testid={`parent-remove-student-${sid}`}>
@@ -287,7 +287,7 @@ export default function StaffParents() {
                             <p className="font-semibold text-sm truncate">{s.first_name} {s.last_name}</p>
                             <p className="text-xs text-stone-500 font-mono truncate">{s.fiscal_code || "— senza CF —"}</p>
                           </div>
-                          {cls && <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-[#FFF3EF] text-[#FF7A54] font-bold uppercase tracking-wider">{cls}</span>}
+                          {cls && <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-[#E3F0EC] text-[#276A5C] font-bold uppercase tracking-wider">{cls}</span>}
                         </button>
                       );
                     })}

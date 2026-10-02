@@ -294,7 +294,7 @@ export default function StaffActivities() {
                 <div>
                   <SectionLabel><BookOpen className="inline h-3 w-3 mr-1" /> Attività didattiche</SectionLabel>
                   <ChoiceRow options={OPT_PARTECIPATO} value={form.didattica}
-                    onChange={(v) => setForm({ ...form, didattica: v })} testidPrefix="didattica" colorOn="#FDE68A" />
+                    onChange={(v) => setForm({ ...form, didattica: v })} testidPrefix="didattica" colorOn="#FBEBA8" />
                   <Textarea className="mt-3" label="Descrizione attività didattiche"
                     value={form.note_didattica} onChange={(v) => setForm({ ...form, note_didattica: v })} testid="note-didattica" />
                 </div>
@@ -303,7 +303,7 @@ export default function StaffActivities() {
                 <div>
                   <SectionLabel><Activity className="inline h-3 w-3 mr-1" /> Attività ricreative e motorie</SectionLabel>
                   <ChoiceRow options={OPT_PARTECIPATO} value={form.motoria}
-                    onChange={(v) => setForm({ ...form, motoria: v })} testidPrefix="motoria" colorOn="#FFB38A" />
+                    onChange={(v) => setForm({ ...form, motoria: v })} testidPrefix="motoria" colorOn="#F2A65A" />
                   <Textarea className="mt-3" label="Descrizione attività ricreative e motorie"
                     value={form.note_motoria} onChange={(v) => setForm({ ...form, note_motoria: v })} testid="note-motoria" />
                 </div>
@@ -312,7 +312,7 @@ export default function StaffActivities() {
                 <div>
                   <SectionLabel><UtensilsCrossed className="inline h-3 w-3 mr-1" /> Pranzo</SectionLabel>
                   <ChoiceRow options={OPT_PRANZO} value={form.pranzo}
-                    onChange={(v) => setForm({ ...form, pranzo: v })} testidPrefix="pranzo" colorOn="#A7D7C5" />
+                    onChange={(v) => setForm({ ...form, pranzo: v })} testidPrefix="pranzo" colorOn="#D5EDE5" />
                   <Textarea className="mt-3" label="Ulteriori info sul pranzo"
                     value={form.note_pranzo} onChange={(v) => setForm({ ...form, note_pranzo: v })} testid="note-pranzo" />
                 </div>
@@ -336,7 +336,7 @@ export default function StaffActivities() {
                   onChange={(v) => setForm({ ...form, note: v })} testid="note-generali" />
 
                 <button onClick={save} disabled={saving}
-                  className="w-full h-14 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2"
+                  className="w-full h-14 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2"
                   data-testid="save-activity-button">
                   <Save className="h-5 w-5" />
                   {saving ? "Salvataggio..." : editing.bulk ? `Applica a ${students.length} alunni` : "Inserisci / Modifica attività"}

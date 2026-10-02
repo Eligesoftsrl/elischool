@@ -39,7 +39,7 @@ export default function Events() {
       <PageHeader title="Festività & Chiusure" subtitle={`${items.length} ricorrenze`}
         right={
           <button onClick={() => { setForm(empty); setEditId(null); setOpen(true); }}
-            className="h-12 px-5 rounded-2xl bg-[#FF8C6B] text-white font-semibold text-sm flex items-center gap-2" data-testid="add-event-button">
+            className="h-12 px-5 rounded-2xl bg-[#2F7D6D] text-white font-semibold text-sm flex items-center gap-2" data-testid="add-event-button">
             <Plus className="h-4 w-4" /> Nuovo evento
           </button>}
       />
@@ -97,7 +97,7 @@ export default function Events() {
             <Field label="Note"><textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full px-4 py-3 rounded-2xl bg-stone-50 border border-stone-200" /></Field>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 font-semibold">Annulla</button>
-              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] text-white font-semibold" data-testid="event-submit">Salva</button>
+              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#2F7D6D] text-white font-semibold" data-testid="event-submit">Salva</button>
             </div>
           </form>
         </Modal>

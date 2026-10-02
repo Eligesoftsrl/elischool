@@ -59,7 +59,7 @@ export default function NewTenant() {
           >
             <Copy className="h-4 w-4" /> Copia invito
           </button>
-          <Link to="/superadmin" className="h-11 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white text-sm font-semibold flex items-center" data-testid="new-tenant-back">
+          <Link to="/superadmin" className="h-11 px-5 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] text-white text-sm font-semibold flex items-center" data-testid="new-tenant-back">
             Torna alle scuole
           </Link>
         </div>
@@ -69,10 +69,10 @@ export default function NewTenant() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <Link to="/superadmin" className="inline-flex items-center text-sm text-stone-500 hover:text-[#FF8C6B] mb-6">
+      <Link to="/superadmin" className="inline-flex items-center text-sm text-stone-500 hover:text-[#2F7D6D] mb-6">
         <ArrowLeft className="h-4 w-4 mr-1" /> Indietro
       </Link>
-      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-xs font-semibold text-[#FF7A54] mb-4">
+      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-light/50 border border-brand-light text-xs font-semibold text-[#276A5C] mb-4">
         <Sparkles className="h-3.5 w-3.5" /> Nuova scuola
       </span>
       <h1 className="font-display text-4xl font-bold text-stone-900 leading-tight mb-2">Crea una nuova scuola</h1>
@@ -120,7 +120,7 @@ export default function NewTenant() {
         <button
           type="submit"
           disabled={busy}
-          className="w-full h-14 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] disabled:opacity-60 text-white font-bold text-base flex items-center justify-center gap-2 tap-press shadow-sm"
+          className="w-full h-14 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] disabled:opacity-60 text-white font-bold text-base flex items-center justify-center gap-2 tap-press shadow-sm"
           data-testid="nt-submit"
         >
           <Send className="h-5 w-5" /> {busy ? "Creazione…" : "Crea scuola e invia invito"}

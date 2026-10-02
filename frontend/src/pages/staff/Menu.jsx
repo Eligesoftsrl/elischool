@@ -75,7 +75,7 @@ export default function StaffMenu() {
       <PageHeader title="Menu" subtitle="Rotante su 4 settimane (lun-ven)"
         right={
           <button onClick={() => { setForm(emptyMenu); setEditId(null); setOpen(true); }}
-            className="h-12 px-5 rounded-2xl bg-[#FF8C6B] text-white font-semibold text-sm flex items-center gap-2" data-testid="add-menu-button">
+            className="h-12 px-5 rounded-2xl bg-[#2F7D6D] text-white font-semibold text-sm flex items-center gap-2" data-testid="add-menu-button">
             <Plus className="h-4 w-4" /> Nuovo menu
           </button>}
       />
@@ -96,7 +96,7 @@ export default function StaffMenu() {
               </div>
               {m.notes && <p className="text-xs text-stone-500 mt-2 italic">{m.notes}</p>}
               <div className="mt-4 grid grid-cols-3 gap-2">
-                <button onClick={() => openEditor(m)} className="h-10 rounded-xl bg-[#FFF3EF] text-[#FF7A54] text-xs font-semibold flex items-center justify-center gap-1.5" data-testid={`open-menu-editor-${m.id}`}>
+                <button onClick={() => openEditor(m)} className="h-10 rounded-xl bg-[#E3F0EC] text-[#276A5C] text-xs font-semibold flex items-center justify-center gap-1.5" data-testid={`open-menu-editor-${m.id}`}>
                   <CalendarDays className="h-3.5 w-3.5" /> Compila settimane
                 </button>
                 <button onClick={() => { setForm({ name: m.name, valid_from: m.valid_from, valid_to: m.valid_to, notes: m.notes || "" }); setEditId(m.id); setOpen(true); }} className="h-10 rounded-xl bg-stone-100 text-xs font-semibold flex items-center justify-center gap-1.5"><Pencil className="h-3.5 w-3.5" /> Modifica</button>
@@ -121,7 +121,7 @@ export default function StaffMenu() {
             </Field>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 font-semibold">Annulla</button>
-              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] text-white font-semibold" data-testid="menu-submit">Salva</button>
+              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#2F7D6D] text-white font-semibold" data-testid="menu-submit">Salva</button>
             </div>
           </form>
         </Modal>
@@ -137,7 +137,7 @@ export default function StaffMenu() {
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={saveMeals} disabled={saving}
-                  className="h-11 px-4 rounded-2xl bg-[#FF8C6B] text-white text-sm font-semibold flex items-center gap-2"
+                  className="h-11 px-4 rounded-2xl bg-[#2F7D6D] text-white text-sm font-semibold flex items-center gap-2"
                   data-testid="save-meals-button">
                   <Save className="h-4 w-4" /> {saving ? "Salvataggio..." : "Salva"}
                 </button>

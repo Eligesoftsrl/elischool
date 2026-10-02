@@ -88,7 +88,7 @@ export default function SchoolProfile() {
         </Card>
 
         <button type="submit" disabled={busy}
-          className="w-full md:w-auto h-14 px-8 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2"
+          className="w-full md:w-auto h-14 px-8 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2"
           data-testid="profile-submit">
           <Save className="h-5 w-5" /> {busy ? "Salvataggio..." : "Salva profilo"}
         </button>

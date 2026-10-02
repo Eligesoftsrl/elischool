@@ -49,7 +49,7 @@ export default function Gallery() {
       <PageHeader title="Galleria" subtitle={`${items.length} foto`}
         right={
           <button onClick={() => fileRef.current?.click()} disabled={uploading}
-            className="h-12 px-5 rounded-2xl bg-[#FF8C6B] text-white font-semibold text-sm flex items-center gap-2"
+            className="h-12 px-5 rounded-2xl bg-[#2F7D6D] text-white font-semibold text-sm flex items-center gap-2"
             data-testid="add-photo-button">
             <Camera className="h-4 w-4" /> {uploading ? "Caricamento…" : "Aggiungi foto"}
           </button>}

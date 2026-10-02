@@ -134,7 +134,7 @@ export default function StaffTeachers() {
               testid="export-teachers"
             />
             <button onClick={() => { setForm({ ...empty, password: genPassword() }); setEditId(null); setCreatedInfo(null); setShowPassword(true); setOpen(true); }}
-              className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 tap-press"
+              className="h-12 px-5 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] text-white font-semibold text-sm flex items-center gap-2 tap-press"
               data-testid="add-teacher-button">
               <Plus className="h-4 w-4" /> Nuova maestra
             </button>
@@ -224,7 +224,7 @@ export default function StaffTeachers() {
           ) : (
             <div className="flex gap-3">
               <button type="button" onClick={closeAndReset} className="flex-1 h-12 rounded-2xl bg-stone-100 hover:bg-stone-200 font-semibold" data-testid="teacher-cancel">Annulla</button>
-              <button type="submit" form="teacher-form" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold" data-testid="teacher-submit">
+              <button type="submit" form="teacher-form" className="flex-1 h-12 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] text-white font-semibold" data-testid="teacher-submit">
                 {editId ? "Salva" : "Crea e genera accesso"}
               </button>
             </div>

@@ -25,35 +25,35 @@ def _wrap_html(title: str, intro: str, cta_url: Optional[str], cta_label: Option
     if cta_url and cta_label:
         cta_block = f"""
         <tr><td align="center" style="padding:8px 0 28px;">
-          <a href="{cta_url}" style="display:inline-block;background:#FF8C6B;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:18px;font-size:15px;letter-spacing:.2px;">{cta_label}</a>
+          <a href="{cta_url}" style="display:inline-block;background:#2F7D6D;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:18px;font-size:15px;letter-spacing:.2px;">{cta_label}</a>
         </td></tr>
-        <tr><td style="font-size:12px;color:#9c9389;padding:0 0 16px;">
+        <tr><td style="font-size:12px;color:#8A8F93;padding:0 0 16px;">
           Se il pulsante non funziona, copia e incolla questo link nel tuo browser:<br/>
-          <a href="{cta_url}" style="color:#FF7A54;word-break:break-all;">{cta_url}</a>
+          <a href="{cta_url}" style="color:#276A5C;word-break:break-all;">{cta_url}</a>
         </td></tr>
         """
     return f"""<!DOCTYPE html>
 <html lang="it"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>{title}</title></head>
-<body style="margin:0;padding:0;background:#FDFBF7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1c1917;">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#FDFBF7;padding:32px 16px;">
+<body style="margin:0;padding:0;background:#F7F5F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#2B2F33;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#F7F5F0;padding:32px 16px;">
   <tr><td align="center">
-    <table role="presentation" width="560" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:28px;border:1px solid #f1ebe2;overflow:hidden;">
+    <table role="presentation" width="560" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:28px;border:1px solid #E2DED6;overflow:hidden;">
       <tr><td style="padding:32px 32px 8px;">
         <table cellpadding="0" cellspacing="0" border="0"><tr>
-          <td style="background:#FF8C6B;width:40px;height:40px;border-radius:14px;text-align:center;vertical-align:middle;color:#fff;font-size:20px;line-height:40px;">&#9829;</td>
-          <td style="padding-left:10px;font-weight:800;font-size:18px;color:#1c1917;">nido<span style="color:#FF8C6B;">.</span></td>
+          <td style="background:#2F7D6D;width:40px;height:40px;border-radius:14px;text-align:center;vertical-align:middle;color:#fff;font-size:22px;line-height:40px;font-family:'Outfit',sans-serif;font-weight:800;">t</td>
+          <td style="padding-left:10px;font-weight:800;font-size:18px;color:#2B2F33;letter-spacing:-0.01em;">tiptii</td>
         </tr></table>
       </td></tr>
-      <tr><td style="padding:16px 32px 8px;font-size:24px;font-weight:800;color:#1c1917;line-height:1.25;letter-spacing:-0.01em;">{title}</td></tr>
-      <tr><td style="padding:8px 32px 4px;font-size:15px;line-height:1.6;color:#44403c;">{intro}</td></tr>
+      <tr><td style="padding:16px 32px 8px;font-size:24px;font-weight:800;color:#2B2F33;line-height:1.25;letter-spacing:-0.01em;">{title}</td></tr>
+      <tr><td style="padding:8px 32px 4px;font-size:15px;line-height:1.6;color:#3A3E42;">{intro}</td></tr>
       <tr><td style="padding:16px 32px 0;">{cta_block}</td></tr>
-      <tr><td style="padding:0 32px 24px;font-size:14px;line-height:1.6;color:#57534e;">{outro}</td></tr>
-      <tr><td style="padding:18px 32px;border-top:1px solid #f1ebe2;font-size:12px;color:#a8a29e;">
-        Un abbraccio,<br/><b style="color:#57534e;">{SENDER_NAME}</b>
+      <tr><td style="padding:0 32px 24px;font-size:14px;line-height:1.6;color:#5E6469;">{outro}</td></tr>
+      <tr><td style="padding:18px 32px;border-top:1px solid #E2DED6;font-size:12px;color:#8A8F93;">
+        Un abbraccio,<br/><b style="color:#5E6469;">{SENDER_NAME}</b>
       </td></tr>
     </table>
-    <p style="font-size:11px;color:#a8a29e;margin:14px 0 0;">Hai ricevuto questa email perché sei collegato/a alla nostra scuola. Se non sei tu, ignora il messaggio.</p>
+    <p style="font-size:11px;color:#8A8F93;margin:14px 0 0;">Hai ricevuto questa email perché sei collegato/a alla nostra scuola. Se non sei tu, ignora il messaggio.</p>
   </td></tr>
 </table>
 </body></html>"""
@@ -184,14 +184,14 @@ async def send_credentials_email(to_email: str, full_name: str, login_email: str
         )
 
     creds_block = f"""
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#faf7f2;border:1px solid #f1ebe2;border-radius:18px;margin:4px 0 20px;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#F0ECE4;border:1px solid #E2DED6;border-radius:18px;margin:4px 0 20px;">
       <tr><td style="padding:16px 20px;">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:#a8a29e;text-transform:uppercase;">Nome utente (email)</div>
-        <div style="font-size:15px;color:#1c1917;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;margin-top:4px;word-break:break-all;">{login_email}</div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:#8A8F93;text-transform:uppercase;">Nome utente (email)</div>
+        <div style="font-size:15px;color:#2B2F33;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;margin-top:4px;word-break:break-all;">{login_email}</div>
       </td></tr>
       <tr><td style="padding:0 20px 16px;">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:#a8a29e;text-transform:uppercase;">Password iniziale</div>
-        <div style="font-size:15px;color:#1c1917;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;margin-top:4px;">{password}</div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:#8A8F93;text-transform:uppercase;">Password iniziale</div>
+        <div style="font-size:15px;color:#2B2F33;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;margin-top:4px;">{password}</div>
       </td></tr>
     </table>
     """

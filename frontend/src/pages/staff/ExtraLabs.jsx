@@ -54,7 +54,7 @@ export default function ExtraLabs() {
       <PageHeader title="Laboratori extra" subtitle="Palinsesto settimanale (musica, teatro, motoria, arte...)"
         right={
           <button onClick={() => { setForm({ ...empty, classroom_id: classId }); setEditId(null); setOpen(true); }}
-            className="h-12 px-5 rounded-2xl bg-[#FF8C6B] text-white font-semibold text-sm flex items-center gap-2" data-testid="add-extra-button">
+            className="h-12 px-5 rounded-2xl bg-[#2F7D6D] text-white font-semibold text-sm flex items-center gap-2" data-testid="add-extra-button">
             <Plus className="h-4 w-4" /> Nuovo laboratorio
           </button>}
       />
@@ -120,7 +120,7 @@ export default function ExtraLabs() {
             <Field label="Maestra/Istruttore"><Input value={form.teacher_name} onChange={(v) => setForm({ ...form, teacher_name: v })} /></Field>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 font-semibold">Annulla</button>
-              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] text-white font-semibold" data-testid="extra-submit">Salva</button>
+              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#2F7D6D] text-white font-semibold" data-testid="extra-submit">Salva</button>
             </div>
           </form>
         </Modal>

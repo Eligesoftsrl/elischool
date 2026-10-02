@@ -77,17 +77,17 @@ export default function EditTenant() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <Link to="/superadmin" className="inline-flex items-center text-sm text-stone-500 hover:text-[#FF8C6B] mb-6">
+      <Link to="/superadmin" className="inline-flex items-center text-sm text-stone-500 hover:text-[#2F7D6D] mb-6">
         <ArrowLeft className="h-4 w-4 mr-1" /> Torna alle scuole
       </Link>
 
       {/* Hero */}
       <div className="mb-6 rounded-3xl bg-white border border-stone-200 p-5 md:p-6 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <div className="h-20 w-20 rounded-2xl bg-orange-50 border border-orange-100 overflow-hidden flex items-center justify-center shrink-0">
+          <div className="h-20 w-20 rounded-2xl bg-brand-light/50 border border-brand-light overflow-hidden flex items-center justify-center shrink-0">
             {form.logo_base64
               ? <img src={form.logo_base64.startsWith("data:") ? form.logo_base64 : `data:image/png;base64,${form.logo_base64}`} alt="" className="h-full w-full object-cover" />
-              : <School className="h-9 w-9 text-[#FF8C6B]" />}
+              : <School className="h-9 w-9 text-[#2F7D6D]" />}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500">Modifica scuola</p>
@@ -224,7 +224,7 @@ export default function EditTenant() {
             </p>
             <button
               type="submit" disabled={saving}
-              className="h-12 px-6 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 shadow-sm disabled:opacity-60"
+              className="h-12 px-6 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] text-white font-semibold text-sm flex items-center gap-2 shadow-sm disabled:opacity-60"
               data-testid="edit-save"
             >
               <Save className="h-4 w-4" />

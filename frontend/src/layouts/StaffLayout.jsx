@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Home, Users, GraduationCap, UserCog, UsersRound, ClipboardList,
-  Utensils, Megaphone, CalendarRange, ArrowRightLeft, LogOut, Menu as MenuIcon, X, ChevronDown, Heart,
+  Utensils, Megaphone, CalendarRange, ArrowRightLeft, LogOut, Menu as MenuIcon, X, ChevronDown,
   BookOpen, Sparkles, Building2, Scan, Image as ImageIcon, CalendarDays, Inbox, NotebookPen,
   Server,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
+import { TiptiiBadge } from "@/components/TiptiiLogo";
 
 // Menu grouped by frequency of use. Each group is collapsible.
 // `admin: true` hides the item for non-admin roles.
@@ -126,17 +127,15 @@ export default function StaffLayout() {
             >
               <MenuIcon className="h-5 w-5" />
             </button>
-            <Link to="/s" className="flex items-center gap-2 font-display font-bold text-stone-900">
+            <Link to="/s" className="flex items-center gap-2 font-display font-bold text-stone-800">
               {user?.tenant?.logo_base64 ? (
-                <img src={`data:image/png;base64,${user.tenant.logo_base64}`} alt={user.tenant.name} className="h-9 w-9 rounded-2xl object-cover shadow-sm"/>
+                <img src={user.tenant.logo_base64.startsWith("data:") ? user.tenant.logo_base64 : `data:image/png;base64,${user.tenant.logo_base64}`} alt={user.tenant.name} className="h-9 w-9 rounded-2xl object-cover shadow-sm"/>
               ) : (
-                <span className="h-9 w-9 rounded-2xl bg-[#FF8C6B] flex items-center justify-center shadow-sm">
-                  <Heart className="h-4 w-4 text-white" fill="white" />
-                </span>
+                <TiptiiBadge size={36} className="shadow-sm" />
               )}
               <span className="hidden sm:flex flex-col leading-tight">
-                <span className="text-[15px] truncate max-w-[180px]" data-testid="staff-tenant-name">{user?.tenant?.name || "nido."}</span>
-                <span className="text-[10px] font-normal text-stone-500 -mt-0.5">powered by nido<span className="text-brand">.</span></span>
+                <span className="text-[15px] truncate max-w-[180px]" data-testid="staff-tenant-name">{user?.tenant?.name || "tiptii"}</span>
+                <span className="text-[10px] font-normal text-stone-500 -mt-0.5">powered by tiptii</span>
               </span>
             </Link>
           </div>
@@ -218,7 +217,7 @@ function BottomNav({ pathname, onOpenMore }) {
             end={n.end}
             className={({ isActive }) =>
               `flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors ${
-                isActive ? "text-[#FF7A54]" : "text-stone-500 hover:text-stone-800"
+                isActive ? "text-[#276A5C]" : "text-stone-500 hover:text-stone-800"
               }`
             }
             data-testid={`bnav-${n.label.toLowerCase()}`}
@@ -302,7 +301,7 @@ function SideNav({ groups, pathname }) {
                         className={({ isActive }) =>
                           `flex items-center gap-3 h-11 px-4 rounded-2xl text-sm font-semibold transition-all ${
                             isActive
-                              ? "bg-[#FFF3EF] text-[#FF7A54] shadow-sm"
+                              ? "bg-[#E3F0EC] text-[#276A5C] shadow-sm"
                               : n.danger
                                 ? "text-rose-700 hover:bg-rose-50"
                                 : "text-stone-700 hover:bg-stone-100"
@@ -348,7 +347,7 @@ function YearSwitcher({ years, active, onChange }) {
               <button
                 key={y.id}
                 onClick={() => { onChange(y); setOpen(false); }}
-                className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium hover:bg-stone-100 ${active.id === y.id ? "text-brand bg-[#FFF3EF]" : "text-stone-700"}`}
+                className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium hover:bg-stone-100 ${active.id === y.id ? "text-brand bg-[#E3F0EC]" : "text-stone-700"}`}
                 data-testid={`year-option-${y.label.replace("/", "-")}`}
               >
                 {y.label} {y.is_active && <span className="ml-1 text-[10px] uppercase font-bold text-emerald-600">attivo</span>}

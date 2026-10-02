@@ -2,31 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Fonts */
+/* Fonts — Outfit (display) + Manrope (body) sono rounded sans-serif coerenti col wordmark Tiptii */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Manrope:wght@300;400;500;600;700&display=swap');
 
+/* ---------------------------------------------------------------------------
+   Tiptii Design Tokens (coerenti con la guida colori ufficiale)
+--------------------------------------------------------------------------- */
 :root {
-    --bg-base: #FDFBF7;
-    --bg-surface: #FFFFFF;
+    /* Surfaces */
+    --bg-base: #F7F5F0;          /* Bianco nuvola — sfondo pagina */
+    --bg-surface: #FFFFFF;       /* Bianco — card / modali / input */
     --bg-elevated: #FFFFFF;
-    --text-primary: #1C1917;
-    --text-secondary: #57534E;
-    --text-muted: #A8A29E;
-    --brand: #FF8C6B;
-    --brand-hover: #FF7A54;
-    --brand-light: #FFF3EF;
-    --border-subtle: #E7E5E4;
 
-    --accent-didattica: #FDE68A;
-    --accent-motoria: #FFB38A;
-    --accent-pranzo: #A7D7C5;
-    --accent-riposo: #A2D2FF;
-    --accent-bagno: #D8B4E2;
+    /* Testo */
+    --text-primary: #2B2F33;     /* Ardesia calda */
+    --text-secondary: #5E6469;   /* Grigio testo */
+    --text-muted: #8A8F93;
+
+    /* Brand — Salvia (primary) */
+    --brand: #2F7D6D;            /* Salvia profondo */
+    --brand-hover: #276A5C;      /* Salvia scuro */
+    --brand-pressed: #1F5549;    /* Salvia notte */
+    --brand-light: #E3F0EC;      /* Salvia velo */
+
+    /* Accent — Albicocca (solo con testo scuro sopra) */
+    --accent: #F2A65A;
+    --accent-dark-text: #2B2F33;
+
+    /* Bordi */
+    --border-subtle: #E2DED6;
+
+    /* Categorie diario */
+    --cat-pappa: #FCE3C7;
+    --cat-nanna: #DCD6F5;
+    --cat-igiene: #D3E8F6;
+    --cat-attivita: #FBEBA8;
+    --cat-presenze: #D5EDE5;
+
+    /* Semantic */
+    --semantic-success: #237A4B;    /* Conferma */
+    --semantic-warning: #E0A100;    /* Avviso — testo scuro sopra */
+    --semantic-critical: #C8443A;   /* Critico — allergie, farmaci, errori bloccanti */
+    --semantic-info: #2F6BC0;       /* Informazione */
 }
 
-html, body, #root {
-    height: 100%;
-}
+html, body, #root { height: 100%; }
 
 body {
     margin: 0;
@@ -44,33 +64,30 @@ h1, h2, h3, h4, h5, h6, .font-display {
 }
 
 /* Selection */
-::selection {
-    background: var(--brand-light);
-    color: var(--brand-hover);
-}
+::selection { background: var(--brand-light); color: var(--brand-pressed); }
 
-/* Shadcn variables tuned to our palette */
+/* Shadcn vars → palette Tiptii */
 @layer base {
     :root {
-        --background: 40 50% 98%;
-        --foreground: 20 14% 10%;
+        --background: 42 30% 95%;         /* Bianco nuvola */
+        --foreground: 210 7% 19%;         /* Ardesia calda */
         --card: 0 0% 100%;
-        --card-foreground: 20 14% 10%;
+        --card-foreground: 210 7% 19%;
         --popover: 0 0% 100%;
-        --popover-foreground: 20 14% 10%;
-        --primary: 14 100% 71%;
+        --popover-foreground: 210 7% 19%;
+        --primary: 169 46% 34%;           /* Salvia profondo #2F7D6D */
         --primary-foreground: 0 0% 100%;
-        --secondary: 30 20% 96%;
-        --secondary-foreground: 20 14% 18%;
-        --muted: 30 20% 96%;
-        --muted-foreground: 25 5% 45%;
-        --accent: 30 20% 94%;
-        --accent-foreground: 20 14% 18%;
-        --destructive: 0 75% 60%;
+        --secondary: 42 20% 94%;
+        --secondary-foreground: 210 7% 19%;
+        --muted: 42 20% 94%;
+        --muted-foreground: 210 5% 39%;   /* Grigio testo */
+        --accent: 170 44% 92%;            /* Salvia velo per hover subtle */
+        --accent-foreground: 169 60% 20%;
+        --destructive: 4 55% 51%;         /* Critico #C8443A */
         --destructive-foreground: 0 0% 100%;
-        --border: 30 15% 90%;
-        --input: 30 15% 92%;
-        --ring: 14 100% 71%;
+        --border: 35 20% 86%;             /* Grigio bordo #E2DED6 */
+        --input: 35 20% 90%;
+        --ring: 169 46% 34%;
         --radius: 1.25rem;
     }
 }
@@ -80,20 +97,18 @@ h1, h2, h3, h4, h5, h6, .font-display {
     body { @apply bg-background text-foreground; }
 }
 
-/* Pretty scrollbar */
+/* Scrollbar neutra */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #E7E5E4; border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: #D6D3D1; }
+::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #CFCAC0; }
 
 /* Hide scrollbars utility */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Subtle grain overlay class */
-.grain {
-    position: relative;
-}
+/* Grain overlay */
+.grain { position: relative; }
 .grain::after {
     content: '';
     position: absolute;
@@ -104,41 +119,40 @@ h1, h2, h3, h4, h5, h6, .font-display {
     mix-blend-mode: multiply;
 }
 
-/* Card glass for top bars */
+/* Glass per top bar */
 .glass {
     background: rgba(255, 255, 255, 0.78);
     backdrop-filter: saturate(180%) blur(18px);
     -webkit-backdrop-filter: saturate(180%) blur(18px);
-    border-bottom: 1px solid rgba(231, 229, 228, 0.7);
+    border-bottom: 1px solid rgba(226, 222, 214, 0.7);
 }
 
-/* Soft tactile shadow */
+/* Ombre leggere (solo per modali / menu / card in evidenza) — niente gradienti saturi */
 .tactile {
     box-shadow:
-        0 1px 2px rgba(28, 25, 23, 0.04),
-        0 6px 14px rgba(28, 25, 23, 0.04);
+        0 1px 2px rgba(43, 47, 51, 0.04),
+        0 6px 14px rgba(43, 47, 51, 0.04);
 }
-
 .tactile-hover:hover {
     box-shadow:
-        0 2px 4px rgba(28, 25, 23, 0.05),
-        0 14px 28px rgba(28, 25, 23, 0.06);
+        0 2px 4px rgba(43, 47, 51, 0.05),
+        0 14px 28px rgba(43, 47, 51, 0.06);
     transform: translateY(-1px);
 }
 
-/* Active tap effect */
+/* Active tap */
 .tap-press:active { transform: scale(0.98); }
 
-/* Page enter animation */
+/* Page enter */
 @keyframes fadeUp {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
 }
 .fade-up { animation: fadeUp 0.35s ease-out both; }
 
-/* Pulsing dot */
+/* Pulsing dot — brand salvia */
 @keyframes pulseDot {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 140, 107, 0.5); }
-    50% { box-shadow: 0 0 0 8px rgba(255, 140, 107, 0); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(47, 125, 109, 0.5); }
+    50%      { box-shadow: 0 0 0 8px rgba(47, 125, 109, 0); }
 }
 .pulse-dot { animation: pulseDot 1.8s infinite; }

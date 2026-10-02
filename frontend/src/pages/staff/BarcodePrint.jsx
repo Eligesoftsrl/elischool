@@ -101,7 +101,7 @@ export default function BarcodePrint() {
           </div>
         </div>
         <button onClick={downloadPdf} disabled={busy || !students.length}
-          className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] disabled:opacity-50 text-white font-semibold text-sm flex items-center gap-2"
+          className="h-12 px-5 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] disabled:opacity-50 text-white font-semibold text-sm flex items-center gap-2"
           data-testid="download-pdf-button">
           <Download className="h-4 w-4" /> {busy ? "Generazione..." : "Scarica PDF"}
         </button>

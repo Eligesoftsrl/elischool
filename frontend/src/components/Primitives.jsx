@@ -46,7 +46,7 @@ export function EmptyState({ title, description, icon, action, imageUrl }) {
   );
 }
 
-export function StatCard({ label, value, hint, accent = "#FF8C6B", icon }) {
+export function StatCard({ label, value, hint, accent = "#2F7D6D", icon }) {
   return (
     <div className="relative overflow-hidden bg-white border border-stone-200 rounded-3xl p-6 tactile">
       <div
@@ -66,7 +66,7 @@ export function StatCard({ label, value, hint, accent = "#FF8C6B", icon }) {
 export function Pill({ children, color = "stone", className }) {
   const map = {
     stone: "bg-stone-100 text-stone-700",
-    brand: "bg-[#FFF3EF] text-[#FF7A54]",
+    brand: "bg-[#E3F0EC] text-[#276A5C]",
     green: "bg-emerald-50 text-emerald-700",
     blue: "bg-sky-50 text-sky-700",
     amber: "bg-amber-50 text-amber-700",

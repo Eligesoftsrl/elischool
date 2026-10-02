@@ -1,7 +1,8 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Home, Calendar, Utensils, Newspaper, LogOut, Heart, CalendarDays, BookOpen } from "lucide-react";
+import { Home, Calendar, Utensils, Newspaper, LogOut, CalendarDays, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { TiptiiBadge } from "@/components/TiptiiLogo";
 
 const NAV = [
   { to: "/g", icon: Home, label: "Oggi", end: true },
@@ -24,11 +25,9 @@ export default function ParentLayout() {
           <div className="px-5 h-16 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {user?.tenant?.logo_base64 ? (
-                <img src={`data:image/png;base64,${user.tenant.logo_base64}`} alt={user.tenant.name} className="h-9 w-9 rounded-2xl object-cover shadow-sm"/>
+                <img src={user.tenant.logo_base64.startsWith("data:") ? user.tenant.logo_base64 : `data:image/png;base64,${user.tenant.logo_base64}`} alt={user.tenant.name} className="h-9 w-9 rounded-2xl object-cover shadow-sm"/>
               ) : (
-                <span className="h-9 w-9 rounded-2xl bg-[#FF8C6B] flex items-center justify-center shadow-sm">
-                  <Heart className="h-4 w-4 text-white" fill="white" />
-                </span>
+                <TiptiiBadge size={36} className="shadow-sm" />
               )}
               <div className="leading-tight">
                 <p className="text-[10px] uppercase tracking-wider font-bold text-stone-400">Ciao</p>
@@ -65,7 +64,7 @@ export default function ParentLayout() {
                 end={n.end}
                 className={({ isActive }) =>
                   `relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl text-[11px] font-semibold transition-all ${
-                    isActive ? "text-[#FF7A54]" : "text-stone-500"
+                    isActive ? "text-[#276A5C]" : "text-stone-500"
                   }`
                 }
                 data-testid={`parent-nav-${n.label.toLowerCase()}`}
@@ -75,7 +74,7 @@ export default function ParentLayout() {
                     {isActive && (
                       <motion.span
                         layoutId="parent-nav-pill"
-                        className="absolute inset-0 bg-[#FFF3EF] rounded-2xl -z-10"
+                        className="absolute inset-0 bg-[#E3F0EC] rounded-2xl -z-10"
                         transition={{ type: "spring", stiffness: 300, damping: 26 }}
                       />
                     )}

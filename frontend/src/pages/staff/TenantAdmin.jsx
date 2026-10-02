@@ -179,7 +179,7 @@ export default function StaffTenantAdmin() {
               Queste informazioni appaiono nelle email alle famiglie, nei PDF esportati e nel modulo pubblico di iscrizione.
             </p>
             <button type="submit" disabled={saving}
-              className="h-12 px-6 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 shadow-sm disabled:opacity-60"
+              className="h-12 px-6 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] text-white font-semibold text-sm flex items-center gap-2 shadow-sm disabled:opacity-60"
               data-testid="tenant-save">
               <Save className="h-4 w-4" />
               {saving ? "Salvataggio…" : "Salva modifiche"}
@@ -193,7 +193,7 @@ export default function StaffTenantAdmin() {
 
 function StatCard({ icon, label, value, sub, tone = "stone", testid, mono }) {
   const colors = {
-    brand: "bg-orange-50 text-orange-900 border-orange-100",
+    brand: "bg-brand-light/50 text-brand-pressed border-brand-light",
     purple: "bg-violet-50 text-violet-900 border-violet-100",
     rose: "bg-rose-50 text-rose-900 border-rose-100",
     emerald: "bg-emerald-50 text-emerald-900 border-emerald-100",
@@ -203,7 +203,7 @@ function StatCard({ icon, label, value, sub, tone = "stone", testid, mono }) {
     stone: "bg-stone-50 text-stone-900 border-stone-100",
   };
   const iconBg = {
-    brand: "bg-orange-200/60 text-orange-700",
+    brand: "bg-brand-light text-brand-hover",
     purple: "bg-violet-200/60 text-violet-700",
     rose: "bg-rose-200/60 text-rose-700",
     emerald: "bg-emerald-200/60 text-emerald-700",

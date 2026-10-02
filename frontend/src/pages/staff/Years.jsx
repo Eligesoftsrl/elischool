@@ -31,14 +31,14 @@ export default function StaffYears() {
       <PageHeader title="Anni scolastici" subtitle={`${items.length} anni`}
         right={
           <button onClick={() => { setForm(empty); setEditId(null); setOpen(true); }}
-            className="h-12 px-5 rounded-2xl bg-[#FF8C6B] text-white font-semibold text-sm flex items-center gap-2" data-testid="add-year-button">
+            className="h-12 px-5 rounded-2xl bg-[#2F7D6D] text-white font-semibold text-sm flex items-center gap-2" data-testid="add-year-button">
             <Plus className="h-4 w-4" /> Nuovo anno
           </button>}
       />
       {items.length === 0 ? <EmptyState title="Nessun anno scolastico" /> :
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map((y) => (
-            <Card key={y.id} className={y.is_active ? "ring-2 ring-[#FF8C6B] ring-offset-2" : ""}>
+            <Card key={y.id} className={y.is_active ? "ring-2 ring-[#2F7D6D] ring-offset-2" : ""}>
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-2xl bg-stone-100 flex items-center justify-center"><CalendarRange className="h-5 w-5 text-stone-600" /></div>
                 <div>
@@ -48,7 +48,7 @@ export default function StaffYears() {
               </div>
               {y.is_active && <Pill color="green" className="mt-3"><Check className="h-3 w-3" /> Attivo</Pill>}
               <div className="mt-4 grid grid-cols-3 gap-2">
-                {!y.is_active && <button onClick={() => activate(y.id)} className="h-10 rounded-xl bg-[#FFF3EF] text-[#FF7A54] text-xs font-semibold" data-testid={`activate-year-${y.id}`}>Attiva</button>}
+                {!y.is_active && <button onClick={() => activate(y.id)} className="h-10 rounded-xl bg-[#E3F0EC] text-[#276A5C] text-xs font-semibold" data-testid={`activate-year-${y.id}`}>Attiva</button>}
                 <button onClick={() => { setForm({ label: y.label, start_date: y.start_date, end_date: y.end_date, is_active: y.is_active }); setEditId(y.id); setOpen(true); }} className="h-10 rounded-xl bg-stone-100 text-xs font-semibold flex items-center justify-center"><Pencil className="h-3.5 w-3.5" /></button>
                 <button onClick={() => remove(y.id)} className="h-10 rounded-xl bg-rose-50 text-rose-700 text-xs font-semibold flex items-center justify-center"><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
@@ -70,7 +70,7 @@ export default function StaffYears() {
             </label>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-2xl bg-stone-100 font-semibold">Annulla</button>
-              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#FF8C6B] text-white font-semibold" data-testid="year-submit">Salva</button>
+              <button type="submit" className="flex-1 h-12 rounded-2xl bg-[#2F7D6D] text-white font-semibold" data-testid="year-submit">Salva</button>
             </div>
           </form>
         </Modal>

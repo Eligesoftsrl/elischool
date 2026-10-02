@@ -56,7 +56,7 @@ export default function ParentTimeline() {
               initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.04 }}
               className="ml-5"
             >
-              <span className="absolute -left-[7px] mt-2 h-3 w-3 rounded-full bg-[#FF8C6B] ring-4 ring-[#FDFBF7]" />
+              <span className="absolute -left-[7px] mt-2 h-3 w-3 rounded-full bg-[#2F7D6D] ring-4 ring-[#FDFBF7]" />
               <Card className="!p-4">
                 <div className="flex items-center justify-between mb-2">
                   <p className="font-display font-bold text-stone-900 flex items-center gap-2">

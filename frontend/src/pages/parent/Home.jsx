@@ -74,7 +74,7 @@ export default function ParentHome() {
       {/* Hero */}
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-[2rem] p-6 bg-gradient-to-br from-[#FF8C6B] via-[#FFB38A] to-[#FDE68A] text-white"
+        className="relative overflow-hidden rounded-[2rem] p-6 bg-gradient-to-br from-[#2F7D6D] via-[#F2A65A] to-[#FBEBA8] text-white"
       >
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/15" />
         <div className="absolute -right-4 bottom-4 h-24 w-24 rounded-full bg-white/10" />
@@ -120,9 +120,9 @@ export default function ParentHome() {
       {a ? (
         <div className="space-y-3">
           <SectionLabel>Attività di oggi</SectionLabel>
-          <Block icon={<BookOpen className="h-5 w-5" />} bg="#FDE68A" title="Didattica" value={a.didattica} note={a.note_didattica} />
-          <Block icon={<Activity className="h-5 w-5" />} bg="#FFB38A" title="Motoria" value={a.motoria} note={a.note_motoria} />
-          <Block icon={<UtensilsCrossed className="h-5 w-5" />} bg="#A7D7C5" title="Pranzo" value={a.pranzo} note={a.note_pranzo} />
+          <Block icon={<BookOpen className="h-5 w-5" />} bg="#FBEBA8" title="Didattica" value={a.didattica} note={a.note_didattica} />
+          <Block icon={<Activity className="h-5 w-5" />} bg="#F2A65A" title="Motoria" value={a.motoria} note={a.note_motoria} />
+          <Block icon={<UtensilsCrossed className="h-5 w-5" />} bg="#D5EDE5" title="Pranzo" value={a.pranzo} note={a.note_pranzo} />
           <div className="grid grid-cols-2 gap-3">
             <MiniBlock title="Merenda" value={a.merenda} />
             <MiniBlock title="Riposo" value={a.riposo} />
@@ -130,7 +130,7 @@ export default function ParentHome() {
             <MiniBlock title="Pipì" value={a.pipi} />
           </div>
           {a.note && (
-            <Card className="!p-5 border-l-4 border-[#FF8C6B]">
+            <Card className="!p-5 border-l-4 border-[#2F7D6D]">
               <p className="text-xs uppercase tracking-wider font-bold text-stone-500 mb-1">Note dalle maestre</p>
               <p className="text-stone-800 leading-relaxed">{a.note}</p>
             </Card>

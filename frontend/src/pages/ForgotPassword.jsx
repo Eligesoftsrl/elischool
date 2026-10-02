@@ -48,7 +48,7 @@ export default function ForgotPassword() {
           <button
             disabled={busy}
             type="submit"
-            className="mt-4 w-full h-14 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold tap-press"
+            className="mt-4 w-full h-14 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] text-white font-semibold tap-press"
             data-testid="forgot-submit-button"
           >
             {busy ? "Invio..." : "Invia link di reset"}

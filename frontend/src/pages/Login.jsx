@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Sparkles, Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, ArrowRight, Eye, EyeOff, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiErrorMessage } from "@/lib/api";
+import { TiptiiBadge } from "@/components/TiptiiLogo";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -29,11 +30,11 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-[#FDFBF7] flex items-center justify-center px-5 py-10">
-      {/* Soft background blobs */}
-      <div className="pointer-events-none absolute -top-32 -left-24 h-96 w-96 rounded-full bg-[#FFB38A]/25 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -right-24 h-96 w-96 rounded-full bg-[#A2D2FF]/30 blur-3xl" />
-      <div className="pointer-events-none absolute top-1/3 right-1/4 h-72 w-72 rounded-full bg-[#FDE68A]/30 blur-3xl" />
+    <div className="min-h-screen relative overflow-hidden bg-[#F7F5F0] flex items-center justify-center px-5 py-10">
+      {/* Soft background blobs (coerenti con palette Tiptii) */}
+      <div className="pointer-events-none absolute -top-32 -left-24 h-96 w-96 rounded-full bg-[#F2A65A]/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -right-24 h-96 w-96 rounded-full bg-[#2F7D6D]/15 blur-3xl" />
+      <div className="pointer-events-none absolute top-1/3 right-1/4 h-72 w-72 rounded-full bg-[#FBEBA8]/40 blur-3xl" />
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -42,11 +43,8 @@ export default function Login() {
         className="relative w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/70 backdrop-blur border border-stone-200 text-xs font-semibold text-stone-600 mb-5">
-            <span className="h-2 w-2 rounded-full bg-brand pulse-dot" />
-            Scuola dell'infanzia
-          </div>
-          <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight text-stone-900">
+          <TiptiiBadge size={64} className="mx-auto mb-4 shadow-sm" />
+          <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight text-stone-800">
             Bentornati
           </h1>
           <p className="mt-2 text-stone-500 text-base">
@@ -110,7 +108,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full h-14 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] disabled:opacity-60 text-white font-semibold text-base tap-press transition-all shadow-sm flex items-center justify-center gap-2"
+            className="w-full h-14 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] disabled:opacity-60 text-white font-semibold text-base tap-press transition-all shadow-sm flex items-center justify-center gap-2"
             data-testid="login-submit-button"
           >
             {busy ? "Accesso..." : "Entra"}

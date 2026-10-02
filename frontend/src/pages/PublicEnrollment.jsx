@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle2, ArrowLeft, Heart, Sparkles, Send, IdCard } from "lucide-react";
+import { CheckCircle2, ArrowLeft, Sparkles, Send, IdCard } from "lucide-react";
 import { toast } from "sonner";
 import api, { apiErrorMessage } from "@/lib/api";
 import { ComuniAutocomplete } from "@/components/ComuniAutocomplete";
@@ -66,8 +66,8 @@ export default function PublicEnrollment() {
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] relative overflow-hidden">
-      <div className="pointer-events-none absolute -top-32 -left-24 h-96 w-96 rounded-full bg-[#FFB38A]/25 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -right-24 h-96 w-96 rounded-full bg-[#A2D2FF]/30 blur-3xl" />
+      <div className="pointer-events-none absolute -top-32 -left-24 h-96 w-96 rounded-full bg-[#F2A65A]/25 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -right-24 h-96 w-96 rounded-full bg-[#D3E8F6]/30 blur-3xl" />
 
       <div className="relative max-w-2xl mx-auto px-5 py-10">
         <Link to="/" className="inline-flex items-center text-sm text-stone-500 hover:text-brand mb-6">
@@ -90,7 +90,7 @@ export default function PublicEnrollment() {
           data-testid="enrollment-form">
           <section>
             <p className="text-xs uppercase tracking-wider font-bold text-stone-400 mb-3 flex items-center gap-1.5">
-              <Heart className="h-3 w-3 text-brand" /> Il bambino / la bambina
+              <Sparkles className="h-3 w-3 text-brand" /> Il bambino / la bambina
             </p>
             <div className="grid sm:grid-cols-2 gap-3">
               <Field label="Nome *"><Input value={form.student_first_name} onChange={(v) => setForm({ ...form, student_first_name: v })} required testid="enr-student-first" /></Field>
@@ -138,7 +138,7 @@ export default function PublicEnrollment() {
           </section>
 
           <button type="submit" disabled={busy}
-            className="w-full h-14 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] disabled:opacity-50 text-white font-semibold text-base tap-press flex items-center justify-center gap-2"
+            className="w-full h-14 rounded-2xl bg-[#2F7D6D] hover:bg-[#276A5C] disabled:opacity-50 text-white font-semibold text-base tap-press flex items-center justify-center gap-2"
             data-testid="enr-submit">
             <Send className="h-5 w-5" /> {busy ? "Invio…" : "Invia richiesta"}
           </button>
