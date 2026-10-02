@@ -35,6 +35,7 @@ import PublicEnrollment from "@/pages/PublicEnrollment";
 import SuperAdminLayout from "@/layouts/SuperAdminLayout";
 import SuperAdminTenants from "@/pages/superadmin/Tenants";
 import SuperAdminNewTenant from "@/pages/superadmin/NewTenant";
+import SuperAdminEditTenant from "@/pages/superadmin/EditTenant";
 
 import ParentLayout from "@/layouts/ParentLayout";
 import ParentHome from "@/pages/parent/Home";
@@ -101,6 +102,7 @@ function App() {
           >
             <Route index element={<SuperAdminTenants />} />
             <Route path="tenants/new" element={<SuperAdminNewTenant />} />
+            <Route path="tenants/:id/edit" element={<SuperAdminEditTenant />} />
           </Route>
 
           {/* STAFF */}

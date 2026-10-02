@@ -2452,6 +2452,12 @@ async def sa_get_tenant(tid: str, user=Depends(require_superadmin)):
     t = await raw_db.tenants.find_one({"id": tid}, {"_id": 0})
     if not t:
         raise HTTPException(404, "Scuola non trovata")
+    t["stats"] = {
+        "students": await raw_db.students.count_documents({"tenant_id": tid}),
+        "users": await raw_db.users.count_documents({"tenant_id": tid}),
+        "classrooms": await raw_db.classrooms.count_documents({"tenant_id": tid}),
+        "enrollment_requests_pending": await raw_db.enrollment_requests.count_documents({"tenant_id": tid, "status": "pending"}),
+    }
     return t
 
 
@@ -2533,7 +2539,7 @@ async def sa_patch_tenant(tid: str, payload: TenantPatchIn, user=Depends(require
         if "contact_email" in update:
             update["contact_email"] = update["contact_email"].lower().strip()
         await raw_db.tenants.update_one({"id": tid}, {"$set": update})
-    return await raw_db.tenants.find_one({"id": tid}, {"_id": 0})
+    return await sa_get_tenant(tid, user)
 
 
 @api.delete("/superadmin/tenants/{tid}")
