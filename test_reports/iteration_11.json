@@ -1,0 +1,28 @@
+{
+  "summary": "Full-stack testing of iteration 11 (5 improvements: Italian date formatting via lib/format.js, reusable SearchBar, ExportMenu CSV/XLSX/PDF, new /s/tenant Admin page with usage stats and plan readonly, AES-256-GCM media encryption at rest). Backend: 8/8 pytest cases GREEN — GET /api/admin/tenant returns tenant+stats, PATCH persists name & lowercases contact_email, extra keys plan/status are silently ignored (admin cannot escalate), media upload stores is_encrypted=true/cipher_alg=aes-256-gcm with no plaintext leak in list, GET /api/media/{id} transparently decrypts and roundtrip byte-equals the uploaded blob, invalid base64 rejected, seed has 6 teachers + Siria Longobardi student. Frontend (Playwright): /s/tenant renders tenant-name 'L\\'Albero della Vita' + all 8 stat cards (students/parents/staff/classrooms/media/media-bytes/enrollment/slug), the lock note 'Solo il Superadmin può modificare il piano' is visible, no editable plan/status inputs, Save shows 'Dati tenant aggiornati' toast. Classrooms, Communications, LessonPlans (/s/piano) and Parents/Students/Teachers all show the new SearchBar with its clear button and 'Nessun risultato' empty state when the query matches nothing. Export menu triggers are present on Classrooms/Parents/Students/Teachers (1 per page). Sidebar 'Gestione tenant' link reachable (1 occurrence). Teacher cards count = 6 and 'Siria' appears on Alunni. No console errors observed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter11_features.py",
+    "/app/test_reports/pytest/iter11_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "backend/media_crypto.py — AES-256-GCM with per-blob 12-byte nonce and 128-bit tag; MEDIA_ENCRYPTION_KEY in backend/.env is 64-char hex (32 bytes), correct. Consider rotating via a key_id prefix so re-key is possible without re-encrypting all historical blobs.",
+    "backend/server.py admin_patch_tenant — correctly uses AdminTenantPatchIn so unknown fields (plan/status) are stripped by pydantic. Great defense-in-depth; still, a 403 instead of silent-strip when the client posts plan/status would be more honest to API consumers.",
+    "backend/server.py upload_media — base64.b64decode() is permissive (ignores whitespace, silently truncates on bad chars). The validator catches only exceptions; consider validate=True for strict decode.",
+    "frontend/components/ExportMenu.jsx — jsPDF + xlsx are heavy (~400kB each). Consider dynamic import() on click to keep initial bundle small. Also, for CSV/XLSX of large datasets you still iterate in-memory on the client; a server-side stream would scale better.",
+    "frontend/pages/staff/TenantAdmin.jsx — Save button is enabled even when the form is pristine; disabling via a dirty flag would avoid unnecessary PATCH roundtrips.",
+    "frontend/lib/format.js — _parse handles ISO date-only correctly (avoids TZ drift). Good. Consider exposing a single formatter object or memoized Intl.DateTimeFormat for perf on large lists."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter11_features.py"
+  ],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100% (all 5 review areas verified)"},
+  "test_credentials": "admin@scuolapp.it / Admin2026! (from /app/memory/test_credentials.md). No credentials rotated. Tenant name was briefly set to '... - TEST' and reverted in both the API test and the Playwright test.",
+  "seed_data_creation": "No permanent seed changes. The media upload test created one TEST_iter11.txt record and deleted it immediately. Confirmed Siria Longobardi + 6 teachers already seeded in demo tenant.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "iteration_11 is GREEN end-to-end. New endpoints: GET/PATCH /api/admin/tenant (admin-only, returns usage stats, strips plan/status). New frontend route: /s/tenant (admin only). Media upload now stores ciphertext in Mongo under data_cipher with is_encrypted=true/cipher_alg=aes-256-gcm/byte_size; GET decrypts and ships a data: URL. All list pages (Classrooms, Communications, LessonPlans, Parents, Students, Teachers) now include a SearchBar with data-testid search-<area>-input / -clear. Export triggers: data-testid export-<area>-trigger with -csv / -xlsx / -pdf items. LessonPlans route is /s/piano (singular) not /s/piani — update any references accordingly. Italian date helpers live in frontend/src/lib/format.js and are already consumed by LessonPlans and Communications.",
+  "rca of the issue": "N/A — no bugs found during iteration 11 testing."
+}
