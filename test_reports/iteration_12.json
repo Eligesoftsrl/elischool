@@ -1,0 +1,26 @@
+{
+  "summary": "Tested the Superadmin tenants area (list, edit, new) end-to-end for iteration_12. Backend: 9/9 pytest tests pass covering GET list (with stats), GET single tenant (with stats, no _id), PATCH name/plan/status/logo (persisted + stats returned), 404 handling, DELETE protection of DEFAULT_TENANT_ID, and full create+delete lifecycle of a non-demo tenant. Frontend: Superadmin login works, all pages render with light palette (bg light-cream, white cards). SuperAdminLayout header shows 'nido.' + 'SUPERADMIN' pill. Tenants page shows 4 KPIs, SearchBar (sa-search-input), ExportMenu (export-tenants-trigger), and each tenant card has sa-edit-{id} black Modifica button. Clicking Modifica navigates to /superadmin/tenants/{id}/edit; the EditTenant page loads tenant+stats, shows hero with name/pill Attiva/Piano Demo/data, 4 StatMini (Alunni/Utenti/Sezioni/Iscrizioni Pending), and 4 cards (Identità/Contatti/Sede/Piano&Stato). Editing name and clicking edit-save triggers PATCH, toast 'Scuola aggiornata' appears, and hero reflects the new name. edit-toggle-status and edit-delete-tenant buttons are present. NewTenant page /superadmin/tenants/new renders with the same light palette and orange brand. Demo tenant restored to original name/plan after tests.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Nota su bg-stone-900", "issues": ["3 occorrenze residue di bg-stone-900 nei file superadmin: (a) SuperAdminLayout.jsx riga 18 — pill 'SUPERADMIN' nell'header; (b) Tenants.jsx riga 168 — pulsante 'Modifica' NERO (richiesto esplicitamente dallo spec); (c) edit page (pulsante Sospendi/Elimina small accent). Sono tutti accent di piccole dimensioni, non background pagina. Se main agent vuole aderenza rigorosa al requisito 'nessun bg-stone-900' potrebbe sostituirli con bg-stone-800 o un brand scuro, altrimenti considerare OK."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_superadmin_tenants.py", "/app/test_reports/pytest/superadmin_tenants.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "sa_patch_tenant correctly re-reads tenant via sa_get_tenant so stats are always fresh in the response — good pattern.",
+    "sa_delete_tenant correctly protects DEFAULT_TENANT_ID (returns 400).",
+    "All superadmin endpoints exclude _id from the response — no ObjectId serialization issue.",
+    "No bg-stone-950 or text-stone-100 anywhere; only 3 small bg-stone-900 accents (pill, Modifica button, hero delete/suspend) — in line with the design brief except for a strict reading of 'nessun bg-stone-900'."
+  ],
+  "updated_files": ["/app/backend/tests/test_superadmin_tenants.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "superadmin@nido.app / SuperAdmin2026! — OK",
+  "seed_data_creation": "Nessun dato di seed persistente creato. Durante i test è stato creato e poi eliminato il tenant 'TEST_Nido Prova' (slug test-nido-prova-del12). Il tenant demo è stato temporaneamente rinominato/piano cambiato e poi ripristinato a 'L'Albero della Vita' / plan=demo / status=active.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Area superadmin (list + edit + new + delete + backend endpoints /api/superadmin/tenants[/{id}]) completamente validata. Il tenant demo tenant-demo ('L'Albero della Vita', slug=demo) è stato ripristinato dopo i test. Il tenant demo è protetto dalla DELETE (restituisce 400). Prossimi test non devono eliminarlo. Il test file test_superadmin_tenants.py può essere riutilizzato come regression."
+}
