@@ -5,6 +5,8 @@ import { Plus, Search, Trash2, Pencil, X, GraduationCap, ArrowRightLeft, Cake, A
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
 import { ComuniAutocomplete } from "@/components/ComuniAutocomplete";
+import { ExportMenu } from "@/components/ExportMenu";
+import { fmtDate } from "@/lib/format";
 
 const CF_RE = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/;
 const empty = { first_name: "", last_name: "", birth_date: "", fiscal_code: "", city_residence: "", residence: "", allergies: "", notes: "", classroom_id: "" };
@@ -179,13 +181,31 @@ export default function StaffStudents() {
                 : `${active.length} bambini attivi`
         }
         right={
-          <button
-            onClick={() => { setForm(empty); setEditId(null); setOpen(true); }}
-            className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 tap-press"
-            data-testid="add-student-button"
-          >
-            <Plus className="h-4 w-4" /> Nuovo alunno
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportMenu
+              data={displayed.filter((s) => s.status !== "withdrawn")}
+              columns={[
+                { key: "last_name", label: "Cognome" },
+                { key: "first_name", label: "Nome" },
+                { key: "fiscal_code", label: "Codice Fiscale" },
+                { key: "birth_date", label: "Data nascita", format: (r) => fmtDate(r.birth_date) },
+                { key: "city_residence", label: "Città" },
+                { key: "residence", label: "Indirizzo" },
+                { key: "classroom", label: "Sezione", format: (r) => classrooms.find((c) => c.id === r.enrollment?.classroom_id)?.name || "— Da assegnare —" },
+                { key: "allergies", label: "Allergie" },
+              ]}
+              filename="alunni"
+              title="Elenco alunni"
+              testid="export-students"
+            />
+            <button
+              onClick={() => { setForm(empty); setEditId(null); setOpen(true); }}
+              className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 tap-press"
+              data-testid="add-student-button"
+            >
+              <Plus className="h-4 w-4" /> Nuovo alunno
+            </button>
+          </div>
         }
       />
 
@@ -308,14 +328,14 @@ export default function StaffStudents() {
                       <p className={`font-display font-bold ${isWithdrawn ? "text-stone-500" : "text-stone-900"}`}>{s.first_name} {s.last_name}</p>
                       <div className="flex flex-wrap items-center gap-1.5 mt-1">
                         {isWithdrawn ? (
-                          <Pill color="stone"><Ban className="h-3 w-3" /> Ritirato {s.withdrawn_at ? `il ${s.withdrawn_at}` : ""}</Pill>
+                          <Pill color="stone"><Ban className="h-3 w-3" /> Ritirato {s.withdrawn_at ? `il ${fmtDate(s.withdrawn_at)}` : ""}</Pill>
                         ) : cName ? (
                           <Pill color="brand">{cName}</Pill>
                         ) : (
                           <Pill color="amber"><AlertTriangle className="h-3 w-3" /> Da assegnare</Pill>
                         )}
                         {s.birth_date && !isWithdrawn && (
-                          <Pill color="stone"><Cake className="h-3 w-3" /> {s.birth_date}</Pill>
+                          <Pill color="stone"><Cake className="h-3 w-3" /> {fmtDate(s.birth_date)}</Pill>
                         )}
                       </div>
                       {s.fiscal_code && !isWithdrawn && (
@@ -438,7 +458,7 @@ export default function StaffStudents() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-stone-600 truncate">{s.first_name} {s.last_name}</p>
-                    <p className="text-xs text-stone-500 truncate">Ritirato il {s.withdrawn_at} · {REASON_LABEL[s.withdrawal_reason] || s.withdrawal_reason}</p>
+                    <p className="text-xs text-stone-500 truncate">Ritirato il {fmtDate(s.withdrawn_at)} · {REASON_LABEL[s.withdrawal_reason] || s.withdrawal_reason}</p>
                   </div>
                   <button
                     onClick={() => reactivate(s)}

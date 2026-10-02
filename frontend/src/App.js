@@ -29,6 +29,7 @@ import StaffGallery from "@/pages/staff/Gallery";
 import StaffBirthdays from "@/pages/staff/Birthdays";
 import StaffBarcodePrint from "@/pages/staff/BarcodePrint";
 import StaffEnrollmentRequests from "@/pages/staff/EnrollmentRequests";
+import StaffTenantAdmin from "@/pages/staff/TenantAdmin";
 import PublicEnrollment from "@/pages/PublicEnrollment";
 
 import SuperAdminLayout from "@/layouts/SuperAdminLayout";
@@ -133,6 +134,7 @@ function App() {
             <Route path="compleanni" element={<StaffBirthdays />} />
             <Route path="tesserini" element={<StaffBarcodePrint />} />
             <Route path="iscrizioni" element={<StaffEnrollmentRequests />} />
+            <Route path="tenant" element={<Protected roles={["admin"]}><StaffTenantAdmin /></Protected>} />
           </Route>
 
           {/* PARENT */}

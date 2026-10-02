@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, X, Users, Pencil, Trash2 } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
+import { SearchBar } from "@/components/SearchBar";
+import { ExportMenu } from "@/components/ExportMenu";
 
 const empty = { name: "", age_band: "3 anni", notes: "", school_year_id: "", teacher_ids: [] };
 
@@ -14,6 +16,7 @@ export default function StaffClassrooms() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(empty);
+  const [q, setQ] = useState("");
 
   const load = async () => {
     if (!activeYear) return;
@@ -46,25 +49,70 @@ export default function StaffClassrooms() {
     catch (e) { toast.error(apiErrorMessage(e)); }
   };
 
+  const teacherName = (tid) => {
+    const t = teachers.find((x) => x.id === tid);
+    return t ? `${t.first_name} ${t.last_name}` : "";
+  };
+
+  const displayed = useMemo(() => {
+    const qn = q.trim().toLowerCase();
+    if (!qn) return items;
+    return items.filter((c) => {
+      const teachersStr = (c.teacher_ids || []).map(teacherName).join(" ").toLowerCase();
+      return (
+        (c.name || "").toLowerCase().includes(qn) ||
+        (c.age_band || "").toLowerCase().includes(qn) ||
+        (c.notes || "").toLowerCase().includes(qn) ||
+        teachersStr.includes(qn)
+      );
+    });
+  }, [items, q, teachers]);
+
   return (
     <div>
       <PageHeader
         title="Sezioni"
-        subtitle={`Anno ${activeYear?.label || ""} · ${items.length} sezioni`}
+        subtitle={q
+          ? `${displayed.length} di ${items.length} sezioni · ${activeYear?.label || ""}`
+          : `Anno ${activeYear?.label || ""} · ${items.length} sezioni`}
         right={
-          <button onClick={() => { setForm({ ...empty, school_year_id: activeYear?.id }); setEditId(null); setOpen(true); }}
-            className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 tap-press"
-            data-testid="add-classroom-button">
-            <Plus className="h-4 w-4" /> Nuova sezione
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportMenu
+              data={displayed}
+              columns={[
+                { key: "name", label: "Nome sezione" },
+                { key: "age_band", label: "Fascia età" },
+                { key: "student_count", label: "N° alunni" },
+                { key: "teachers", label: "Maestre", format: (r) => (r.teacher_ids || []).map(teacherName).join(", ") },
+                { key: "notes", label: "Note" },
+              ]}
+              filename="sezioni"
+              title={`Elenco sezioni · ${activeYear?.label || ""}`}
+              testid="export-classrooms"
+            />
+            <button onClick={() => { setForm({ ...empty, school_year_id: activeYear?.id }); setEditId(null); setOpen(true); }}
+              className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 tap-press"
+              data-testid="add-classroom-button">
+              <Plus className="h-4 w-4" /> Nuova sezione
+            </button>
+          </div>
         }
+      />
+
+      <SearchBar
+        value={q}
+        onChange={setQ}
+        placeholder="Cerca per nome sezione, fascia età o maestra…"
+        testid="search-classroom"
       />
 
       {items.length === 0 ? (
         <EmptyState title="Nessuna sezione" description="Crea la prima sezione per quest'anno scolastico." />
+      ) : displayed.length === 0 ? (
+        <EmptyState title="Nessun risultato" description="Prova a cambiare i termini di ricerca." />
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((c) => (
+          {displayed.map((c) => (
             <Card key={c.id} data-testid={`classroom-card-${c.id}`}>
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">

@@ -1,8 +1,10 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { toast } from "sonner";
 import { Plus, X, Megaphone, Pencil, Trash2, Camera, Image as ImageIcon } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
+import { SearchBar } from "@/components/SearchBar";
+import { fmtDateTime } from "@/lib/format";
 
 const empty = { title: "", body: "", type: "comunicazione_classe", classroom_id: null, media_ids: [], publish_date: "" };
 
@@ -26,6 +28,7 @@ export default function Communications() {
   const [uploading, setUploading] = useState(false);
   const [newMedia, setNewMedia] = useState([]); // media just uploaded for the form
   const fileRef = useRef(null);
+  const [q, setQ] = useState("");
 
   const load = async () => {
     try {
@@ -83,18 +86,40 @@ export default function Communications() {
   const typeColor = { comunicazione_classe: "blue", evento_attivita: "amber", avviso: "rose" };
   const typeLabel = { comunicazione_classe: "Classe", evento_attivita: "Evento", avviso: "Avviso" };
 
+  const displayed = useMemo(() => {
+    const qn = q.trim().toLowerCase();
+    if (!qn) return items;
+    return items.filter((n) => {
+      const classroomName = (classrooms.find((c) => c.id === n.classroom_id)?.name || "").toLowerCase();
+      return (
+        (n.title || "").toLowerCase().includes(qn) ||
+        (n.body || "").toLowerCase().includes(qn) ||
+        (typeLabel[n.type] || "").toLowerCase().includes(qn) ||
+        classroomName.includes(qn)
+      );
+    });
+  }, [items, q, classrooms]);
+
   return (
     <div>
-      <PageHeader title="Comunicazioni" subtitle={`${items.length} comunicazioni alle famiglie`}
+      <PageHeader title="Comunicazioni"
+        subtitle={q ? `${displayed.length} di ${items.length} comunicazioni` : `${items.length} comunicazioni alle famiglie`}
         right={
           <button onClick={() => { setForm({ ...empty, publish_date: new Date().toISOString().slice(0, 10) }); setEditId(null); setNewMedia([]); setOpen(true); }}
             className="h-12 px-5 rounded-2xl bg-[#FF8C6B] text-white font-semibold text-sm flex items-center gap-2" data-testid="add-comm-button">
             <Plus className="h-4 w-4" /> Nuova comunicazione
           </button>}
       />
+      <SearchBar
+        value={q}
+        onChange={setQ}
+        placeholder="Cerca per titolo, testo, tipologia o sezione…"
+        testid="search-comm"
+      />
       {items.length === 0 ? <EmptyState title="Nessuna comunicazione" /> :
+       displayed.length === 0 ? <EmptyState title="Nessun risultato" description="Prova a cambiare i termini di ricerca." /> :
         <div className="space-y-3">
-          {items.map((n) => (
+          {displayed.map((n) => (
             <Card key={n.id} data-testid={`comm-card-${n.id}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex gap-3 items-start min-w-0">
@@ -113,7 +138,7 @@ export default function Communications() {
                         ))}
                       </div>
                     )}
-                    <p className="text-xs text-stone-400 mt-2">{new Date(n.publish_date).toLocaleString("it-IT")}</p>
+                    <p className="text-xs text-stone-400 mt-2">{fmtDateTime(n.publish_date)}</p>
                   </div>
                 </div>
                 <div className="flex gap-1 shrink-0">

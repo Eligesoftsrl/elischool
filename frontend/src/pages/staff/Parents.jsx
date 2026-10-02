@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import { Plus, X, UsersRound, Pencil, Trash2, Link as LinkIcon, Copy, Send, CheckCircle2, Clock, Search as SearchIcon, IdCard, AtSign } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
+import { SearchBar } from "@/components/SearchBar";
+import { ExportMenu } from "@/components/ExportMenu";
 
 const CF_RE = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/;
 const empty = { first_name: "", last_name: "", email: "", phone: "", fiscal_code: "", notes: "", student_ids: [] };
@@ -16,6 +18,7 @@ export default function StaffParents() {
   const [form, setForm] = useState(empty);
   const [inviteLink, setInviteLink] = useState(null);
   const [studentSearch, setStudentSearch] = useState("");
+  const [q, setQ] = useState("");
 
   const load = async () => {
     try {
@@ -76,18 +79,58 @@ export default function StaffParents() {
     return s ? `${s.first_name} ${s.last_name}` : "—";
   };
 
+  const displayed = useMemo(() => {
+    const qn = q.trim().toLowerCase();
+    if (!qn) return items;
+    return items.filter((p) => {
+      const name = `${p.first_name || ""} ${p.last_name || ""}`.toLowerCase();
+      const childNames = (p.student_ids || []).map(studentName).join(" ").toLowerCase();
+      return (
+        name.includes(qn) ||
+        (p.email || "").toLowerCase().includes(qn) ||
+        (p.phone || "").toLowerCase().includes(qn) ||
+        (p.fiscal_code || "").toLowerCase().includes(qn) ||
+        childNames.includes(qn)
+      );
+    });
+  }, [items, q, students]);
+
   return (
     <div>
       <PageHeader
         title="Genitori"
-        subtitle={`${items.length} famiglie`}
+        subtitle={q ? `${displayed.length} di ${items.length} famiglie` : `${items.length} famiglie`}
         right={
-          <button onClick={() => { setForm(empty); setEditId(null); setOpen(true); }}
-            className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 tap-press"
-            data-testid="add-parent-button">
-            <Plus className="h-4 w-4" /> Invita genitore
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportMenu
+              data={displayed}
+              columns={[
+                { key: "last_name", label: "Cognome" },
+                { key: "first_name", label: "Nome" },
+                { key: "email", label: "Email (login)" },
+                { key: "phone", label: "Telefono" },
+                { key: "fiscal_code", label: "Codice Fiscale" },
+                { key: "status", label: "Stato", format: (r) => r.status === "active" ? "Attivo" : "In attesa" },
+                { key: "children", label: "Figli", format: (r) => (r.student_ids || []).map(studentName).join(", ") },
+              ]}
+              filename="genitori"
+              title="Elenco genitori"
+              testid="export-parents"
+            />
+            <button onClick={() => { setForm(empty); setEditId(null); setOpen(true); }}
+              className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 tap-press"
+              data-testid="add-parent-button">
+              <Plus className="h-4 w-4" /> Invita genitore
+            </button>
+          </div>
         }
+      />
+
+      <SearchBar
+        value={q}
+        onChange={setQ}
+        placeholder="Cerca per nome, email, telefono, CF o nome del bambino…"
+        testid="search-parent"
       />
 
       {inviteLink && (
@@ -111,8 +154,9 @@ export default function StaffParents() {
       )}
 
       {items.length === 0 ? <EmptyState title="Nessun genitore registrato" description="Invita il primo genitore con email e link sicuro." /> :
+       displayed.length === 0 ? <EmptyState title="Nessun risultato" description="Prova a cambiare i termini di ricerca." /> :
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((p) => (
+          {displayed.map((p) => (
             <Card key={p.id} data-testid={`parent-card-${p.id}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">

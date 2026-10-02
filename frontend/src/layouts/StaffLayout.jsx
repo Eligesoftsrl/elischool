@@ -4,6 +4,7 @@ import {
   Home, Users, GraduationCap, UserCog, UsersRound, ClipboardList,
   Utensils, Megaphone, CalendarRange, ArrowRightLeft, LogOut, Menu as MenuIcon, X, ChevronDown, Heart,
   BookOpen, Sparkles, Building2, Scan, Image as ImageIcon, CalendarDays, Inbox, NotebookPen,
+  Server,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -51,6 +52,7 @@ const NAV_GROUPS = [
       { to: "/s/iscrizioni", icon: Inbox, label: "Iscrizioni", admin: true },
       { to: "/s/menu-mensa", icon: Utensils, label: "Menu mensa", admin: true },
       { to: "/s/scuola", icon: Building2, label: "Profilo scuola", admin: true },
+      { to: "/s/tenant", icon: Server, label: "Gestione tenant", admin: true },
       { to: "/s/anni", icon: CalendarRange, label: "Anni scolastici", admin: true },
       { to: "/s/passaggio-anno", icon: ArrowRightLeft, label: "Passaggio anno", admin: true, danger: true },
     ],

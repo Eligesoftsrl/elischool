@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, X, BookOpen, Pencil, Trash2, CalendarRange } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
+import { SearchBar } from "@/components/SearchBar";
+import { fmtDate } from "@/lib/format";
 
 const empty = { classroom_ids: [], date_from: "", date_to: "", title: "", body: "" };
 
@@ -15,6 +17,7 @@ export default function LessonPlans() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(empty);
+  const [q, setQ] = useState("");
 
   useEffect(() => {
     if (!activeYear) return;
@@ -59,6 +62,20 @@ export default function LessonPlans() {
 
   const classroomName = (cid) => classrooms.find((c) => c.id === cid)?.name || "—";
 
+  const displayed = useMemo(() => {
+    const qn = q.trim().toLowerCase();
+    if (!qn) return items;
+    return items.filter((p) => {
+      const classesStr = ((p.classroom_ids && p.classroom_ids.length > 0) ? p.classroom_ids : (p.classroom_id ? [p.classroom_id] : []))
+        .map(classroomName).join(" ").toLowerCase();
+      return (
+        (p.title || "").toLowerCase().includes(qn) ||
+        (p.body || "").toLowerCase().includes(qn) ||
+        classesStr.includes(qn)
+      );
+    });
+  }, [items, q, classrooms]);
+
   return (
     <div>
       <PageHeader
@@ -89,9 +106,17 @@ export default function LessonPlans() {
         ))}
       </div>
 
+      <SearchBar
+        value={q}
+        onChange={setQ}
+        placeholder="Cerca per titolo, contenuto o sezione…"
+        testid="search-lp"
+      />
+
       {items.length === 0 ? <EmptyState title="Nessun piano didattico" description="Crea il primo piano settimanale." /> :
+       displayed.length === 0 ? <EmptyState title="Nessun risultato" description="Prova a cambiare i termini di ricerca." /> :
         <div className="space-y-4">
-          {items.map((p) => (
+          {displayed.map((p) => (
             <Card key={p.id} data-testid={`lp-card-${p.id}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -105,7 +130,7 @@ export default function LessonPlans() {
                       ) : (
                         <Pill color="purple">Tutte le sezioni</Pill>
                       )}
-                      <span className="text-xs text-stone-500 flex items-center gap-1"><CalendarRange className="h-3 w-3" /> {p.date_from} → {p.date_to}</span>
+                      <span className="text-xs text-stone-500 flex items-center gap-1"><CalendarRange className="h-3 w-3" /> {fmtDate(p.date_from)} → {fmtDate(p.date_to)}</span>
                     </div>
                     <p className="font-display text-lg font-bold text-stone-900">{p.title}</p>
                     <div className="text-sm text-stone-600 mt-2 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: p.body }} />

@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Plus, X, UserCog, Pencil, Trash2, Shield, KeyRound, AtSign, Copy, Check, RotateCw, MailCheck, MailX } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
+import { SearchBar } from "@/components/SearchBar";
+import { ExportMenu } from "@/components/ExportMenu";
 
 const empty = { first_name: "", last_name: "", email: "", phone: "", role: "teacher", password: "", notes: "" };
 
@@ -27,6 +29,7 @@ export default function StaffTeachers() {
   const [resetInfo, setResetInfo] = useState(null);     // { email, password, email_sent, name }
   const [resetting, setResetting] = useState(null);     // teacher id being reset
   const [copied, setCopied] = useState("");
+  const [q, setQ] = useState("");
 
   const load = async () => {
     try { const { data } = await api.get("/teachers"); setItems(data); } catch (e) { toast.error(apiErrorMessage(e)); }
@@ -91,6 +94,20 @@ export default function StaffTeachers() {
     catch (e) { toast.error(apiErrorMessage(e)); }
   };
 
+  const displayed = useMemo(() => {
+    const qn = q.trim().toLowerCase();
+    if (!qn) return items;
+    return items.filter((t) => {
+      const name = `${t.first_name || ""} ${t.last_name || ""}`.toLowerCase();
+      return (
+        name.includes(qn) ||
+        (t.email || "").toLowerCase().includes(qn) ||
+        (t.phone || "").toLowerCase().includes(qn) ||
+        (t.role || "").toLowerCase().includes(qn)
+      );
+    });
+  }, [items, q]);
+
   if (user?.role !== "admin") {
     return <PageHeader title="Maestre" subtitle="Accesso riservato all'amministratore" />;
   }
@@ -99,18 +116,41 @@ export default function StaffTeachers() {
     <div>
       <PageHeader
         title="Maestre"
-        subtitle={`${items.length} membri dello staff`}
+        subtitle={q ? `${displayed.length} di ${items.length} membri dello staff` : `${items.length} membri dello staff`}
         right={
-          <button onClick={() => { setForm({ ...empty, password: genPassword() }); setEditId(null); setCreatedInfo(null); setShowPassword(true); setOpen(true); }}
-            className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 tap-press"
-            data-testid="add-teacher-button">
-            <Plus className="h-4 w-4" /> Nuova maestra
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportMenu
+              data={displayed}
+              columns={[
+                { key: "last_name", label: "Cognome" },
+                { key: "first_name", label: "Nome" },
+                { key: "email", label: "Email (login)" },
+                { key: "phone", label: "Telefono" },
+                { key: "role", label: "Ruolo", format: (r) => r.role === "admin" ? "Amministratore" : "Maestra" },
+                { key: "status", label: "Stato", format: (r) => r.status === "active" ? "Attivo" : (r.status || "") },
+              ]}
+              filename="maestre"
+              title="Elenco maestre e staff"
+              testid="export-teachers"
+            />
+            <button onClick={() => { setForm({ ...empty, password: genPassword() }); setEditId(null); setCreatedInfo(null); setShowPassword(true); setOpen(true); }}
+              className="h-12 px-5 rounded-2xl bg-[#FF8C6B] hover:bg-[#FF7A54] text-white font-semibold text-sm flex items-center gap-2 tap-press"
+              data-testid="add-teacher-button">
+              <Plus className="h-4 w-4" /> Nuova maestra
+            </button>
+          </div>
         }
       />
+      <SearchBar
+        value={q}
+        onChange={setQ}
+        placeholder="Cerca per nome, email, telefono o ruolo…"
+        testid="search-teacher"
+      />
       {items.length === 0 ? <EmptyState title="Nessuna maestra" /> :
+       displayed.length === 0 ? <EmptyState title="Nessun risultato" description="Prova a cambiare i termini di ricerca." /> :
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((t) => (
+          {displayed.map((t) => (
             <Card key={t.id} data-testid={`teacher-card-${t.id}`}>
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-2xl bg-violet-50 flex items-center justify-center">

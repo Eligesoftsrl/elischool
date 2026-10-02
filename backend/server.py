@@ -7,6 +7,7 @@ load_dotenv(ROOT_DIR / ".env")
 import os
 import uuid
 import secrets
+import base64
 import logging
 from datetime import datetime, timezone, timedelta, date
 from typing import List, Optional, Literal
@@ -27,6 +28,7 @@ from email_service import (
     send_credentials_email,
 )
 from tenant_db import SmartDB, set_current_tenant
+from media_crypto import encrypt_bytes, decrypt_blob, is_encrypted_marker
 
 # ----------------------------- App & DB -----------------------------
 mongo_url = os.environ["MONGO_URL"]
@@ -1807,8 +1809,8 @@ async def list_media(
             {"classroom_id": {"$in": class_ids}},
             {"student_id": {"$in": child_ids}},
         ]
-    # Exclude heavy base64 from list
-    docs = await db.media.find(q, {"_id": 0, "data_base64": 0}).sort("created_at", -1).to_list(500)
+    # Exclude heavy encrypted/base64 payload from list
+    docs = await db.media.find(q, {"_id": 0, "data_base64": 0, "data_cipher": 0}).sort("created_at", -1).to_list(500)
     return docs
 
 
@@ -1817,17 +1819,45 @@ async def get_media(mid: str, user=Depends(get_current_user)):
     doc = await db.media.find_one({"id": mid}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Media non trovato")
+    # Decrypt on the fly: cipher payload is never shipped as-is.
+    if doc.get("is_encrypted") and doc.get("data_cipher"):
+        try:
+            raw = decrypt_blob(doc["data_cipher"])
+            content_type = doc.get("content_type") or "application/octet-stream"
+            doc["data_base64"] = f"data:{content_type};base64,{base64.b64encode(raw).decode('ascii')}"
+        except Exception as e:
+            logger.error(f"[MEDIA DECRYPT FAIL] mid={mid}: {type(e).__name__}: {e}")
+            raise HTTPException(500, "Impossibile decifrare il media")
+        # Never leak the ciphertext
+        doc.pop("data_cipher", None)
     return doc
 
 
 @api.post("/media")
 async def upload_media(payload: MediaIn, user=Depends(require_role("admin", "teacher"))):
     doc = payload.model_dump()
+    # Encrypt plaintext bytes at rest. We accept either a raw base64 string or a data URL.
+    data_url = doc.pop("data_base64", "") or ""
+    if "," in data_url:
+        _, b64payload = data_url.split(",", 1)
+    else:
+        b64payload = data_url
+    try:
+        raw_bytes = base64.b64decode(b64payload)
+    except Exception:
+        raise HTTPException(400, "Payload base64 non valido")
+    doc["data_cipher"] = encrypt_bytes(raw_bytes)
+    doc["is_encrypted"] = True
+    doc["cipher_alg"] = is_encrypted_marker()
+    doc["byte_size"] = len(raw_bytes)
     doc["id"] = gen_id()
     doc["created_at"] = now_iso()
     doc["uploaded_by"] = user["id"]
     await db.media.insert_one(doc)
-    return clean_doc(doc)
+    # Return a sanitized record (no cipher payload)
+    out = clean_doc(dict(doc))
+    out.pop("data_cipher", None)
+    return out
 
 
 @api.delete("/media/{mid}")
@@ -2521,6 +2551,58 @@ async def sa_delete_tenant(tid: str, user=Depends(require_superadmin)):
         deleted[coll_name] = res.deleted_count
     await raw_db.tenants.delete_one({"id": tid})
     return {"ok": True, "deleted": deleted}
+
+
+# ----------------------------- ADMIN SELF-TENANT -----------------------------
+class AdminTenantPatchIn(BaseModel):
+    """Fields an admin can edit on their own tenant (plan/status reserved to superadmin)."""
+    name: Optional[str] = None
+    contact_email: Optional[EmailStr] = None
+    contact_phone: Optional[str] = None
+    address: Optional[str] = None
+    vat_number: Optional[str] = None
+    website: Optional[str] = None
+    logo_base64: Optional[str] = None
+
+
+@api.get("/admin/tenant")
+async def admin_get_tenant(user=Depends(require_role("admin"))):
+    """Return the current admin's tenant with usage stats."""
+    tid = user.get("tenant_id")
+    if not tid:
+        raise HTTPException(404, "Tenant non trovato")
+    t = await raw_db.tenants.find_one({"id": tid}, {"_id": 0})
+    if not t:
+        raise HTTPException(404, "Tenant non trovato")
+    # Media storage usage (cipher is base64, so decoded size ≈ len*3/4)
+    media_sum = 0
+    async for m in raw_db.media.find({"tenant_id": tid}, {"byte_size": 1}):
+        media_sum += int(m.get("byte_size") or 0)
+    t["stats"] = {
+        "students_active": await raw_db.students.count_documents({"tenant_id": tid, "status": {"$ne": "withdrawn"}}),
+        "students_withdrawn": await raw_db.students.count_documents({"tenant_id": tid, "status": "withdrawn"}),
+        "parents": await raw_db.users.count_documents({"tenant_id": tid, "role": "parent"}),
+        "teachers": await raw_db.users.count_documents({"tenant_id": tid, "role": "teacher"}),
+        "admins": await raw_db.users.count_documents({"tenant_id": tid, "role": "admin"}),
+        "classrooms": await raw_db.classrooms.count_documents({"tenant_id": tid}),
+        "media_count": await raw_db.media.count_documents({"tenant_id": tid}),
+        "media_bytes": media_sum,
+        "enrollment_requests_pending": await raw_db.enrollment_requests.count_documents({"tenant_id": tid, "status": "pending"}),
+    }
+    return t
+
+
+@api.patch("/admin/tenant")
+async def admin_patch_tenant(payload: AdminTenantPatchIn, user=Depends(require_role("admin"))):
+    tid = user.get("tenant_id")
+    if not tid:
+        raise HTTPException(404, "Tenant non trovato")
+    update = {k: v for k, v in payload.model_dump(exclude_none=True).items()}
+    if "contact_email" in update:
+        update["contact_email"] = update["contact_email"].lower().strip()
+    if update:
+        await raw_db.tenants.update_one({"id": tid}, {"$set": update})
+    return await raw_db.tenants.find_one({"id": tid}, {"_id": 0})
 
 
 # ----------------------------- SEED -----------------------------
