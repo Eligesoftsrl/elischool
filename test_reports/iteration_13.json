@@ -1,0 +1,24 @@
+{
+  "summary": "Testing visuale rebrand nido. -> Tiptii (frontend-only). Verificati Landing, Login, Dashboard admin, Alunni, Superadmin. Palette salvia #2F7D6D correttamente applicata ovunque, nessuna classe residua bg-orange/text-orange/border-orange nel sorgente /app/frontend/src. TiptiiBadge presente su Landing, Login, StaffLayout, SuperAdminLayout, ParentLayout. index.html <title> contiene 'Tiptii' e theme-color = #2F7D6D. Login admin + superadmin funzionanti. Bottone 'Nuovo alunno' misurato in UI reale rgb(47,125,109) == #2F7D6D. Minor: nei soggetti email in /app/backend/email_service.py restano stringhe 'nido.' (subject + fallback SENDER_NAME).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Minor) /app/backend/email_service.py: sostituire 'nido.' in subject reset password ('Reimposta la tua password · nido.') e in test email ('Test email · nido. PWA'), e aggiornare il default fallback SENDER_NAME da 'nido.' a 'Tiptii'. Il wordmark nell'HTML è già corretto ('tiptii' + palette salvia #2F7D6D), ma i subject ancora mostrano 'nido.' nel client email."
+  ],
+  "critical_code_review_comments": [
+    "email_service.py: la palette HTML è aggiornata correttamente (salvia #2F7D6D) ma le costanti subject contengono ancora 'nido.' — rebrand incompleto lato subject line.",
+    "email_service.py SENDER_NAME ha default 'nido.' nel os.environ.get: safe perché .env ora definisce 'Tiptii', ma meglio allineare il default per sicurezza."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only test)", "frontend": "100%"},
+  "test_credentials": "admin@scuolapp.it / Admin2026! e superadmin@nido.app / SuperAdmin2026! entrambi funzionanti.",
+  "seed_data_creation": "nessuna",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Rebrand visivo Tiptii completo e verificato in UI. Residui 'nido.' solo nei subject email di /app/backend/email_service.py (non impatta UI). Playwright ha confermato colore bottone primario = rgb(47,125,109)=#2F7D6D, zero classi orange nel DOM renderizzato di alunni/superadmin, nessun errore console."
+}

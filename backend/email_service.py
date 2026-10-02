@@ -15,12 +15,12 @@ logger = logging.getLogger(__name__)
 BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "")
-SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "nido.")
+SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "Tiptii")
 EMAIL_ENABLED = os.environ.get("EMAIL_ENABLED", "false").lower() == "true"
 
 
 def _wrap_html(title: str, intro: str, cta_url: Optional[str], cta_label: Optional[str], outro: str) -> str:
-    """Branded Italian email HTML — soft pastel palette matching the nido. PWA."""
+    """Branded Italian email HTML — soft pastel palette matching the Tiptii PWA."""
     cta_block = ""
     if cta_url and cta_label:
         cta_block = f"""
@@ -118,7 +118,7 @@ async def send_parent_invite_email(to_email: str, parent_name: str, invite_link:
 
 
 async def send_password_reset_email(to_email: str, full_name: str, reset_link: str) -> bool:
-    subject = "Reimposta la tua password · nido."
+    subject = "Reimposta la tua password · Tiptii"
     intro = (
         f"Ciao <b>{full_name or ''}</b>,<br/><br/>"
         "abbiamo ricevuto una richiesta di reset della password per il tuo account. "
@@ -223,7 +223,7 @@ async def send_credentials_email(to_email: str, full_name: str, login_email: str
 
 async def send_test_email(to_email: str) -> bool:
     """Used by /api/admin/email/test to verify Brevo config."""
-    subject = "Test email · nido. PWA"
+    subject = "Test email · Tiptii"
     intro = "Se stai leggendo questa email, la configurazione <b>Brevo SMTP</b> funziona correttamente. 🎉"
     outro = "Da ora in poi i genitori riceveranno gli inviti e i reset password direttamente nella loro casella di posta."
     html = _wrap_html(
