@@ -290,44 +290,41 @@ export default function StaffActivities() {
                     </div>
                   </div>
                 )}
-                {/* Didattica */}
-                <div>
-                  <SectionLabel><BookOpen className="inline h-3 w-3 mr-1" /> Attività didattiche</SectionLabel>
+                {/* Didattica — categoria Attività (giallo) */}
+                <CategorySection tone="attivita" icon={<BookOpen className="h-4 w-4" />} title="Attività didattiche">
                   <ChoiceRow options={OPT_PARTECIPATO} value={form.didattica}
                     onChange={(v) => setForm({ ...form, didattica: v })} testidPrefix="didattica" colorOn="#FBEBA8" />
                   <Textarea className="mt-3" label="Descrizione attività didattiche"
                     value={form.note_didattica} onChange={(v) => setForm({ ...form, note_didattica: v })} testid="note-didattica" />
-                </div>
+                </CategorySection>
 
-                {/* Motoria */}
-                <div>
-                  <SectionLabel><Activity className="inline h-3 w-3 mr-1" /> Attività ricreative e motorie</SectionLabel>
+                {/* Motoria — categoria Attività, variante accent */}
+                <CategorySection tone="attivita" icon={<Activity className="h-4 w-4" />} title="Attività ricreative e motorie">
                   <ChoiceRow options={OPT_PARTECIPATO} value={form.motoria}
                     onChange={(v) => setForm({ ...form, motoria: v })} testidPrefix="motoria" colorOn="#F2A65A" />
                   <Textarea className="mt-3" label="Descrizione attività ricreative e motorie"
                     value={form.note_motoria} onChange={(v) => setForm({ ...form, note_motoria: v })} testid="note-motoria" />
-                </div>
+                </CategorySection>
 
-                {/* Pranzo */}
-                <div>
-                  <SectionLabel><UtensilsCrossed className="inline h-3 w-3 mr-1" /> Pranzo</SectionLabel>
+                {/* Pranzo — categoria Pappa */}
+                <CategorySection tone="pappa" icon={<UtensilsCrossed className="h-4 w-4" />} title="Pranzo">
                   <ChoiceRow options={OPT_PRANZO} value={form.pranzo}
-                    onChange={(v) => setForm({ ...form, pranzo: v })} testidPrefix="pranzo" colorOn="#D5EDE5" />
+                    onChange={(v) => setForm({ ...form, pranzo: v })} testidPrefix="pranzo" colorOn="#FCE3C7" />
                   <Textarea className="mt-3" label="Ulteriori info sul pranzo"
                     value={form.note_pranzo} onChange={(v) => setForm({ ...form, note_pranzo: v })} testid="note-pranzo" />
-                </div>
+                </CategorySection>
 
-                {/* SiNo group */}
+                {/* Routine giornaliere */}
                 <div>
-                  <SectionLabel>Routine</SectionLabel>
+                  <SectionLabel>Routine giornaliere</SectionLabel>
                   <div className="grid grid-cols-2 gap-3">
-                    <SiNoRow label="Merenda" icon={<Cookie className="h-4 w-4" />} value={form.merenda}
+                    <SiNoRow tone="pappa"   label="Merenda" icon={<Cookie className="h-4 w-4" />} value={form.merenda}
                       onChange={(v) => setForm({ ...form, merenda: v })} testidPrefix="merenda" />
-                    <SiNoRow label="Riposo" icon={<Bed className="h-4 w-4" />} value={form.riposo}
+                    <SiNoRow tone="nanna"   label="Riposo"  icon={<Bed className="h-4 w-4" />}    value={form.riposo}
                       onChange={(v) => setForm({ ...form, riposo: v })} testidPrefix="riposo" />
-                    <SiNoRow label="Cacca" icon={<Bath className="h-4 w-4" />} value={form.cacca}
+                    <SiNoRow tone="igiene"  label="Cacca"   icon={<Bath className="h-4 w-4" />}   value={form.cacca}
                       onChange={(v) => setForm({ ...form, cacca: v })} testidPrefix="cacca" />
-                    <SiNoRow label="Pipì" icon={<Bath className="h-4 w-4" />} value={form.pipi}
+                    <SiNoRow tone="igiene"  label="Pipì"    icon={<Bath className="h-4 w-4" />}   value={form.pipi}
                       onChange={(v) => setForm({ ...form, pipi: v })} testidPrefix="pipi" />
                   </div>
                 </div>
@@ -350,35 +347,85 @@ export default function StaffActivities() {
   );
 }
 
+function CategorySection({ tone, icon, title, children }) {
+  const tones = {
+    pappa:    { bg: "bg-cat-pappa",    chip: "bg-[#F2A65A]" },
+    nanna:    { bg: "bg-cat-nanna",    chip: "bg-[#8B7FD4]" },
+    igiene:   { bg: "bg-cat-igiene",   chip: "bg-[#2F6BC0]" },
+    attivita: { bg: "bg-cat-attivita", chip: "bg-[#E0A100]" },
+    presenze: { bg: "bg-cat-presenze", chip: "bg-[#237A4B]" },
+  }[tone] || { bg: "bg-white", chip: "bg-stone-700" };
+  return (
+    <section className={`rounded-3xl ${tones.bg} border border-stone-200/80 p-4`}>
+      <div className="flex items-center gap-2 mb-3">
+        <span className={`h-8 w-8 rounded-xl flex items-center justify-center text-white ${tones.chip}`}>
+          {icon}
+        </span>
+        <h4 className="font-display font-bold text-stone-800 text-base">{title}</h4>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 function ChoiceRow({ options, value, onChange, colorOn, testidPrefix }) {
   return (
     <div className="flex flex-wrap gap-2">
-      {options.map((o) => (
-        <button key={o} type="button"
-          onClick={() => onChange(value === o ? "" : o)}
-          className={`h-11 px-4 rounded-full border text-sm font-semibold transition-all ${value === o ? "border-transparent shadow-sm text-stone-900" : "bg-white border-stone-200 text-stone-600"}`}
-          style={value === o ? { background: colorOn } : {}}
-          data-testid={`${testidPrefix}-${o.replace(/\s+/g, "-").toLowerCase()}`}>
-          {o}
-        </button>
-      ))}
+      {options.map((o) => {
+        const selected = value === o;
+        const negative = /non ha|non partecipat/i.test(o);
+        return (
+          <button key={o} type="button"
+            onClick={() => onChange(selected ? "" : o)}
+            className={`h-11 px-4 rounded-full border text-sm font-semibold transition-all ${
+              selected
+                ? (negative
+                    ? "border-[#D88B40] text-[#2B2F33] shadow-sm bg-[#F2A65A]"
+                    : "border-transparent shadow-sm text-stone-800")
+                : "bg-white/70 border-stone-200 text-stone-600 hover:bg-white"
+            }`}
+            style={selected && !negative ? { background: colorOn } : {}}
+            data-testid={`${testidPrefix}-${o.replace(/\s+/g, "-").toLowerCase()}`}>
+            {o}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-function SiNoRow({ label, icon, value, onChange, testidPrefix }) {
+function SiNoRow({ label, icon, value, onChange, testidPrefix, tone = "neutral" }) {
+  const toneBg = {
+    neutral: "bg-white",
+    pappa: "bg-cat-pappa",
+    nanna: "bg-cat-nanna",
+    igiene: "bg-cat-igiene",
+    attivita: "bg-cat-attivita",
+    presenze: "bg-cat-presenze",
+  }[tone];
   return (
-    <div className="rounded-3xl border border-stone-200 p-3 bg-white">
-      <div className="flex items-center gap-2 mb-2 text-stone-700 text-sm font-bold">{icon} {label}</div>
+    <div className={`rounded-3xl border border-stone-200 p-3 ${toneBg}`}>
+      <div className="flex items-center gap-2 mb-2 text-stone-800 text-sm font-bold">{icon} {label}</div>
       <div className="flex gap-2">
-        {["Si", "No"].map((o) => (
-          <button key={o} type="button"
-            onClick={() => onChange(value === o ? "" : o)}
-            className={`flex-1 h-10 rounded-xl text-sm font-semibold border ${value === o ? (o === "Si" ? "bg-emerald-100 border-emerald-300 text-emerald-800" : "bg-stone-100 border-stone-300 text-stone-700") : "bg-stone-50 border-stone-200 text-stone-500"}`}
-            data-testid={`${testidPrefix}-${o.toLowerCase()}`}>
-            {o}
-          </button>
-        ))}
+        {["Si", "No"].map((o) => {
+          const selected = value === o;
+          let cls;
+          if (selected) {
+            cls = o === "Si"
+              ? "bg-[#237A4B] border-[#237A4B] text-white shadow-sm" // semantic success — ben visibile
+              : "bg-[#F2A65A] border-[#D88B40] text-[#2B2F33] shadow-sm"; // albicocca con testo scuro
+          } else {
+            cls = "bg-white/70 border-stone-200 text-stone-500 hover:bg-white";
+          }
+          return (
+            <button key={o} type="button"
+              onClick={() => onChange(selected ? "" : o)}
+              className={`flex-1 h-10 rounded-xl text-sm font-semibold border transition-all ${cls}`}
+              data-testid={`${testidPrefix}-${o.toLowerCase()}`}>
+              {o}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

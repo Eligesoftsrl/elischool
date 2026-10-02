@@ -5,7 +5,7 @@ import { Mail, Lock, ArrowRight, Eye, EyeOff, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiErrorMessage } from "@/lib/api";
-import { TiptiiBadge } from "@/components/TiptiiLogo";
+import { TiptiiBadge, TiptiiLogo } from "@/components/TiptiiLogo";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -43,7 +43,9 @@ export default function Login() {
         className="relative w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <TiptiiBadge size={64} className="mx-auto mb-4 shadow-sm" />
+          <div className="flex justify-center mb-5">
+            <TiptiiLogo size={56} />
+          </div>
           <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight text-stone-800">
             Bentornati
           </h1>
