@@ -1,0 +1,47 @@
+{
+  "summary": "Retest of 3 fixes from iter_15 on tenant 'albero-della-vita' - ALL PASS. Backend: 19/19 tests green (7 new iter16 + 12 iter15 regression). Frontend: all 3 UI fixes confirmed. (1) Dashboard 'Attività di oggi' now shows full student names (GIORGIO ANTONIO VERRUSIO, FABRIZIA AMITA, ELIO CAROZZI, DANIEL DE ANGELIS, GIULIA DE GREGORIO…) with DD/MM/YYYY dates (12/10/2026) — zero truncated UUIDs detected on page. (2) /s/piano loads with 'Tutte' tab selected by default (bg-stone-900 text-white classes confirm dark/active state), 77 lesson-plan cards visible immediately, each with 'DD/MM/YYYY → DD/MM/YYYY' date range. (3) /s/menu-mensa shows 1 card 'MENU 2026/2027' with 'Dal 2026-09-02 al 2027-07-31', chip '4 sett. × 5 giorni', buttons 'Compila settimane' and 'Modifica' present. Counters 226/6/13/197 unchanged. No regressions.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/s/menu-mensa card", "issues": ["Date on the menu card still rendered in ISO format '2026-09-02 / 2027-07-31' instead of DD/MM/YYYY (02/09/2026 → 31/07/2027) as used elsewhere in the app. Spec allowed either but DD/MM/YYYY would be consistent with /s/piano and Dashboard."]}
+    ]
+  },
+  "verified_items": {
+    "dashboard_names": "Attività di oggi lists real UPPERCASE student names (GIORGIO ANTONIO VERRUSIO, FABRIZIA AMITA, ELIO CAROZZI, DANIEL DE ANGELIS, GIULIA DE GREGORIO) with DD/MM/YYYY dates. 0 truncated UUID patterns on page.",
+    "dashboard_counters": "226 alunni / 6 sezioni / 13 maestre / 197 genitori — unchanged",
+    "piano_tutte_default": "'Tutte' button has class 'bg-stone-900 text-white border-stone-900' (active). 77 arrow date ranges rendered in DD/MM/YYYY → DD/MM/YYYY format. No 'Nessun piano' message.",
+    "piano_filter": "Section filter pills visible (Fiorellini Rossi, Coccinelle gialle e rosse, Fiorellini Gialli, 5 ANNI, Pulcini, Non Assegnato)",
+    "menu_mensa": "1 card 'MENU 2026/2027', 'Dal 2026-09-02 al 2027-07-31', '4 sett. × 5 giorni' chip, 'Compila settimane' + 'Modifica' buttons present. 0 empty 'Dal  al ' pattern.",
+    "backend_lesson_plans": "GET /api/lesson-plans?school_year_id={active} -> 200 with 77 items, all have school_year_id + date_from + date_to populated",
+    "backend_menus": "GET /api/menus -> 200 with menu using valid_from=2026-09-02 and valid_to=2027-07-31. /api/menus/current -> 404 (acceptable: today is before valid_from), no 500.",
+    "regression_iter15": "All 12 iter_15 tests still passing (dashboard stats, students 226, classrooms 6, teachers 13, parents 197, communications 5, lesson_plans 77, calendar_events 25, menus+meals 19/20 filled, extra_labs 7, tenant isolation, teacher login)"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter16_fixes.py",
+    "/app/backend/tests/test_iter15_migration.py",
+    "/app/test_reports/pytest/iter16.xml"
+  ],
+  "action_items": [
+    "OPTIONAL (design): format menu card dates as DD/MM/YYYY instead of ISO 2026-09-02 for consistency with Dashboard and /s/piano"
+  ],
+  "critical_code_review_comments": [
+    "Fix 1 (migration backfill of school_year_id on lesson_plans): worked. Still recommend persisting mysql_migrate.py change going forward so a re-run on a cleaned DB doesn't re-introduce the regression.",
+    "Fix 2 (menu field rename to valid_from/valid_to): worked. Confirm mysql_migrate.py source file was updated so idempotent re-runs produce correct schema.",
+    "Fix 3 (student-name map in Dashboard.jsx): good; however the component now triggers an extra /api/students fetch on every dashboard load — if 226+ grows to several thousand, consider a lightweight /api/students/map endpoint returning only {id, first_name, last_name} or memoizing with react-query."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter16_fixes.py (new regression file for iter_16 fixes)"
+  ],
+  "success_rate": {"backend": "100% (19/19)", "frontend": "100% (3/3 fixes verified, no regressions)"},
+  "test_credentials": "filippo.malafronte@gmail.com / Albero2026! (verified OK)",
+  "seed_data_creation": "None — read-only verification",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 3 iter_16 fixes verified end-to-end. Regression suite stable at /app/backend/tests/test_iter16_fixes.py + test_iter15_migration.py (19 tests, ~7s). Only remaining cosmetic note: menu card dates still ISO-formatted. No functional issues outstanding on Albero tenant.",
+  "rca of the issue": "N/A — all 3 fixes successfully resolved the iter_15 findings. (1) lesson_plans.school_year_id now populated with active year UUID on all 77 docs. (2) menus now store valid_from/valid_to matching server.py schema. (3) Dashboard.jsx fetches /api/students, builds id->name map, and displays full name + fmtDate(DD/MM/YYYY) instead of student_id.slice(0,8). LessonPlans.jsx classId default='' makes 'Tutte' active on mount."
+}

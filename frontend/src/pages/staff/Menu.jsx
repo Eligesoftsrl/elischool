@@ -3,6 +3,7 @@ import { useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, X, Utensils, Pencil, Trash2, Save, Sparkles, CalendarDays } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
+import { fmtDate } from "@/lib/format";
 import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
 
 const DAYS = ["Lunedi", "Martedi", "Mercoledi", "Giovedi", "Venerdi"];
@@ -89,7 +90,7 @@ export default function StaffMenu() {
                   <div className="h-12 w-12 rounded-2xl bg-emerald-50 flex items-center justify-center"><Utensils className="h-5 w-5 text-emerald-600" /></div>
                   <div className="min-w-0">
                     <p className="font-display text-lg font-bold truncate">{m.name}</p>
-                    <p className="text-xs text-stone-500">Dal {m.valid_from} al {m.valid_to}</p>
+                    <p className="text-xs text-stone-500">Dal {fmtDate(m.valid_from)} al {fmtDate(m.valid_to)}</p>
                   </div>
                 </div>
                 <Pill color="brand"><Sparkles className="h-3 w-3" /> 4 sett. × 5 giorni</Pill>
