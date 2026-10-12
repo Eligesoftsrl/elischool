@@ -24,7 +24,7 @@ export default function LessonPlans() {
     (async () => {
       const c = await api.get("/classrooms", { params: { school_year_id: activeYear.id } });
       setClassrooms(c.data);
-      if (c.data.length && !classId) setClassId(c.data[0].id);
+      if (c.data.length && classId === undefined) setClassId("");
     })();
     // eslint-disable-next-line
   }, [activeYear]);

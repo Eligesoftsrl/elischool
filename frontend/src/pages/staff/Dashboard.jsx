@@ -8,12 +8,14 @@ import {
 import api, { apiErrorMessage } from "@/lib/api";
 import { toast } from "sonner";
 import { PageHeader, StatCard, Card, EmptyState, Pill, SectionLabel } from "@/components/Primitives";
+import { fmtDate } from "@/lib/format";
 
 export default function StaffDashboard() {
   const { activeYear } = useOutletContext();
   const [stats, setStats] = useState(null);
   const [news, setNews] = useState([]);
   const [todayActivities, setTodayActivities] = useState([]);
+  const [studentsMap, setStudentsMap] = useState({});
   const [birthdays, setBirthdays] = useState([]);
 
   useEffect(() => {
@@ -30,9 +32,15 @@ export default function StaffDashboard() {
         setNews(n.data.slice(0, 4));
         setBirthdays((b.data || []).slice(0, 5));
         const today = new Date().toISOString().slice(0, 10);
-        const a = await api.get("/activities", { params: { date_from: today, date_to: today } });
+        const [a, st] = await Promise.all([
+          api.get("/activities", { params: { date_from: today, date_to: today } }),
+          api.get("/students", { params: { status: "active" } }).catch(() => ({ data: [] })),
+        ]);
         if (!m) return;
         setTodayActivities(a.data);
+        const map = {};
+        (st.data || []).forEach((s) => { map[s.id] = `${s.first_name} ${s.last_name}`; });
+        setStudentsMap(map);
       } catch (err) {
         toast.error(apiErrorMessage(err));
       }
@@ -165,8 +173,8 @@ export default function StaffDashboard() {
                       <ClipboardList className="h-4 w-4 text-stone-500" />
                     </span>
                     <div>
-                      <p className="text-sm font-semibold text-stone-800">{a.student_id.slice(0, 8)}…</p>
-                      <p className="text-[11px] text-stone-500">{a.date}</p>
+                      <p className="text-sm font-semibold text-stone-800">{studentsMap[a.student_id] || "Alunno sconosciuto"}</p>
+                      <p className="text-[11px] text-stone-500">{fmtDate(a.date)}</p>
                     </div>
                   </div>
                   <div className="flex gap-1 flex-wrap justify-end">

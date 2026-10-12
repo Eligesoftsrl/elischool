@@ -1,0 +1,59 @@
+{
+  "summary": "Verified MySQL legacy -> MongoDB migration into tenant 'albero-della-vita'. Backend: 12/12 tests pass (all counts match spec: 226 students, 197 parents pending, 13 staff [6 admin + 7 teachers], 6 classrooms, 87 unassigned, 77 lesson plans, 25 events, 5 communications, 19 meals, 7 extra labs). Multi-tenancy isolation confirmed (demo admin does NOT see Albero data). Teacher role restrictions confirmed (/s/tenant redirects away). Frontend: dashboard, alunni, sezioni, maestre, genitori, comunicazioni, eventi, tesserini all render correctly. Found 2 DATA migration bugs (not code bugs, per request scope): (1) lesson_plans missing school_year_id -> UI /s/piano shows 'Nessun piano didattico' hiding all 77 plans; (2) menus use date_from/date_to instead of valid_from/valid_to -> UI /s/menu-mensa shows empty 'Dal al' date range and /api/menus/current will never return the migrated menu.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/lesson-plans", "issue": "Returns 0 when school_year_id filter applied (as frontend does by default) because migrated lesson_plans have NO school_year_id field. Backend is correct; migration script forgot to set it."},
+      {"endpoint": "/api/menus", "issue": "Migrated menus store date_from/date_to but server endpoints POST/current use valid_from/valid_to. UI shows empty date range on menu card. /api/menus/current will never match."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Dashboard", "issue": "'Attività di oggi' displays truncated student_id (e.g. 'b13923c8…') instead of student full name. Code at /app/frontend/src/pages/staff/Dashboard.jsx:168 hard-codes a.student_id.slice(0,8). Pre-existing issue, surfaced now with 1405 migrated activities.", "selector": "Dashboard.jsx:168", "priority": "MEDIUM"},
+      {"component": "LessonPlans /s/piano", "issue": "Defaults to first classroom tab (Fiorellini Rossi) instead of 'Tutte'. User must click 'Tutte' manually. Combined with missing school_year_id, all 77 plans currently invisible.", "selector": "LessonPlans.jsx:27", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "/s/piano Piano didattico", "issue": "Shows 'Nessun piano didattico' for every classroom tab AND 'Tutte' because frontend sends school_year_id in query and migrated lesson_plans lack this field. 77 plans hidden.", "affected_selectors": ["/api/lesson-plans?school_year_id=..."]},
+      {"flow": "/s/menu-mensa Menu", "issue": "Menu card renders 'Dal  al ' with empty dates because the menu document only has date_from/date_to, not valid_from/valid_to that the UI expects.", "affected_selectors": [".menu-card .valid-range"]}
+    ],
+    "design_issues": [
+      {"screen": "Comunicazioni", "issues": ["Date rendered as '13/11/2024 00:00' — the trailing '00:00' is noise; should be DD/MM/YYYY only for all-day comms"]}
+    ]
+  },
+  "verified_items": {
+    "login_albero_admin": "filippo.malafronte@gmail.com / Albero2026! -> 200, token includes tenant_id of albero-della-vita",
+    "login_albero_teacher": "a.dauria@busdauria.com / Albero2026! -> 200, sidebar has NO 'Gestione' section, /s/tenant redirects back to /s",
+    "login_demo_isolation": "admin@scuolapp.it sees < 226 students (confirmed tenant isolation)",
+    "dashboard_counts": "total_students=226, total_parents=197, total_teachers=13, total_classes=6, unassigned_students=87, pending_parents=197 — all match spec",
+    "alunni_page": "'226 bambini', MALAFRONTE search finds Antonio + Maria Antonietta, 6 classroom pills + 87 Non Assegnato",
+    "sezioni_page": "6 classrooms including Fiorellini Rossi, Coccinelle gialle e rosse, Fiorellini Gialli, 5 ANNI, Pulcini, Non Assegnato",
+    "maestre_page": "13 members, Amministratore + Maestra pills visible",
+    "genitori_page": "197 cards, 'In attesa' pills, real @gmail/@alice/@outlook emails present",
+    "comunicazioni_page": "5 communications with title, DD/MM/YYYY date, pill type (Evento/Classe), HTML body rendered",
+    "eventi_page": "25 events including 'Inizio anno scolastico', 'Chiusura Ognissanti'",
+    "tesserini_page": "Alunni list loads with names + birth dates; 'Scarica PDF' button available; selector pills per classroom",
+    "menu_meals_grid": "19 filled meals out of 20 grid slots (4 weeks x 5 days = 20, with one empty slot) — all primo/secondo/contorno/frutta present"
+  },
+  "test_report_links": ["/app/backend/tests/test_iter15_migration.py", "/app/test_reports/pytest/iter15.xml"],
+  "action_items": [
+    "FIX MIGRATION DATA (not code): run a one-shot update script against MongoDB — db.lesson_plans.updateMany({tenant_id:'bb3ff...'}, {$set:{school_year_id:'b32d9490-28c5-4985-a22e-1f35c6012b19'}})",
+    "FIX MIGRATION DATA: db.menus.updateMany({tenant_id:'bb3ff...'}, [{$set:{valid_from:'$date_from', valid_to:'$date_to'}}, {$unset:['date_from','date_to']}])  — OR update mysql_migrate.py to write valid_from/valid_to going forward",
+    "OPTIONAL: also backfill school_year_id on communications (5) and calendar_events (25) for future-proofing even though current endpoints don't filter by it",
+    "FRONTEND (optional, pre-existing): Dashboard.jsx:168 should fetch student name instead of showing truncated UUID; LessonPlans.jsx:27 should default to classId='' (Tutte) instead of first classroom"
+  ],
+  "critical_code_review_comments": [
+    "mysql_migrate.py writes menu dates as date_from/date_to but backend GET /menus/current and the UI expect valid_from/valid_to. Field-name drift between migration and schema -> silent data corruption. Suggest a Pydantic model MenuIn re-used by migration script.",
+    "lesson_plans, communications, calendar_events creation endpoints default school_year_id to active year; migration bypassed this logic and skipped the field entirely. Any school_year scoped query will return 0 for migrated rows.",
+    "Dashboard.jsx displays raw truncated student_id instead of denormalized student name — this would be ugly for any tenant, not just migrated data. Recommend $lookup join or client-side map by student_id."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter15_migration.py (new regression test file for migration)"
+  ],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "80% (8/10 pages fully OK; /s/piano empty + /s/menu-mensa missing dates due to data migration gaps)"},
+  "test_credentials": "filippo.malafronte@gmail.com/Albero2026! ✓, a.dauria@busdauria.com/Albero2026! ✓, admin@scuolapp.it/Admin2026! ✓ (demo tenant isolation verified)",
+  "seed_data_creation": "None — only read-only verification of migrated data as required.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend pytest suite /app/backend/tests/test_iter15_migration.py is green against current migrated data. Two confirmed data migration gaps: (1) lesson_plans.school_year_id missing -> frontend /s/piano empty; (2) menus use date_from/date_to not valid_from/valid_to -> empty date range in UI and /api/menus/current broken. After main agent runs the two mongo updateMany statements above, re-run the test suite plus manually visit /s/piano (should show 77 plans) and /s/menu-mensa (should show '02/09/2026 — 31/07/2027' range).",
+  "rca of the issue": "Root cause: mysql_migrate.py inserted documents using legacy MySQL column names (date_from/date_to for menus) without translating to the Mongo schema expected by server.py (valid_from/valid_to). It also omitted the school_year_id FK on lesson_plans/communications/calendar_events because the legacy MySQL table didn't have it; the migration should have resolved the active school year once at startup and stamped it on every imported temporal row. Reproduction: login as filippo.malafronte@gmail.com, open /s/piano -> 'Nessun piano didattico' on every tab incl. 'Tutte'; open /s/menu-mensa -> card header 'Dal  al '. Mitigation: two targeted mongo updateMany statements (above) + patch mysql_migrate.py so re-runs stay idempotent correctly."
+}

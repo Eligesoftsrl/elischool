@@ -322,6 +322,7 @@ def run_migration(myconn, db):
             "body": norm(p.get("testo")),
             "date_from": to_iso_date(p.get("dal")),
             "date_to": to_iso_date(p.get("al")),
+            "school_year_id": sy_id,
             "classroom_ids": [aula_mid] if aula_mid else [],
             "classroom_id": aula_mid,  # legacy single-ref
             "created_at": now_iso(),
@@ -337,8 +338,9 @@ def run_migration(myconn, db):
         menu_map[m["id"]] = mid
         db.menus.insert_one({
             "id": mid, "tenant_id": tenant_id,
-            "name": norm(m["nome"]), "date_from": to_iso_date(m.get("dal")),
-            "date_to": to_iso_date(m.get("al")),
+            "name": norm(m["nome"]),
+            "valid_from": to_iso_date(m.get("dal")),
+            "valid_to": to_iso_date(m.get("al")),
             "notes": norm(m.get("note")),
             "created_at": now_iso(),
         })
