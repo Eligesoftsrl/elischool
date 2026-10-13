@@ -231,3 +231,6 @@ Aggiunte le 3 ultime feature per parità 100% con Flask/MySQL legacy:
 - Universal Key dev budget limitato → AI report cade su fallback italiano automatico.
 - CORS `*` con `allow_credentials=False`; frontend usa Bearer in localStorage.
 - Media storage: base64 in MongoDB (OK per MVP, da migrare a storage esterno in produzione).
+
+## 2026-06 Fix visibilità dati migrati
+- Spostato admin pasquale.dellaporta@gmail.com dal tenant demo al tenant albero-della-vita (dati migrati visibili).
