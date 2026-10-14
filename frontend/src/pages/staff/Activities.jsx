@@ -293,7 +293,7 @@ export default function StaffActivities() {
                 {/* Didattica — categoria Attività (giallo) */}
                 <CategorySection tone="attivita" icon={<BookOpen className="h-4 w-4" />} title="Attività didattiche">
                   <ChoiceRow options={OPT_PARTECIPATO} value={form.didattica}
-                    onChange={(v) => setForm({ ...form, didattica: v })} testidPrefix="didattica" colorOn="#FBEBA8" />
+                    onChange={(v) => setForm({ ...form, didattica: v })} testidPrefix="didattica" colorOn="#F2A65A" />
                   <Textarea className="mt-3" label="Descrizione attività didattiche"
                     value={form.note_didattica} onChange={(v) => setForm({ ...form, note_didattica: v })} testid="note-didattica" />
                 </CategorySection>
@@ -309,7 +309,7 @@ export default function StaffActivities() {
                 {/* Pranzo — categoria Pappa */}
                 <CategorySection tone="pappa" icon={<UtensilsCrossed className="h-4 w-4" />} title="Pranzo">
                   <ChoiceRow options={OPT_PRANZO} value={form.pranzo}
-                    onChange={(v) => setForm({ ...form, pranzo: v })} testidPrefix="pranzo" colorOn="#FCE3C7" />
+                    onChange={(v) => setForm({ ...form, pranzo: v })} testidPrefix="pranzo" colorOn="#F2A65A" />
                   <Textarea className="mt-3" label="Ulteriori info sul pranzo"
                     value={form.note_pranzo} onChange={(v) => setForm({ ...form, note_pranzo: v })} testid="note-pranzo" />
                 </CategorySection>
