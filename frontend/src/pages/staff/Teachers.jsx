@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Plus, X, UserCog, Pencil, Trash2, Shield, KeyRound, AtSign, Copy, Check, RotateCw, MailCheck, MailX } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
+import { PageHeader, Card, CardActions, CardAction, EmptyState, Pill } from "@/components/Primitives";
 import { SearchBar } from "@/components/SearchBar";
 import { ExportMenu } from "@/components/ExportMenu";
 
@@ -151,7 +151,7 @@ export default function StaffTeachers() {
        displayed.length === 0 ? <EmptyState title="Nessun risultato" description="Prova a cambiare i termini di ricerca." /> :
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {displayed.map((t) => (
-            <Card key={t.id} data-testid={`teacher-card-${t.id}`}>
+            <Card key={t.id} className="flex flex-col" data-testid={`teacher-card-${t.id}`}>
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-2xl bg-violet-50 flex items-center justify-center">
                   {t.role === "admin" ? <Shield className="h-5 w-5 text-violet-600" /> : <UserCog className="h-5 w-5 text-violet-600" />}
@@ -163,21 +163,15 @@ export default function StaffTeachers() {
                 </div>
               </div>
               {t.phone && <p className="text-xs text-stone-500 mt-3">{t.phone}</p>}
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                <button onClick={() => { setForm({ first_name: t.first_name, last_name: t.last_name, email: t.email, phone: t.phone || "", role: t.role, password: "", notes: t.notes || "" }); setEditId(t.id); setCreatedInfo(null); setShowPassword(false); setOpen(true); }}
-                  className="h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-xs font-semibold flex items-center justify-center gap-1.5" data-testid={`edit-teacher-${t.id}`} title="Modifica">
-                  <Pencil className="h-3.5 w-3.5" /><span className="hidden sm:inline">Modifica</span>
-                </button>
-                <button onClick={() => resetPassword(t)} disabled={resetting === t.id}
-                  className="h-10 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"
-                  data-testid={`reset-pwd-${t.id}`} title="Rigenera password">
-                  <RotateCw className={`h-3.5 w-3.5 ${resetting === t.id ? "animate-spin" : ""}`} /><span className="hidden sm:inline">Reset pwd</span>
-                </button>
-                <button onClick={() => remove(t.id)}
-                  className="h-10 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold flex items-center justify-center gap-1.5" data-testid={`delete-teacher-${t.id}`} title="Elimina">
-                  <Trash2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">Elimina</span>
-                </button>
-              </div>
+              <CardActions>
+                <CardAction icon={<Pencil />} label="Modifica"
+                  onClick={() => { setForm({ first_name: t.first_name, last_name: t.last_name, email: t.email, phone: t.phone || "", role: t.role, password: "", notes: t.notes || "" }); setEditId(t.id); setCreatedInfo(null); setShowPassword(false); setOpen(true); }}
+                  data-testid={`edit-teacher-${t.id}`} />
+                <CardAction tone="amber" icon={<RotateCw className={resetting === t.id ? "animate-spin" : ""} />} label="Password"
+                  onClick={() => resetPassword(t)} disabled={resetting === t.id} data-testid={`reset-pwd-${t.id}`} />
+                <CardAction tone="rose" icon={<Trash2 />} label="Elimina"
+                  onClick={() => remove(t.id)} data-testid={`delete-teacher-${t.id}`} />
+              </CardActions>
             </Card>
           ))}
         </div>

@@ -3,7 +3,7 @@ import { useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, Search, Trash2, Pencil, X, GraduationCap, ArrowRightLeft, Cake, AlertTriangle, UserX, RefreshCw, Ban, Send, UsersRound, Mail, Phone, FileText, User } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
-import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
+import { PageHeader, Card, CardActions, CardAction, EmptyState, Pill } from "@/components/Primitives";
 import { ComuniAutocomplete } from "@/components/ComuniAutocomplete";
 import { ExportMenu } from "@/components/ExportMenu";
 import { fmtDate } from "@/lib/format";
@@ -316,7 +316,7 @@ export default function StaffStudents() {
             return (
               <Card
                 key={s.id}
-                className={`hover:shadow-md transition-all ${isWithdrawn ? "bg-stone-50 opacity-80 border-dashed" : isUnassigned ? "border-amber-300" : ""}`}
+                className={`flex flex-col hover:shadow-md transition-shadow ${isWithdrawn ? "bg-stone-50 opacity-80 border-dashed" : isUnassigned ? "border-amber-300" : ""}`}
                 data-testid={`student-card-${s.id}`}
               >
                 <div className="flex items-start justify-between">
@@ -383,59 +383,28 @@ export default function StaffStudents() {
                 )}
 
                 {isWithdrawn ? (
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => reactivate(s)}
-                      className="h-10 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold flex items-center justify-center gap-1.5"
-                      data-testid={`reactivate-student-${s.id}`}
-                    >
-                      <RefreshCw className="h-3.5 w-3.5" /> Ripristina
-                    </button>
-                    <button
-                      onClick={() => remove(s.id)}
-                      className="h-10 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold flex items-center justify-center gap-1.5"
-                      data-testid={`delete-student-${s.id}`}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" /> Elimina def.
-                    </button>
-                  </div>
+                  <CardActions>
+                    <CardAction tone="green" icon={<RefreshCw />} label="Ripristina"
+                      onClick={() => reactivate(s)} data-testid={`reactivate-student-${s.id}`} />
+                    <CardAction tone="rose" icon={<Trash2 />} label="Elimina"
+                      onClick={() => remove(s.id)} data-testid={`delete-student-${s.id}`} />
+                  </CardActions>
                 ) : (
-                  <div className="mt-4 grid grid-cols-4 gap-2">
-                    <button
-                      onClick={() => setTransferOpen(s)}
-                      className={`h-10 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 ${isUnassigned ? "bg-amber-100 hover:bg-amber-200 text-amber-800" : "bg-stone-100 hover:bg-stone-200"}`}
-                      data-testid={`transfer-student-${s.id}`}
-                    >
-                      <ArrowRightLeft className="h-3.5 w-3.5" /> {isUnassigned ? "Assegna" : "Sposta"}
-                    </button>
-                    <button
+                  <CardActions>
+                    <CardAction tone={isUnassigned ? "warn" : "neutral"} icon={<ArrowRightLeft />} label={isUnassigned ? "Assegna" : "Sposta"}
+                      onClick={() => setTransferOpen(s)} data-testid={`transfer-student-${s.id}`} />
+                    <CardAction icon={<Pencil />} label="Modifica"
                       onClick={() => {
                         const { first_name, last_name, birth_date, fiscal_code, city_residence, residence, allergies, notes } = s;
                         setForm({ first_name, last_name, birth_date: birth_date || "", fiscal_code: fiscal_code || "", city_residence: city_residence || "", residence: residence || "", allergies: allergies || "", notes: notes || "", classroom_id: s.enrollment?.classroom_id || "" });
                         setEditId(s.id); setOpen(true);
                       }}
-                      className="h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-xs font-semibold flex items-center justify-center gap-1.5"
-                      data-testid={`edit-student-${s.id}`}
-                    >
-                      <Pencil className="h-3.5 w-3.5" /> Modifica
-                    </button>
-                    <button
-                      onClick={() => setWithdrawOpen(s)}
-                      className="h-10 rounded-xl bg-brand-light/50 hover:bg-brand-light text-brand-hover text-xs font-semibold flex items-center justify-center gap-1.5"
-                      data-testid={`withdraw-student-${s.id}`}
-                      title="Ritira dalla scuola (archivia)"
-                    >
-                      <UserX className="h-3.5 w-3.5" /> Ritira
-                    </button>
-                    <button
-                      onClick={() => remove(s.id)}
-                      className="h-10 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold flex items-center justify-center gap-1.5"
-                      data-testid={`delete-student-${s.id}`}
-                      title="Elimina definitivamente"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                      data-testid={`edit-student-${s.id}`} />
+                    <CardAction tone="brand" icon={<UserX />} label="Ritira"
+                      onClick={() => setWithdrawOpen(s)} data-testid={`withdraw-student-${s.id}`} />
+                    <CardAction tone="rose" icon={<Trash2 />} label="Elimina"
+                      onClick={() => remove(s.id)} data-testid={`delete-student-${s.id}`} />
+                  </CardActions>
                 )}
               </Card>
             );

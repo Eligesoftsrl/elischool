@@ -156,3 +156,8 @@ h1, h2, h3, h4, h5, h6, .font-display {
     50%      { box-shadow: 0 0 0 8px rgba(47, 125, 109, 0); }
 }
 .pulse-dot { animation: pulseDot 1.8s infinite; }
+
+.card-action { container-type: inline-size; }
+@container (max-width: 44px) {
+  .card-action-label { display: none; }
+}

@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Plus, X, UsersRound, Pencil, Trash2, Link as LinkIcon, Copy, Send, CheckCircle2, Clock, Search as SearchIcon, IdCard, AtSign } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
-import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
+import { PageHeader, Card, CardActions, CardAction, EmptyState, Pill } from "@/components/Primitives";
 import { SearchBar } from "@/components/SearchBar";
 import { ExportMenu } from "@/components/ExportMenu";
 
@@ -157,7 +157,7 @@ export default function StaffParents() {
        displayed.length === 0 ? <EmptyState title="Nessun risultato" description="Prova a cambiare i termini di ricerca." /> :
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {displayed.map((p) => (
-            <Card key={p.id} data-testid={`parent-card-${p.id}`}>
+            <Card key={p.id} className="flex flex-col" data-testid={`parent-card-${p.id}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="h-12 w-12 rounded-2xl bg-stone-100 flex items-center justify-center"><UsersRound className="h-5 w-5 text-stone-600" /></div>
@@ -185,12 +185,15 @@ export default function StaffParents() {
               {p.fiscal_code && (
                 <p className="mt-2 text-[11px] text-stone-400 font-mono flex items-center gap-1"><IdCard className="h-3 w-3"/> {p.fiscal_code}</p>
               )}
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                <button onClick={() => resendInvite(p.id)} className="h-10 rounded-xl bg-stone-100 text-xs font-semibold flex items-center justify-center gap-1.5" data-testid={`resend-invite-${p.id}`}><Send className="h-3.5 w-3.5" /></button>
-                <button onClick={() => { setForm({ first_name: p.first_name, last_name: p.last_name, email: p.email, phone: p.phone || "", fiscal_code: p.fiscal_code || "", notes: p.notes || "", student_ids: p.student_ids || [] }); setEditId(p.id); setOpen(true); setStudentSearch(""); }}
-                  className="h-10 rounded-xl bg-stone-100 text-xs font-semibold flex items-center justify-center gap-1.5" data-testid={`edit-parent-${p.id}`}><Pencil className="h-3.5 w-3.5" /></button>
-                <button onClick={() => remove(p.id)} className="h-10 rounded-xl bg-rose-50 text-rose-700 text-xs font-semibold flex items-center justify-center gap-1.5" data-testid={`delete-parent-${p.id}`}><Trash2 className="h-3.5 w-3.5" /></button>
-              </div>
+              <CardActions>
+                <CardAction icon={<Send />} label="Invito"
+                  onClick={() => resendInvite(p.id)} data-testid={`resend-invite-${p.id}`} />
+                <CardAction icon={<Pencil />} label="Modifica"
+                  onClick={() => { setForm({ first_name: p.first_name, last_name: p.last_name, email: p.email, phone: p.phone || "", fiscal_code: p.fiscal_code || "", notes: p.notes || "", student_ids: p.student_ids || [] }); setEditId(p.id); setOpen(true); setStudentSearch(""); }}
+                  data-testid={`edit-parent-${p.id}`} />
+                <CardAction tone="rose" icon={<Trash2 />} label="Elimina"
+                  onClick={() => remove(p.id)} data-testid={`delete-parent-${p.id}`} />
+              </CardActions>
             </Card>
           ))}
         </div>

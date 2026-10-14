@@ -3,7 +3,7 @@ import { useOutletContext } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, X, Users, Pencil, Trash2 } from "lucide-react";
 import api, { apiErrorMessage } from "@/lib/api";
-import { PageHeader, Card, EmptyState, Pill } from "@/components/Primitives";
+import { PageHeader, Card, CardActions, CardAction, EmptyState, Pill } from "@/components/Primitives";
 import { SearchBar } from "@/components/SearchBar";
 import { ExportMenu } from "@/components/ExportMenu";
 
@@ -113,7 +113,7 @@ export default function StaffClassrooms() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {displayed.map((c) => (
-            <Card key={c.id} data-testid={`classroom-card-${c.id}`}>
+            <Card key={c.id} className="flex flex-col" data-testid={`classroom-card-${c.id}`}>
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div className="h-12 w-12 rounded-2xl bg-[#E3F0EC] flex items-center justify-center">
@@ -133,22 +133,16 @@ export default function StaffClassrooms() {
                   return t ? <Pill key={tid} color="purple">{t.first_name} {t.last_name}</Pill> : null;
                 })}
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button
+              <CardActions>
+                <CardAction icon={<Pencil />} label="Modifica"
                   onClick={() => {
                     setForm({ name: c.name, age_band: c.age_band, notes: c.notes || "", school_year_id: activeYear.id, teacher_ids: c.teacher_ids || [] });
                     setEditId(c.id); setOpen(true);
                   }}
-                  className="h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-xs font-semibold flex items-center justify-center gap-1.5"
-                  data-testid={`edit-classroom-${c.id}`}>
-                  <Pencil className="h-3.5 w-3.5" /> Modifica
-                </button>
-                <button onClick={() => remove(c.id)}
-                  className="h-10 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold flex items-center justify-center gap-1.5"
-                  data-testid={`delete-classroom-${c.id}`}>
-                  <Trash2 className="h-3.5 w-3.5" /> Elimina
-                </button>
-              </div>
+                  data-testid={`edit-classroom-${c.id}`} />
+                <CardAction tone="rose" icon={<Trash2 />} label="Elimina"
+                  onClick={() => remove(c.id)} data-testid={`delete-classroom-${c.id}`} />
+              </CardActions>
             </Card>
           ))}
         </div>

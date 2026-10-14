@@ -14,6 +14,31 @@ export function PageHeader({ title, subtitle, right, className }) {
   );
 }
 
+const ACTION_TONES = {
+  neutral: "bg-stone-100 hover:bg-stone-200 text-stone-800",
+  brand: "bg-brand-light/50 hover:bg-brand-light text-brand-hover",
+  green: "bg-emerald-50 hover:bg-emerald-100 text-emerald-700",
+  amber: "bg-amber-50 hover:bg-amber-100 text-amber-800",
+  warn: "bg-amber-100 hover:bg-amber-200 text-amber-800",
+  rose: "bg-rose-50 hover:bg-rose-100 text-rose-700",
+};
+
+// Row of card actions pinned to the card bottom; labels hide only if buttons get extremely narrow.
+export function CardActions({ children }) {
+  return <div className="mt-auto pt-4 flex gap-2">{children}</div>;
+}
+
+export function CardAction({ icon, label, tone = "neutral", className, ...rest }) {
+  return (
+    <button type="button" title={label} aria-label={label}
+      className={cn("card-action flex-1 min-w-0 h-14 rounded-xl text-[11px] leading-none font-semibold flex flex-col items-center justify-center gap-1.5 px-1 transition-colors disabled:opacity-60", ACTION_TONES[tone], className)}
+      {...rest}>
+      <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4 flex">{icon}</span>
+      <span className="card-action-label whitespace-nowrap truncate">{label}</span>
+    </button>
+  );
+}
+
 export function Card({ className, children, ...rest }) {
   return (
     <div
