@@ -236,3 +236,4 @@ Aggiunte le 3 ultime feature per parità 100% con Flask/MySQL legacy:
 - Spostato admin pasquale.dellaporta@gmail.com dal tenant demo al tenant albero-della-vita (dati migrati visibili).
 - Diario: stati selezionati di Didattica e Pranzo ora arancioni (#F2A65A) come Motoria.
 - Anagrafiche (Alunni, Maestre, Genitori, Sezioni, Anni): pulsanti azione unificati con CardActions/CardAction (Primitives.jsx), icona+etichetta, h-14, sempre in fondo alla card.
+- Compleanni (/api/birthdays): solo alunni non ritirati con sezione assegnata nell'anno attivo (esclusa "Non Assegnato"); risposta include classroom_name.

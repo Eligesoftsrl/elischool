@@ -2022,8 +2022,18 @@ class EnrollmentRequestIn(BaseModel):
 async def upcoming_birthdays(days: int = 7, user=Depends(require_role("admin", "teacher"))):
     """Compleanni dei prossimi N giorni (default 7)."""
     today = date.today()
+    active = await db.school_years.find_one({"is_active": True}, {"_id": 0})
+    if not active:
+        return []
+    classrooms = await db.classrooms.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(500)
+    cls_names = {c["id"]: c["name"] for c in classrooms if (c.get("name") or "").strip().lower() != "non assegnato"}
+    enrolls = await db.enrollments.find(
+        {"school_year_id": active["id"], "classroom_id": {"$in": list(cls_names)}}, {"_id": 0}
+    ).to_list(5000)
+    student_cls = {e["student_id"]: e["classroom_id"] for e in enrolls}
     students = await db.students.find(
-        {"birth_date": {"$ne": ""}, "$or": [{"status": {"$exists": False}}, {"status": {"$in": [None, "", "active"]}}]},
+        {"id": {"$in": list(student_cls)}, "birth_date": {"$ne": ""},
+         "$or": [{"status": {"$exists": False}}, {"status": {"$in": [None, "", "active"]}}]},
         {"_id": 0}
     ).to_list(2000)
     out = []
@@ -2054,6 +2064,7 @@ async def upcoming_birthdays(days: int = 7, user=Depends(require_role("admin", "
                 "next_birthday": next_bd.isoformat(),
                 "days_until": delta_days,
                 "age_turning": age,
+                "classroom_name": cls_names[student_cls[s["id"]]],
             })
     out.sort(key=lambda x: x["days_until"])
     return out
