@@ -1,0 +1,31 @@
+# Tiptii
+
+> Tiptii è un'app web italiana per asili nido e scuole dell'infanzia (0–6 anni), sviluppata da Eligesoft S.r.l. Collega direzione, educatrici e famiglie: diario giornaliero, presenze, mensa, foto e comunicazioni in un unico posto, ottimizzato per smartphone.
+
+## Cosa fa
+
+- Diario giornaliero a colori in cinque categorie: pappa, nanna, igiene, attività, presenze.
+- Registro presenze per sezione, con tesserini e codici a barre stampabili.
+- Menu della mensa, calendario eventi, laboratori extra, compleanni.
+- Galleria foto e documenti cifrati con AES-256-GCM, visibili solo agli utenti autorizzati.
+- Comunicazioni e news dalla scuola alle famiglie.
+- Piano didattico settimanale esportabile in PDF.
+- Iscrizioni online con un modulo dedicato per ogni scuola.
+- Anagrafiche di alunni e genitori, gestione di più anni scolastici e passaggio d'anno.
+- Esportazioni in PDF, Excel e CSV.
+- Multi-scuola: ogni scuola vede solo i propri dati.
+
+## Per chi è
+
+- Direzioni e coordinatrici di asili nido, micronidi, sezioni primavera e scuole dell'infanzia, pubbliche e private.
+- Educatrici e maestre.
+- Genitori, che seguono la giornata del bambino dal telefono.
+
+## Azienda
+
+- Eligesoft S.r.l. — https://www.eligesoft.com — info@eligesoft.com
+
+## Link utili
+
+- Home: https://www.tiptii.com/
+- Privacy policy: https://www.tiptii.com/privacy

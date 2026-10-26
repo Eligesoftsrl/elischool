@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /s/
+Disallow: /g/
+Disallow: /superadmin
+Disallow: /reset-password/
+Disallow: /setup-password/
+
+Sitemap: https://www.tiptii.com/sitemap.xml

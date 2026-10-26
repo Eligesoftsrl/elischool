@@ -1,0 +1,847 @@
+From c601c6f0a8fe70a3be2641b5d13b199c7ebd71a1 Mon Sep 17 00:00:00 2001
+From: Eligesoft <info@eligesoft.com>
+Date: Mon, 26 Oct 2026 17:46:30 +0100
+Subject: [PATCH] Home: sezioni Chi siamo e FAQ, footer Eligesoft, SEO/AI e
+ pagina Privacy policy
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01CThSu7ZsMLnsXmEkfVMHsC
+---
+ frontend/public/index.html     | 157 +++++++++--------------
+ frontend/public/llms.txt       |  32 +++++
+ frontend/public/robots.txt     |   9 ++
+ frontend/public/sitemap.xml    |  18 +++
+ frontend/src/App.js            |   2 +
+ frontend/src/config/site.js    |  33 +++++
+ frontend/src/pages/Landing.jsx | 184 ++++++++++++++++++++++++---
+ frontend/src/pages/Privacy.jsx | 223 +++++++++++++++++++++++++++++++++
+ 8 files changed, 539 insertions(+), 119 deletions(-)
+ create mode 100644 frontend/public/llms.txt
+ create mode 100644 frontend/public/robots.txt
+ create mode 100644 frontend/public/sitemap.xml
+ create mode 100644 frontend/src/config/site.js
+ create mode 100644 frontend/src/pages/Privacy.jsx
+
+diff --git a/frontend/public/index.html b/frontend/public/index.html
+index 2e6486e..a07ac09 100644
+--- a/frontend/public/index.html
++++ b/frontend/public/index.html
+@@ -1,123 +1,80 @@
+ <!doctype html>
+-<html lang="en">
++<html lang="it">
+     <head>
+         <meta charset="utf-8" />
+         <meta name="viewport" content="width=device-width, initial-scale=1" />
+         <meta name="theme-color" content="#2F7D6D" />
+-        <meta name="description" content="Tiptii — la piattaforma dolce per nido e scuola dell'infanzia" />
++
++        <!-- SEO -->
++        <title>Tiptii — App per nido e scuola dell'infanzia | Diario, presenze e comunicazioni</title>
++        <meta name="description" content="Tiptii è l'app italiana per asili nido e scuole dell'infanzia 0–6 anni: diario giornaliero a colori, presenze, menu della mensa, foto cifrate e comunicazioni con le famiglie. Sviluppata da Eligesoft S.r.l." />
++        <meta name="keywords" content="app asilo nido, app scuola dell'infanzia, diario asilo nido, registro presenze asilo, comunicazioni scuola famiglia, software gestione nido, gestionale scuola infanzia" />
++        <meta name="author" content="Eligesoft S.r.l." />
++        <meta name="robots" content="index, follow, max-image-preview:large" />
++        <link rel="canonical" href="https://www.tiptii.com/" />
++
++        <!-- Open Graph / social -->
++        <meta property="og:type" content="website" />
++        <meta property="og:locale" content="it_IT" />
++        <meta property="og:site_name" content="Tiptii" />
++        <meta property="og:title" content="Tiptii — App per nido e scuola dell'infanzia" />
++        <meta property="og:description" content="Diario giornaliero, presenze, mensa e comunicazioni scuola-famiglia in un'unica app sicura, 100% italiana." />
++        <meta property="og:url" content="https://www.tiptii.com/" />
++        <meta property="og:image" content="https://www.tiptii.com/favicon-512.png" />
++        <meta name="twitter:card" content="summary" />
++        <meta name="twitter:title" content="Tiptii — App per nido e scuola dell'infanzia" />
++        <meta name="twitter:description" content="Diario giornaliero, presenze, mensa e comunicazioni scuola-famiglia in un'unica app sicura." />
++
++        <!-- PWA / mobile -->
+         <meta name="apple-mobile-web-app-capable" content="yes" />
+         <meta name="mobile-web-app-capable" content="yes" />
+         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
++
+         <link rel="preconnect" href="https://fonts.googleapis.com" />
+         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap" rel="stylesheet" />
+-        <!-- Tiptii Favicon (multi-size) -->
++
+         <link rel="icon" type="image/x-icon" href="%PUBLIC_URL%/favicon.ico" />
+         <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16.png" />
+         <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32.png" />
+         <link rel="icon" type="image/png" sizes="192x192" href="%PUBLIC_URL%/favicon-192.png" />
+         <link rel="icon" type="image/png" sizes="512x512" href="%PUBLIC_URL%/favicon-512.png" />
+         <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/apple-touch-icon.png" />
+-        <!--
+-        manifest.json provides metadata used when your web app is installed on a
+-        user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
+-        -->
+-        <!--
+-        Notice the use of %PUBLIC_URL% in the tags above.
+-        It will be replaced with the URL of the `public` folder during the build.
+-        Only files inside the `public` folder can be referenced from the HTML.
+ 
+-        Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
+-        work correctly both with client-side routing and a non-root public URL.
+-        Learn how to configure a non-root public URL by running `npm run build`.
+-        -->
+-        <title>Tiptii — Nido e scuola dell'infanzia</title>
+-        <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
+-        <script src="https://assets.emergent.sh/scripts/emergent-main.js"></script>
++        <!-- Dati strutturati per Google e motori di risposta AI -->
++        <script type="application/ld+json">
++        {
++          "@context": "https://schema.org",
++          "@graph": [
++            {
++              "@type": "Organization",
++              "@id": "https://www.eligesoft.com/#organization",
++              "name": "Eligesoft S.r.l.",
++              "url": "https://www.eligesoft.com",
++              "email": "info@eligesoft.com",
++              "logo": "https://www.tiptii.com/favicon-512.png"
++            },
++            {
++              "@type": "SoftwareApplication",
++              "@id": "https://www.tiptii.com/#app",
++              "name": "Tiptii",
++              "url": "https://www.tiptii.com/",
++              "applicationCategory": "EducationalApplication",
++              "operatingSystem": "Web, iOS, Android",
++              "inLanguage": "it",
++              "description": "App per asili nido e scuole dell'infanzia: diario giornaliero a colori, presenze, menu della mensa, galleria foto cifrata, calendario eventi, iscrizioni online e comunicazioni con le famiglie.",
++              "audience": { "@type": "EducationalAudience", "educationalRole": "teacher, parent, school administrator" },
++              "publisher": { "@id": "https://www.eligesoft.com/#organization" }
++            }
++          ]
++        }
++        </script>
+     </head>
+     <body>
+-        <noscript>You need to enable JavaScript to run this app.</noscript>
++        <noscript>
++            <h1>Tiptii — App per nido e scuola dell'infanzia</h1>
++            <p>Tiptii è la piattaforma italiana di Eligesoft S.r.l. per asili nido e scuole dell'infanzia: diario giornaliero, presenze, mensa, foto cifrate e comunicazioni scuola-famiglia. Per usare l'applicazione abilita JavaScript.</p>
++        </noscript>
+         <div id="root"></div>
+-        <!--
+-      This HTML file is a template.
+-      If you open it directly in the browser, you will see an empty page.
+-
+-      You can add webfonts, meta tags, or analytics to this file.
+-      The build step will place the bundled scripts into the <body> tag.
+-
+-      To begin the development, run `npm start` or `yarn start`.
+-      To create a production bundle, use `npm run build` or `yarn build`.
+-    -->
+-                <script>
+-            !(function (t, e) {
+-                var o, n, p, r;
+-                e.__SV ||
+-                    ((window.posthog = e),
+-                    (e._i = []),
+-                    (e.init = function (i, s, a) {
+-                        function g(t, e) {
+-                            var o = e.split(".");
+-                            2 == o.length && ((t = t[o[0]]), (e = o[1])),
+-                                (t[e] = function () {
+-                                    t.push(
+-                                        [e].concat(
+-                                            Array.prototype.slice.call(
+-                                                arguments,
+-                                                0,
+-                                            ),
+-                                        ),
+-                                    );
+-                                });
+-                        }
+-                        ((p = t.createElement("script")).type =
+-                            "text/javascript"),
+-                            (p.crossOrigin = "anonymous"),
+-                            (p.async = !0),
+-                            (p.src =
+-                                s.api_host.replace(
+-                                    ".i.posthog.com",
+-                                    "-assets.i.posthog.com",
+-                                ) + "/static/array.js"),
+-                            (r =
+-                                t.getElementsByTagName(
+-                                    "script",
+-                                )[0]).parentNode.insertBefore(p, r);
+-                        var u = e;
+-                        for (
+-                            void 0 !== a ? (u = e[a] = []) : (a = "posthog"),
+-                                u.people = u.people || [],
+-                                u.toString = function (t) {
+-                                    var e = "posthog";
+-                                    return (
+-                                        "posthog" !== a && (e += "." + a),
+-                                        t || (e += " (stub)"),
+-                                        e
+-                                    );
+-                                },
+-                                u.people.toString = function () {
+-                                    return u.toString(1) + ".people (stub)";
+-                                },
+-                                o =
+-                                    "init me ws ys ps bs capture je Di ks register register_once register_for_session unregister unregister_for_session Ps getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSurveysLoaded onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey canRenderSurveyAsync identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty Es $s createPersonProfile Is opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing Ss debug xs getPageViewId captureTraceFeedback captureTraceMetric".split(
+-                                        " ",
+-                                    ),
+-                                n = 0;
+-                            n < o.length;
+-                            n++
+-                        )
+-                            g(u, o[n]);
+-                        e._i.push([i, s, a]);
+-                    }),
+-                    (e.__SV = 1));
+-            })(document, window.posthog || []);
+-            posthog.init("phc_xAvL2Iq4tFmANRE7kzbKwaSqp1HJjN7x48s3vr0CMjs", {
+-                api_host: "https://us.i.posthog.com",
+-                person_profiles: "identified_only", // or 'always' to create profiles for anonymous users as well,
+-                session_recording: {
+-                    recordCrossOriginIframes: true,
+-                    capturePerformance: false,
+-                },
+-            });
+-        </script>
+     </body>
+ </html>
+diff --git a/frontend/public/llms.txt b/frontend/public/llms.txt
+new file mode 100644
+index 0000000..2f88fea
+--- /dev/null
++++ b/frontend/public/llms.txt
+@@ -0,0 +1,32 @@
++# Tiptii
++
++> Tiptii è un'app web italiana per asili nido e scuole dell'infanzia (0–6 anni), sviluppata da Eligesoft S.r.l. Collega direzione, educatrici e famiglie: diario giornaliero, presenze, mensa, foto e comunicazioni in un unico posto, ottimizzato per smartphone.
++
++## Cosa fa
++
++- Diario giornaliero a colori in cinque categorie: pappa, nanna, igiene, attività, presenze.
++- Registro presenze per sezione, con tesserini e codici a barre stampabili.
++- Menu della mensa, calendario eventi, laboratori extra, compleanni.
++- Galleria foto e documenti cifrati con AES-256-GCM, visibili solo agli utenti autorizzati.
++- Comunicazioni e news dalla scuola alle famiglie.
++- Piano didattico settimanale esportabile in PDF.
++- Iscrizioni online con modulo pubblico per ogni scuola.
++- Anagrafiche di alunni e genitori, gestione di più anni scolastici e passaggio d'anno.
++- Esportazioni in PDF, Excel e CSV.
++- Multi-scuola: ogni scuola vede solo i propri dati.
++
++## Per chi è
++
++- Direzioni e coordinatrici di asili nido, micronidi, sezioni primavera e scuole dell'infanzia, pubbliche e private.
++- Educatrici e maestre.
++- Genitori, che seguono la giornata del bambino dal telefono.
++
++## Azienda
++
++- Eligesoft S.r.l. — https://www.eligesoft.com — info@eligesoft.com
++
++## Link utili
++
++- Home: https://www.tiptii.com/
++- Privacy policy: https://www.tiptii.com/privacy
++- Iscrizione online: https://www.tiptii.com/iscrizione
+diff --git a/frontend/public/robots.txt b/frontend/public/robots.txt
+new file mode 100644
+index 0000000..bae0445
+--- /dev/null
++++ b/frontend/public/robots.txt
+@@ -0,0 +1,9 @@
++User-agent: *
++Allow: /
++Disallow: /s/
++Disallow: /g/
++Disallow: /superadmin
++Disallow: /reset-password/
++Disallow: /setup-password/
++
++Sitemap: https://www.tiptii.com/sitemap.xml
+diff --git a/frontend/public/sitemap.xml b/frontend/public/sitemap.xml
+new file mode 100644
+index 0000000..119e1dd
+--- /dev/null
++++ b/frontend/public/sitemap.xml
+@@ -0,0 +1,18 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
++  <url>
++    <loc>https://www.tiptii.com/</loc>
++    <changefreq>monthly</changefreq>
++    <priority>1.0</priority>
++  </url>
++  <url>
++    <loc>https://www.tiptii.com/privacy</loc>
++    <changefreq>yearly</changefreq>
++    <priority>0.4</priority>
++  </url>
++  <url>
++    <loc>https://www.tiptii.com/iscrizione</loc>
++    <changefreq>monthly</changefreq>
++    <priority>0.6</priority>
++  </url>
++</urlset>
+diff --git a/frontend/src/App.js b/frontend/src/App.js
+index 7d7c5d6..433c82c 100644
+--- a/frontend/src/App.js
++++ b/frontend/src/App.js
+@@ -7,6 +7,7 @@ import ForgotPassword from "@/pages/ForgotPassword";
+ import ResetPassword from "@/pages/ResetPassword";
+ import SetupPassword from "@/pages/SetupPassword";
+ import Landing from "@/pages/Landing";
++import Privacy from "@/pages/Privacy";
+ 
+ import StaffLayout from "@/layouts/StaffLayout";
+ import StaffDashboard from "@/pages/staff/Dashboard";
+@@ -84,6 +85,7 @@ function App() {
+         />
+         <Routes>
+           <Route path="/" element={<HomeRedirect />} />
++          <Route path="/privacy" element={<Privacy />} />
+           <Route path="/login" element={<Login />} />
+           <Route path="/forgot-password" element={<ForgotPassword />} />
+           <Route path="/reset-password/:token" element={<ResetPassword />} />
+diff --git a/frontend/src/config/site.js b/frontend/src/config/site.js
+new file mode 100644
+index 0000000..2957c8b
+--- /dev/null
++++ b/frontend/src/config/site.js
+@@ -0,0 +1,33 @@
++// Dati del sito e dell'azienda, usati da home, footer e privacy policy.
++// Modifica SOLO questo file per aggiornare le informazioni ovunque.
++// I valori tra [ ] sono da completare prima della pubblicazione definitiva.
++
++export const SITE = {
++  productName: "Tiptii",
++  url: "https://www.tiptii.com",
++  tagline: "La piattaforma per nido e scuola dell'infanzia",
++  supportEmail: "info@eligesoft.com",
++};
++
++export const COMPANY = {
++  name: "Eligesoft",
++  legalName: "Eligesoft S.r.l.",
++  website: "https://www.eligesoft.com",
++  email: "info@eligesoft.com",
++  pec: "[PEC aziendale]",
++  phone: "[Telefono]",
++  address: "[Via e numero civico]",
++  cap: "[CAP]",
++  city: "[Città]",
++  province: "[Provincia]",
++  vat: "[Partita IVA]",
++  rea: "[Numero REA]",
++  shareCapital: "[Capitale sociale i.v.]",
++  // Lascia vuoto se non avete nominato un DPO (Responsabile Protezione Dati)
++  dpoEmail: "",
++};
++
++export const PRIVACY_LAST_UPDATE = "26 ottobre 2026";
++
++export const fullAddress = () =>
++  `${COMPANY.address}, ${COMPANY.cap} ${COMPANY.city} (${COMPANY.province})`;
+diff --git a/frontend/src/pages/Landing.jsx b/frontend/src/pages/Landing.jsx
+index 0cfd038..d5c1348 100644
+--- a/frontend/src/pages/Landing.jsx
++++ b/frontend/src/pages/Landing.jsx
+@@ -4,9 +4,45 @@ import {
+   ArrowRight, Sparkles, Camera, MessageCircle, CalendarDays, UtensilsCrossed,
+   Bed, Bath, BookOpen, Activity, HeartHandshake, ShieldCheck, Lock, Smartphone,
+   Cloud, Users, GraduationCap, LineChart, CheckCircle2, Mail, Bell,
+-  FileText, Globe, Baby,
++  FileText, Globe, Baby, Building2, ChevronDown, Code2, Headphones,
+ } from "lucide-react";
+ import { TiptiiBadge, TiptiiLogo } from "@/components/TiptiiLogo";
++import { SITE, COMPANY, fullAddress } from "@/config/site";
++
++const FAQS = [
++  {
++    q: "Che cos'è Tiptii?",
++    a: "Tiptii è un'app web italiana per asili nido e scuole dell'infanzia (0–6 anni). Riunisce in un unico posto il diario giornaliero dei bambini, le presenze, il menu della mensa, le foto, il calendario e le comunicazioni con le famiglie.",
++  },
++  {
++    q: "Chi sviluppa Tiptii?",
++    a: `Tiptii è progettata e sviluppata da ${COMPANY.legalName}, software house italiana che realizza soluzioni digitali per scuole, enti e aziende.`,
++  },
++  {
++    q: "Serve installare qualcosa?",
++    a: "No. Tiptii funziona dal browser di smartphone, tablet e computer. Maestre e genitori accedono con email e password, senza scaricare nulla.",
++  },
++  {
++    q: "Come vengono protette le foto dei bambini?",
++    a: "Ogni foto e documento viene cifrato con AES-256-GCM prima di essere salvato. Le immagini sono visibili solo agli utenti autorizzati della scuola e non vengono mai pubblicate né vendute a terzi.",
++  },
++  {
++    q: "Tiptii è conforme al GDPR?",
++    a: "Sì. I dati sono trattati secondo il Regolamento UE 2016/679: ogni scuola resta titolare dei dati dei propri iscritti, mentre Eligesoft agisce come responsabile del trattamento. Le famiglie possono chiedere in ogni momento accesso, rettifica o cancellazione.",
++  },
++  {
++    q: "Per quali scuole è adatta?",
++    a: "Per asili nido, micronidi, sezioni primavera e scuole dell'infanzia, pubbliche e private, anche con più sedi e più sezioni. Una piattaforma, tante scuole: ognuna vede solo i propri dati.",
++  },
++  {
++    q: "Come si iscrive un bambino?",
++    a: "Ogni scuola ha un modulo di iscrizione online: il genitore lo compila dal telefono e la segreteria riceve la richiesta direttamente nel pannello, pronta da approvare.",
++  },
++  {
++    q: "Come posso attivare Tiptii nella mia scuola?",
++    a: `Scrivici a ${COMPANY.email}: ti mostriamo la piattaforma in una breve demo e attiviamo la tua scuola, con assistenza in italiano.`,
++  },
++];
+ 
+ export default function Landing() {
+   return (
+@@ -22,7 +58,8 @@ export default function Landing() {
+             <a href="#famiglie" className="hover:text-brand-hover">Per le famiglie</a>
+             <a href="#maestre" className="hover:text-brand-hover">Per le maestre</a>
+             <a href="#direzione" className="hover:text-brand-hover">Per la direzione</a>
+-            <a href="#privacy" className="hover:text-brand-hover">Privacy</a>
++            <a href="#faq" className="hover:text-brand-hover">Domande frequenti</a>
++            <a href="#chi-siamo" className="hover:text-brand-hover">Chi siamo</a>
+           </nav>
+           <div className="flex items-center gap-2">
+             <Link to="/iscrizione" className="hidden sm:inline-flex h-10 px-4 rounded-2xl bg-white border border-stone-200 hover:bg-stone-50 text-stone-800 text-sm font-semibold items-center gap-1.5" data-testid="landing-enrollment-link">
+@@ -52,8 +89,8 @@ export default function Landing() {
+               <span className="text-brand">cresciamo insieme.</span>
+             </h1>
+             <p className="mt-6 max-w-xl text-stone-600 text-lg leading-relaxed">
+-              Tiptii è la piattaforma dolce per nido e scuola dell'infanzia 0–5 anni.
+-              Maestre, bambini e famiglie connessi ogni giorno, su un'app pensata per il telefono che hai in tasca.
++              Tiptii è l'app per asilo nido e scuola dell'infanzia 0–6 anni: diario giornaliero, presenze,
++              mensa e comunicazioni scuola-famiglia in un unico posto. Maestre, bambini e famiglie connessi ogni giorno, dal telefono che hai in tasca.
+             </p>
+             <div className="mt-8 flex flex-wrap items-center gap-3">
+               <Link to="/login" className="h-14 px-7 rounded-2xl bg-brand hover:bg-brand-hover text-white text-base font-bold flex items-center gap-2 shadow-lg shadow-brand/20">
+@@ -70,7 +107,7 @@ export default function Landing() {
+             <div className="mt-10 flex flex-wrap items-center gap-6 text-xs text-stone-500">
+               <TrustItem icon={<ShieldCheck className="h-4 w-4" />} label="Foto cifrate AES-256" />
+               <TrustItem icon={<Globe className="h-4 w-4" />} label="100% italiano" />
+-              <TrustItem icon={<Smartphone className="h-4 w-4" />} label="PWA installabile" />
++              <TrustItem icon={<Smartphone className="h-4 w-4" />} label="Pensata per smartphone" />
+             </div>
+           </motion.div>
+         </div>
+@@ -108,7 +145,7 @@ export default function Landing() {
+             { icon: <BookOpen />,     text: "Diario a colori: compila in 10 secondi, auto-fill intelligente" },
+             { icon: <Users />,        text: "Presenze a sezione multipla, barcode e tesserini stampabili" },
+             { icon: <FileText />,     text: "Piano didattico settimanale esportabile in PDF" },
+-            { icon: <Bell />,         text: "Notifiche push alle famiglie quando il report è pronto" },
++            { icon: <Bell />,         text: "Comunicazioni e news alle famiglie in un unico canale" },
+           ]} />
+ 
+           <PillarCard id="direzione" accent="bg-stone-800" title="Per la direzione" icon={<LineChart className="h-5 w-5" />} items={[
+@@ -143,21 +180,84 @@ export default function Landing() {
+                 <p className="text-xs uppercase tracking-wider font-bold text-white/70">Privacy & Sicurezza</p>
+                 <h3 className="font-display text-3xl md:text-4xl font-bold mt-1">Le foto dei bambini valgono di più di un codice.</h3>
+                 <p className="mt-3 text-white/85 max-w-2xl leading-relaxed">
+-                  Ogni foto e documento è cifrato <b className="text-white">AES-256-GCM</b> prima di essere salvato nel database. Nessun accesso diretto, nessun bucket pubblico, nessuna condivisione con terze parti.
++                  Ogni foto e documento è cifrato <b className="text-white">AES-256-GCM</b> prima di essere salvato nel database. Nessun accesso diretto, nessun archivio pubblico, nessuna vendita o uso pubblicitario dei dati.
+                   Ricostruiamo l'immagine solo quando serve ed esclusivamente a chi è autorizzato.
+                 </p>
+                 <ul className="mt-5 grid sm:grid-cols-2 gap-2 text-sm">
+                   <PrivacyItem>Isolamento multi-tenant: ogni scuola vede solo i propri dati</PrivacyItem>
+                   <PrivacyItem>Login con JWT + password hash bcrypt</PrivacyItem>
+                   <PrivacyItem>Codici fiscali validati e cittadinanza italiana</PrivacyItem>
+-                  <PrivacyItem>Backup giornalieri e cancellazione a richiesta</PrivacyItem>
++                  <PrivacyItem>Accesso, rettifica e cancellazione dei dati a richiesta</PrivacyItem>
+                 </ul>
++                <Link to="/privacy" className="mt-6 inline-flex items-center gap-2 h-11 px-5 rounded-2xl bg-white text-brand font-bold text-sm hover:bg-white/90">
++                  Leggi la privacy policy <ArrowRight className="h-4 w-4" />
++                </Link>
+               </div>
+             </div>
+           </div>
+         </div>
+       </section>
+ 
++      {/* -------------------------------- CHI SIAMO --------------------------- */}
++      <section id="chi-siamo" className="py-16">
++        <div className="max-w-6xl mx-auto px-5 grid lg:grid-cols-5 gap-8 items-start">
++          <div className="lg:col-span-3">
++            <SectionHeading
++              eyebrow="Chi siamo"
++              title={`${SITE.productName} è un progetto ${COMPANY.legalName}`}
++            />
++            <div className="mt-4 space-y-4 text-stone-600 leading-relaxed">
++              <p>
++                {COMPANY.name} è una software house italiana che progetta e sviluppa applicazioni web e gestionali su misura.
++                Con {SITE.productName} portiamo la stessa cura nel mondo 0–6: uno strumento semplice per le educatrici,
++                completo per la direzione e rassicurante per le famiglie.
++              </p>
++              <p>
++                Sviluppiamo, ospitiamo e manteniamo la piattaforma direttamente, con assistenza in italiano e
++                aggiornamenti continui costruiti sulle richieste delle scuole che la usano ogni giorno.
++              </p>
++            </div>
++          </div>
++          <div className="lg:col-span-2 grid gap-3">
++            <AboutItem icon={<Code2 className="h-5 w-5" />} title="Sviluppo interno" text="Progettiamo e scriviamo il software in Italia, senza intermediari." />
++            <AboutItem icon={<Headphones className="h-5 w-5" />} title="Assistenza dedicata" text={`Una persona reale risponde a ${COMPANY.email}.`} />
++            <AboutItem icon={<ShieldCheck className="h-5 w-5" />} title="Privacy by design" text="Dati cifrati, ruoli separati e conformità al GDPR fin dal primo giorno." />
++          </div>
++        </div>
++      </section>
++
++      {/* ----------------------------------- FAQ ------------------------------ */}
++      <section id="faq" className="py-16">
++        <div className="max-w-3xl mx-auto px-5">
++          <SectionHeading eyebrow="Domande frequenti" title="Tutto quello che vuoi sapere su Tiptii" />
++          <div className="mt-8 space-y-3">
++            {FAQS.map((f) => (
++              <details key={f.q} className="group rounded-2xl bg-white border border-stone-200 p-5 shadow-sm">
++                <summary className="flex items-center justify-between gap-4 cursor-pointer list-none font-display font-bold text-stone-800">
++                  <h3 className="text-base md:text-lg">{f.q}</h3>
++                  <ChevronDown className="h-5 w-5 text-brand shrink-0 transition-transform group-open:rotate-180" />
++                </summary>
++                <p className="mt-3 text-stone-600 leading-relaxed">{f.a}</p>
++              </details>
++            ))}
++          </div>
++        </div>
++        <script
++          type="application/ld+json"
++          dangerouslySetInnerHTML={{
++            __html: JSON.stringify({
++              "@context": "https://schema.org",
++              "@type": "FAQPage",
++              mainEntity: FAQS.map((f) => ({
++                "@type": "Question",
++                name: f.q,
++                acceptedAnswer: { "@type": "Answer", text: f.a },
++              })),
++            }),
++          }}
++        />
++      </section>
++
+       {/* ----------------------------- CTA FINALE ----------------------------- */}
+       <section className="py-20">
+         <div className="max-w-3xl mx-auto px-5 text-center">
+@@ -166,35 +266,81 @@ export default function Landing() {
+             Pronti a cambiare passo?
+           </h2>
+           <p className="mt-4 text-stone-600 text-lg">
+-            Attiva la tua scuola in meno di 10 minuti. Nessuna carta richiesta, 30 giorni di trial gratuito.
++            Scrivici per una demo: attiviamo la tua scuola in pochi minuti e ti accompagniamo nei primi giorni.
+           </p>
+           <div className="mt-7 flex flex-wrap justify-center gap-3">
+             <Link to="/login" className="h-14 px-8 rounded-2xl bg-brand hover:bg-brand-hover text-white font-bold shadow-lg shadow-brand/20 flex items-center gap-2">
+               Accedi al pannello <ArrowRight className="h-5 w-5" />
+             </Link>
+-            <a href="mailto:ciao@tiptii.app" className="h-14 px-8 rounded-2xl bg-white border border-stone-200 hover:bg-stone-50 font-semibold flex items-center">
+-              Parliamone — ciao@tiptii.app
++            <a href={`mailto:${COMPANY.email}?subject=Richiesta%20demo%20Tiptii`} className="h-14 px-8 rounded-2xl bg-white border border-stone-200 hover:bg-stone-50 font-semibold flex items-center">
++              Richiedi una demo — {COMPANY.email}
+             </a>
+           </div>
+         </div>
+       </section>
+ 
+       {/* ------------------------------- FOOTER ------------------------------- */}
+-      <footer className="border-t border-stone-200 bg-white/60">
+-        <div className="max-w-6xl mx-auto px-5 py-10 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-stone-500">
+-          <div className="flex items-center gap-2">
++      <SiteFooter />
++    </div>
++  );
++}
++
++/* ------------------------------- Footer ---------------------------------- */
++export function SiteFooter() {
++  return (
++    <footer className="border-t border-stone-200 bg-white/60">
++      <div className="max-w-6xl mx-auto px-5 py-10 grid gap-8 md:grid-cols-3 text-sm text-stone-500">
++        <div>
++          <Link to="/" className="flex items-center gap-2">
+             <TiptiiBadge size={28} />
+             <span className="font-display font-bold text-stone-800">tiptii</span>
+-            <span className="hidden sm:inline">— un passo dopo l'altro.</span>
+-          </div>
+-          <p>© {new Date().getFullYear()} Tiptii. Realizzata con cura in Italia.</p>
++          </Link>
++          <p className="mt-3 leading-relaxed">{SITE.tagline}. Un passo dopo l'altro, cresciamo insieme.</p>
+         </div>
+-      </footer>
+-    </div>
++        <div>
++          <p className="font-display font-bold text-stone-800 flex items-center gap-2">
++            <Building2 className="h-4 w-4 text-brand" /> {COMPANY.legalName}
++          </p>
++          <address className="mt-3 not-italic leading-relaxed">
++            {fullAddress()}<br />
++            P.IVA {COMPANY.vat}<br />
++            <a href={`mailto:${COMPANY.email}`} className="hover:text-brand-hover">{COMPANY.email}</a>
++            {" · "}
++            <a href={COMPANY.website} target="_blank" rel="noreferrer" className="hover:text-brand-hover">{COMPANY.website.replace(/^https?:\/\/(www\.)?/, "")}</a>
++          </address>
++        </div>
++        <div>
++          <p className="font-display font-bold text-stone-800">Link utili</p>
++          <ul className="mt-3 space-y-1.5">
++            <li><Link to="/privacy" className="hover:text-brand-hover">Privacy policy</Link></li>
++            <li><Link to="/privacy#cookie" className="hover:text-brand-hover">Cookie</Link></li>
++            <li><Link to="/iscrizione" className="hover:text-brand-hover">Iscrizione online</Link></li>
++            <li><Link to="/login" className="hover:text-brand-hover">Accedi</Link></li>
++          </ul>
++        </div>
++      </div>
++      <div className="border-t border-stone-200">
++        <p className="max-w-6xl mx-auto px-5 py-4 text-xs text-stone-400">
++          © {new Date().getFullYear()} {COMPANY.legalName} — Tutti i diritti riservati. Realizzata con cura in Italia.
++        </p>
++      </div>
++    </footer>
+   );
+ }
+ 
+ /* ------------------------------- Primitives ----------------------------- */
++function AboutItem({ icon, title, text }) {
++  return (
++    <div className="rounded-2xl bg-white border border-stone-200 p-5 shadow-sm flex items-start gap-3">
++      <span className="h-10 w-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center shrink-0">{icon}</span>
++      <div>
++        <p className="font-display font-bold text-stone-800">{title}</p>
++        <p className="text-sm text-stone-600 mt-0.5">{text}</p>
++      </div>
++    </div>
++  );
++}
++
+ function SectionHeading({ eyebrow, title, sub }) {
+   return (
+     <div className="max-w-3xl">
+diff --git a/frontend/src/pages/Privacy.jsx b/frontend/src/pages/Privacy.jsx
+new file mode 100644
+index 0000000..95c1ce4
+--- /dev/null
++++ b/frontend/src/pages/Privacy.jsx
+@@ -0,0 +1,223 @@
++import { useEffect } from "react";
++import { Link, useLocation } from "react-router-dom";
++import { ArrowLeft, ShieldCheck } from "lucide-react";
++import { TiptiiBadge } from "@/components/TiptiiLogo";
++import { SiteFooter } from "@/pages/Landing";
++import { SITE, COMPANY, PRIVACY_LAST_UPDATE, fullAddress } from "@/config/site";
++
++const SECTIONS = [
++  ["titolare", "1. Chi tratta i dati"],
++  ["dati", "2. Quali dati trattiamo"],
++  ["finalita", "3. Finalità e basi giuridiche"],
++  ["minori", "4. Dati dei minori e dati sulla salute"],
++  ["fornitori", "5. Fornitori e destinatari"],
++  ["estero", "6. Trasferimenti fuori dall'UE"],
++  ["sicurezza", "7. Sicurezza"],
++  ["conservazione", "8. Per quanto tempo conserviamo i dati"],
++  ["diritti", "9. I tuoi diritti"],
++  ["cookie", "10. Cookie e archiviazione locale"],
++  ["modifiche", "11. Modifiche a questa informativa"],
++];
++
++export default function Privacy() {
++  const { hash } = useLocation();
++
++  useEffect(() => {
++    const prev = document.title;
++    document.title = `Privacy policy — ${SITE.productName} | ${COMPANY.legalName}`;
++    return () => { document.title = prev; };
++  }, []);
++
++  useEffect(() => {
++    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
++    else window.scrollTo(0, 0);
++  }, [hash]);
++
++  return (
++    <div className="min-h-screen bg-[#F7F5F0] text-stone-800">
++      <header className="sticky top-0 z-50 glass">
++        <div className="max-w-4xl mx-auto px-5 h-16 flex items-center justify-between">
++          <Link to="/" className="flex items-center gap-2">
++            <TiptiiBadge size={34} />
++            <span className="font-display font-bold text-lg text-stone-800">tiptii</span>
++          </Link>
++          <Link to="/" className="text-sm font-semibold text-stone-600 hover:text-brand-hover flex items-center gap-1.5">
++            <ArrowLeft className="h-4 w-4" /> Torna alla home
++          </Link>
++        </div>
++      </header>
++
++      <main className="max-w-4xl mx-auto px-5 py-12">
++        <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand">
++          <ShieldCheck className="h-4 w-4" /> Informativa ai sensi degli artt. 13 e 14 del Regolamento UE 2016/679 (GDPR)
++        </span>
++        <h1 className="mt-2 font-display text-4xl md:text-5xl font-extrabold tracking-tight">Privacy policy</h1>
++        <p className="mt-3 text-stone-500 text-sm">Ultimo aggiornamento: {PRIVACY_LAST_UPDATE}</p>
++
++        <p className="mt-6 text-stone-600 leading-relaxed">
++          Questa informativa spiega come vengono trattati i dati personali di chi visita il sito {SITE.url.replace("https://", "")} e di chi
++          utilizza la piattaforma {SITE.productName}: direzioni scolastiche, educatrici e maestre, genitori e bambini iscritti alle scuole
++          che adottano il servizio.
++        </p>
++
++        <nav className="mt-8 rounded-2xl bg-white border border-stone-200 p-5">
++          <p className="font-display font-bold text-sm">Indice</p>
++          <ol className="mt-2 grid sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
++            {SECTIONS.map(([id, label]) => (
++              <li key={id}><a href={`#${id}`} className="text-stone-600 hover:text-brand-hover">{label}</a></li>
++            ))}
++          </ol>
++        </nav>
++
++        <article className="mt-10 space-y-10 text-stone-700 leading-relaxed [&_h2]:font-display [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-stone-800 [&_h2]:scroll-mt-24 [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-1.5 [&_a]:text-brand [&_a]:underline">
++          <section>
++            <h2 id="titolare">1. Chi tratta i dati</h2>
++            <p>
++              <b>{COMPANY.legalName}</b>, con sede in {fullAddress()}, P.IVA {COMPANY.vat}, email{" "}
++              <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>, PEC {COMPANY.pec}, sviluppa e gestisce la piattaforma {SITE.productName}.
++              Il ruolo di {COMPANY.name} cambia a seconda dei dati:
++            </p>
++            <ul>
++              <li>
++                <b>Titolare del trattamento</b> per i dati di chi visita il sito, chiede una demo o informazioni, e per i dati dei
++                referenti delle scuole clienti necessari a gestire il contratto.
++              </li>
++              <li>
++                <b>Responsabile del trattamento</b> (art. 28 GDPR) per i dati che le scuole inseriscono in {SITE.productName}: bambini,
++                genitori, personale. In questo caso il <b>titolare è la scuola</b>, che decide quali dati raccogliere e per quali scopi.{" "}
++                {COMPANY.name} li tratta solo secondo le istruzioni della scuola e sulla base di un accordo di nomina a responsabile.
++              </li>
++            </ul>
++            <p>
++              Se sei un genitore o un dipendente di una scuola, per le richieste sui tuoi dati puoi rivolgerti direttamente alla scuola;
++              {" "}{COMPANY.name} la supporterà nel rispondere.
++              {COMPANY.dpoEmail && <> Il Responsabile della Protezione dei Dati (DPO) è contattabile a <a href={`mailto:${COMPANY.dpoEmail}`}>{COMPANY.dpoEmail}</a>.</>}
++            </p>
++          </section>
++
++          <section>
++            <h2 id="dati">2. Quali dati trattiamo</h2>
++            <ul>
++              <li><b>Visitatori del sito:</b> dati tecnici di navigazione (indirizzo IP, tipo di browser, data e ora di accesso) registrati automaticamente dai server.</li>
++              <li><b>Richieste di contatto o demo:</b> nome, email, nome della scuola e contenuto del messaggio.</li>
++              <li><b>Account utente</b> (direzione, maestre, genitori): nome, cognome, email, ruolo, password conservata solo in forma cifrata (hash bcrypt), data e ora degli accessi.</li>
++              <li><b>Anagrafiche inserite dalla scuola:</b> dati di bambini e genitori, inclusi codice fiscale, data e luogo di nascita, residenza, recapiti, sezione frequentata.</li>
++              <li><b>Vita scolastica:</b> presenze, diario giornaliero (pasti, riposo, igiene, attività), comunicazioni, eventi, piani didattici.</li>
++              <li><b>Foto e documenti</b> caricati dalla scuola, salvati in forma cifrata.</li>
++              <li><b>Informazioni sulla salute</b> eventualmente indicate dalla scuola, come allergie o intolleranze alimentari.</li>
++            </ul>
++          </section>
++
++          <section>
++            <h2 id="finalita">3. Finalità e basi giuridiche</h2>
++            <ul>
++              <li><b>Erogare il servizio {SITE.productName}</b> alle scuole e ai loro utenti — esecuzione del contratto con la scuola (art. 6.1.b) e, per i dati degli iscritti, le basi giuridiche individuate dalla scuola titolare.</li>
++              <li><b>Rispondere a richieste di informazioni o demo</b> — misure precontrattuali su richiesta dell'interessato (art. 6.1.b).</li>
++              <li><b>Inviare email di servizio</b> (inviti, reimpostazione password, avvisi) — esecuzione del contratto (art. 6.1.b).</li>
++              <li><b>Sicurezza della piattaforma</b> e prevenzione degli abusi, ad esempio il blocco dopo tentativi di accesso falliti — legittimo interesse (art. 6.1.f).</li>
++              <li><b>Adempimenti fiscali e amministrativi</b> verso le scuole clienti — obbligo di legge (art. 6.1.c).</li>
++            </ul>
++            <p>Non vendiamo i dati, non li usiamo per pubblicità e non facciamo profilazione commerciale degli utenti.</p>
++          </section>
++
++          <section>
++            <h2 id="minori">4. Dati dei minori e dati sulla salute</h2>
++            <p>
++              {SITE.productName} tratta dati di bambini in età prescolare. Questi dati sono inseriti esclusivamente dalla scuola, sono
++              visibili solo al personale autorizzato e ai genitori collegati a quel bambino, e non sono mai resi pubblici.
++            </p>
++            <p>
++              Le informazioni su allergie e intolleranze rientrano tra le categorie particolari di dati (art. 9 GDPR). Vengono trattate solo
++              se la scuola le ritiene necessarie per la tutela della salute del bambino, ad esempio per la preparazione dei pasti, e
++              sulla base giuridica individuata dalla scuola titolare.
++            </p>
++          </section>
++
++          <section>
++            <h2 id="fornitori">5. Fornitori e destinatari</h2>
++            <p>I dati sono accessibili al personale autorizzato di {COMPANY.name} e ai seguenti fornitori, nominati responsabili del trattamento, solo nella misura necessaria al servizio:</p>
++            <ul>
++              <li><b>Railway Corporation</b> (USA) — hosting del server applicativo e del database.</li>
++              <li><b>Vercel Inc.</b> (USA) — hosting e distribuzione delle pagine del sito.</li>
++              <li><b>Brevo / Sendinblue SAS</b> (Francia) — invio delle email di servizio.</li>
++              <li><b>Google LLC</b> (USA) — fornitura dei caratteri tipografici del sito (Google Fonts), che comporta la trasmissione dell'indirizzo IP.</li>
++              <li>
++                <b>Fornitore di intelligenza artificiale</b> (OpenAI, tramite la piattaforma Emergent) — solo se la scuola attiva la funzione
++                di report giornaliero automatico: il testo del diario della giornata viene elaborato per generare un riassunto per la famiglia.
++              </li>
++            </ul>
++            <p>I dati possono inoltre essere comunicati alle autorità quando richiesto dalla legge.</p>
++          </section>
++
++          <section>
++            <h2 id="estero">6. Trasferimenti fuori dall'Unione Europea</h2>
++            <p>
++              Alcuni fornitori hanno sede negli Stati Uniti. In questi casi il trasferimento avviene sulla base dell'adesione del fornitore
++              all'EU-US Data Privacy Framework oppure delle Clausole Contrattuali Standard approvate dalla Commissione Europea (art. 46 GDPR),
++              con misure di sicurezza aggiuntive. Puoi chiedere copia delle garanzie adottate scrivendo a <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>.
++            </p>
++          </section>
++
++          <section>
++            <h2 id="sicurezza">7. Sicurezza</h2>
++            <ul>
++              <li>Foto e documenti cifrati con AES-256-GCM prima del salvataggio.</li>
++              <li>Connessioni protette con HTTPS.</li>
++              <li>Password conservate solo come hash bcrypt, mai in chiaro.</li>
++              <li>Separazione dei dati tra scuole diverse e accessi limitati in base al ruolo (direzione, maestra, genitore).</li>
++              <li>Limitazione dei tentativi di accesso per prevenire attacchi.</li>
++            </ul>
++          </section>
++
++          <section>
++            <h2 id="conservazione">8. Per quanto tempo conserviamo i dati</h2>
++            <ul>
++              <li><b>Dati inseriti dalla scuola:</b> per la durata del contratto con la scuola. Alla cessazione vengono restituiti alla scuola su richiesta e poi cancellati entro 90 giorni, salvo diverse istruzioni della scuola o obblighi di legge.</li>
++              <li><b>Account utente:</b> fino alla disattivazione da parte della scuola o su richiesta dell'interessato.</li>
++              <li><b>Richieste di contatto:</b> fino a 24 mesi dall'ultimo contatto, se non segue un contratto.</li>
++              <li><b>Dati tecnici e di sicurezza</b> (log di accesso): fino a 12 mesi.</li>
++              <li><b>Documenti amministrativi e fiscali:</b> 10 anni, come previsto dalla legge.</li>
++            </ul>
++          </section>
++
++          <section>
++            <h2 id="diritti">9. I tuoi diritti</h2>
++            <p>In ogni momento puoi chiedere:</p>
++            <ul>
++              <li>l'accesso ai tuoi dati e una copia degli stessi;</li>
++              <li>la rettifica dei dati inesatti o l'integrazione di quelli incompleti;</li>
++              <li>la cancellazione dei dati o la limitazione del trattamento;</li>
++              <li>la portabilità dei dati in un formato leggibile;</li>
++              <li>di opporti ai trattamenti basati sul legittimo interesse.</li>
++            </ul>
++            <p>
++              Scrivi a <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a> oppure, per i dati gestiti dalla scuola, direttamente alla
++              scuola. Rispondiamo entro 30 giorni. Hai anche il diritto di proporre reclamo al{" "}
++              <a href="https://www.garanteprivacy.it" target="_blank" rel="noreferrer">Garante per la protezione dei dati personali</a>.
++            </p>
++          </section>
++
++          <section>
++            <h2 id="cookie">10. Cookie e archiviazione locale</h2>
++            <p>
++              {SITE.productName} non usa cookie di profilazione né strumenti di tracciamento pubblicitario o statistico. Dopo l'accesso, il
++              browser conserva un token tecnico di autenticazione (nella memoria locale del browser) che serve solo a mantenerti
++              collegato: è strettamente necessario al funzionamento del servizio e non richiede consenso. Viene eliminato quando esci
++              dall'account.
++            </p>
++          </section>
++
++          <section>
++            <h2 id="modifiche">11. Modifiche a questa informativa</h2>
++            <p>
++              Possiamo aggiornare questa informativa per adeguarla a novità normative o a cambiamenti del servizio. La data dell'ultimo
++              aggiornamento è indicata in cima alla pagina; in caso di modifiche rilevanti avviseremo le scuole clienti.
++            </p>
++          </section>
++        </article>
++      </main>
++
++      <SiteFooter />
++    </div>
++  );
++}
+-- 
+2.43.0
+

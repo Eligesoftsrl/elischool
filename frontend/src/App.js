@@ -7,6 +7,7 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import SetupPassword from "@/pages/SetupPassword";
 import Landing from "@/pages/Landing";
+import Privacy from "@/pages/Privacy";
 
 import StaffLayout from "@/layouts/StaffLayout";
 import StaffDashboard from "@/pages/staff/Dashboard";
@@ -84,11 +85,12 @@ function App() {
         />
         <Routes>
           <Route path="/" element={<HomeRedirect />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/setup-password/:token" element={<SetupPassword />} />
-          <Route path="/iscrizione" element={<PublicEnrollment />} />
+          <Route path="/iscrizione" element={<Navigate to="/" replace />} />
           <Route path="/iscrizione/:slug" element={<PublicEnrollment />} />
 
           {/* SUPER ADMIN */}
