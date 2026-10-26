@@ -2557,8 +2557,6 @@ async def sa_patch_tenant(tid: str, payload: TenantPatchIn, user=Depends(require
 
 @api.delete("/superadmin/tenants/{tid}")
 async def sa_delete_tenant(tid: str, user=Depends(require_superadmin)):
-    if tid == DEFAULT_TENANT_ID:
-        raise HTTPException(400, "Impossibile eliminare il tenant demo")
     t = await raw_db.tenants.find_one({"id": tid}, {"_id": 0})
     if not t:
         raise HTTPException(404, "Scuola non trovata")
@@ -2648,9 +2646,11 @@ async def seed():
     await raw_db.login_attempts.create_index("identifier", unique=True)
 
     # ---------------- Multi-tenant bootstrap & migration ----------------
+    # Demo school is created only when SEED_DEMO=true
+    seed_demo = os.environ.get("SEED_DEMO", "").lower() == "true"
     # 1) Create default tenant (the existing "Scuola Demo")
     default_tenant = await raw_db.tenants.find_one({"id": DEFAULT_TENANT_ID})
-    if not default_tenant:
+    if seed_demo and not default_tenant:
         # Try to inherit name/logo from legacy school_profile (singleton)
         legacy_profile = await raw_db.school_profile.find_one({}, {"_id": 0}) or {}
         await raw_db.tenants.insert_one({
@@ -2672,7 +2672,7 @@ async def seed():
 
     # 2) Migrate ALL existing documents in scoped collections: assign DEFAULT_TENANT_ID if missing
     from tenant_db import SCOPED_COLLECTIONS as _SC
-    for coll_name in _SC:
+    for coll_name in (_SC if seed_demo else ()):
         res = await raw_db[coll_name].update_many(
             {"tenant_id": {"$exists": False}},
             {"$set": {"tenant_id": DEFAULT_TENANT_ID}}
@@ -2681,7 +2681,7 @@ async def seed():
             logger.info(f"Migrated {res.modified_count} docs in '{coll_name}' to tenant {DEFAULT_TENANT_ID}")
 
     # 3) Seed superadmin (no tenant_id, role=superadmin)
-    superadmin_email = os.environ.get("SUPERADMIN_EMAIL", "superadmin@nido.app")
+    superadmin_email = os.environ.get("SUPERADMIN_EMAIL", "admin@tiptii.com")
     superadmin_password = os.environ.get("SUPERADMIN_PASSWORD", "SuperAdmin2026!")
     sa_existing = await raw_db.users.find_one({"email": superadmin_email})
     if not sa_existing:
@@ -2706,6 +2706,9 @@ async def seed():
                 {"$set": {"password_hash": hash_password(superadmin_password), "role": "superadmin", "tenant_id": None, "status": "active"}}
             )
             logger.info(f"Superadmin password synced for {superadmin_email}")
+
+    if not seed_demo:
+        return
 
     # 4) Set tenant context for the rest of the seed (so SmartDB auto-scopes inserts)
     set_current_tenant(DEFAULT_TENANT_ID)
