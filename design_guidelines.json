@@ -1,138 +1,197 @@
 {
-  "project_name": "Kindergarten Management PWA",
-  "theme": "Light",
-  "archetype": "3 (Pastel & Soft) - Customized for 'Soft Utility'",
-  "design_philosophy": "A mobile-first, premium experience combining the clean efficiency of tools like Notion with the warm, joyful undertones required for a kindergarten app. It uses generous spacing, large touch targets, tactile surfaces, and a soft but highly legible color palette. Avoid childish clichés; rely on emotional imagery and soft geometry instead.",
+  "project_name": "Tiptii - Asilo Nido e Scuola dell'Infanzia SaaS Landing & Cookie Consent",
+  "app_type": "marketing_landing_page",
+  "locale": "it-IT",
+  "theme": "Light theme (Warm Cream #F6F5F0 + Salvia #2F7D6D + Pastel Accents)",
+  "design_philosophy": "UX/UI 2026 - Organic Precision & Tactile Delight. Fusion of Archetype 1 (Organic & Earthy) and Archetype 3 (Soft Pastel & Playful) with modern 2026 glassmorphism, micro-interactions, scroll-driven staggered reveals, and interactive live previews.",
+
   "typography": {
-    "strategy": "Soft Utility pairing. A modern, geometric but friendly sans-serif for headings to evoke approachability, paired with a highly legible, clean sans-serif for dense data reading.",
     "fonts": {
-      "headings": "Outfit",
-      "body": "Manrope"
+      "display": "Outfit, sans-serif (Rounded, friendly, confident for H1-H3)",
+      "body": "Manrope, system-ui, sans-serif (Clean, readable, geometric for body & UI)",
+      "fallback": "Inter, sans-serif"
     },
-    "hierarchy": {
-      "h1": "text-4xl tracking-tight font-bold text-stone-900",
-      "h2": "text-2xl tracking-tight font-semibold text-stone-900",
-      "h3": "text-xl font-semibold text-stone-900",
-      "h4": "text-lg font-medium text-stone-800",
-      "body": "text-base font-normal leading-relaxed text-stone-700",
-      "small": "text-sm font-medium text-stone-500",
-      "overline": "text-xs font-bold uppercase tracking-wider text-stone-400"
-    }
+    "scale": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight leading-snug",
+      "h3": "text-xl sm:text-2xl font-bold tracking-tight",
+      "h4": "text-lg sm:text-xl font-semibold",
+      "body_large": "text-lg sm:text-xl text-stone-600 leading-relaxed font-normal",
+      "body": "text-base text-stone-700 leading-relaxed",
+      "small": "text-xs sm:text-sm font-medium tracking-wide"
+    },
+    "rules": [
+      "Headings MUST use tight tracking (tracking-tight or tracking-tighter).",
+      "Labels/Badges MUST use uppercase + tracking-wider (tracking-[0.15em] or tracking-widest).",
+      "Never exceed text-6xl for main H1. Maintain 1.2-1.5x scale hierarchy between H1, H2, and H3.",
+      "All text contrast against backgrounds MUST strictly satisfy WCAG AA (4.5:1 min) or APCA standards."
+    ]
   },
+
   "colors": {
-    "background": {
-      "base": "#FDFBF7",
-      "surface": "#FFFFFF",
-      "elevated": "#FFFFFF"
+    "palette": {
+      "brand_primary": "#2F7D6D",
+      "brand_hover": "#276A5C",
+      "brand_pressed": "#1F5549",
+      "brand_light": "#E3F0EC",
+      "accent_apricot": "#F2A65A",
+      "accent_apricot_dark": "#D88B40",
+      "butter_yellow": "#FBEBA8",
+      "peach": "#FCE3C7",
+      "soft_lavender": "#DCD6F5",
+      "sky_blue": "#D3E8F6",
+      "mint_green": "#D5EDE5",
+      "bg_base": "#F6F5F0",
+      "bg_card": "#FFFFFF",
+      "text_primary": "#2B2F33",
+      "text_secondary": "#5E6469",
+      "text_muted": "#8A8F93",
+      "border_subtle": "#E2DED6"
     },
-    "text": {
-      "primary": "#1C1917",
-      "secondary": "#57534E",
-      "muted": "#A8A29E"
-    },
-    "brand": {
-      "primary": "#FF8C6B",
-      "primary_hover": "#FF7A54",
-      "primary_light": "#FFF3EF"
-    },
-    "accents_for_activities": {
-      "didattica": "#FDE68A",
-      "motoria": "#FFB38A",
-      "pranzo_merenda": "#A7D7C5",
-      "riposo": "#A2D2FF",
-      "bagno": "#D8B4E2"
-    },
-    "borders": {
-      "subtle": "#E7E5E4",
-      "focus": "#FF8C6B"
-    }
+    "rules": [
+      "Primary brand color #2F7D6D (Salvia) is reserved for main actions, active states, and brand anchors.",
+      "Accent Apricot #F2A65A is used for high-delight micro-highlights and energetic tags with dark text.",
+      "Never use pure #000000; use warm slate #2B2F33 for body and headers.",
+      "Cards have soft 1px solid border #E2DED6 with subtle shadow drop."
+    ]
   },
-  "spacing_and_layout": {
-    "system": "Tailwind standard, but shifted one step up for generosity (e.g., use p-6 instead of p-4 for cards).",
-    "touch_targets": "CRITICAL: All interactive elements (buttons, chips, list items) MUST have a minimum height of 48px to accommodate one-handed tablet/phone use.",
-    "grids": {
-      "staff_dashboard": "Bento layout (Control Room Grid). Dense but clear. grid-cols-2 md:grid-cols-4 gap-4.",
-      "parent_portal": "Vertical card stack with generous spacing (gap-6) to tell a timeline story."
-    },
-    "containers": "Max-width wrapper for the PWA on desktop/tablet to maintain mobile proportions (e.g., max-w-lg mx-auto for parent view, or full-width responsive grid for staff tablet view)."
+
+  "layout_and_grid": {
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "hero_layout": "Asymmetric 2-column on desktop (lg:grid-cols-12, col-span-7 text & interactive CTAs, col-span-5 floating playful interactive illustration card stack).",
+    "bento_grid": "Mode A Tetris Grid for Features: grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 with varied heights (col-span-1/2, row-span-1/2).",
+    "spacing_scale": "Generous spacing philosophy: py-16 md:py-24 lg:py-32 between major sections to let content breathe.",
+    "border_radius": "Rounded-3xl (24px) for cards, rounded-2xl (16px) for inner containers, rounded-full for badges and pill buttons."
   },
-  "surfaces": {
-    "cards": {
-      "style": "Neumorphic Tactile Base",
-      "classes": "bg-white border border-stone-200 rounded-3xl shadow-sm p-6",
-      "hover": "hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-    },
-    "inputs": {
-      "style": "Soft and thick",
-      "classes": "bg-stone-50 border border-stone-200 rounded-2xl p-4 text-base focus:ring-2 focus:ring-primary/20 focus:border-primary"
-    },
-    "bottom_sheet": {
-      "style": "Overlaid quick-entry drawers for activities",
-      "classes": "bg-white rounded-t-[2.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] p-6"
-    }
-  },
-  "navigation": {
-    "parent_portal": "Bottom Navigation Bar. Fixed to bottom, bg-white/80 backdrop-blur-xl border-t border-stone-100, featuring 4 icons (Home, Timeline, Menu, Gallery).",
-    "staff_portal": "Top Header (sticky, glassmorphism) + floating Action Button (FAB) or bottom sheet for quick class switching."
-  },
-  "components": {
-    "buttons": {
-      "primary": "bg-[#FF8C6B] text-white rounded-2xl font-semibold h-14 px-8 w-full shadow-sm active:scale-[0.98]",
-      "secondary": "bg-stone-100 text-stone-700 rounded-2xl font-semibold h-14 px-8 w-full hover:bg-stone-200 active:scale-[0.98]",
-      "icon_quick_action": "h-16 w-16 rounded-2xl flex flex-col items-center justify-center gap-1 bg-stone-50 border border-stone-100 active:bg-stone-100"
-    },
-    "chips": {
-      "style": "Horizontal scrollable list for selecting students or dates without leaving the view. h-10 px-4 rounded-full border border-stone-200 snap-center."
-    },
-    "ai_report_block": {
-      "style": "A premium 'Notion-like' callout block.",
-      "classes": "bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-3xl p-6 relative overflow-hidden",
-      "icon": "✨"
-    }
-  },
-  "motion": {
-    "library": "framer-motion",
-    "page_transitions": "Slide up and fade in (opacity: 0 -> 1, y: 10 -> 0) duration 0.3s ease-out.",
-    "list_stagger": "Children fade in with a 0.05s stagger. Important for rendering the timeline of daily activities or student lists.",
-    "micro_interactions": "Tap scale (0.98) on all buttons, activity quick-entry buttons, and student cards."
-  },
-  "media_and_assets": {
-    "icons": {
-      "library": "lucide-react",
-      "style": "Stroke width 2, rounded, soft."
-    },
-    "images": {
-      "empty_state": {
-        "url": "https://static.prod-images.emergentagent.com/jobs/96ad60f7-372f-4730-9be4-769e965e5107/images/ff88168c79f5a887e58508be26ea3e4f7ae859628398e0d781e9ee508232af3c.png",
-        "description": "Abstract minimalist wooden toy blocks, perfect for empty states like 'No activities logged yet' or 'No photos uploaded'. Render as rounded images or inside cards.",
-        "category": "empty_state"
-      },
-      "gallery_placeholders": [
-        {
-          "url": "https://images.unsplash.com/photo-1599376672737-bd66af54c8f5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwxfHxraW5kZXJnYXJ0ZW4lMjBraWRzJTIwcGxheWluZyUyMG91dGRvb3JzfGVufDB8fHx8MTc3ODg1Mjg4OHww&ixlib=rb-4.1.0&q=85",
-          "description": "Kids playing outdoors",
-          "category": "activity_photo"
-        },
-        {
-          "url": "https://images.unsplash.com/photo-1666710988451-ba4450498967?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzN8MHwxfHNlYXJjaHw0fHx0b2RkbGVyJTIwZmluZ2VyJTIwcGFpbnRpbmd8ZW58MHx8fHwxNzc4ODUyODg4fDA&ixlib=rb-4.1.0&q=85",
-          "description": "Toddler finger painting",
-          "category": "activity_photo"
-        }
+
+  "components_and_sections": {
+    "cookie_banner": {
+      "component_name": "CookieBanner.jsx",
+      "placement": "Floating bottom dock / toast bar with z-[100] fixed positioning.",
+      "behaviour": "Displays on first visit if no consent decision in localStorage ('tiptii_cookie_consent'). Dismisses instantly on Accept ('accepted') or Reject ('rejected').",
+      "requirements": [
+        "MUST have ONLY two buttons: 'Accetta tutti' and 'Rifiuta' (Solo Accetta e Rifiuta).",
+        "MUST include a link to privacy policy: '/privacy#cookie'.",
+        "Visual style: 2026 organic glassmorphism panel (backdrop-blur-xl bg-white/90 border border-brand-light/60 shadow-2xl rounded-3xl p-5 md:p-6).",
+        "Micro-illustrations / badge: includes Tiptii footprint badge icon and cookie/shield icon.",
+        "Must support keyboard navigation and include data-testid attributes."
       ]
+    },
+
+    "navigation_header": {
+      "component_name": "Navbar in Landing.jsx",
+      "style": "Sticky top-0 z-50 glassmorphism header (backdrop-blur-xl bg-white/80 border-b border-stone-200/60 transition-all duration-300).",
+      "elements": [
+        "Brand Logo (TiptiiLogo with footprint icon + wordmark).",
+        "Nav Links: 'Funzionalità' (#features), 'Per Chi' (#per-chi), 'Sicurezza' (#security), 'Chi siamo' (#chi-siamo), 'FAQ' (#faq).",
+        "CTA Button: 'Accedi' (Primary Salvia button linking to app login/dashboard)."
+      ]
+    },
+
+    "hero_section": {
+      "section_id": "hero",
+      "headline": "Un passo dopo l'altro, cresciamo insieme.",
+      "subtitle": "La piattaforma semplice, sicura e intuitiva per asili nido e scuole dell'infanzia (0–6 anni). Diario giornaliero, comunicazioni, foto cifrate e presenze in un unico posto.",
+      "visuals": [
+        "Interactive Animated Card Stack: Live interactive preview of Tiptii daily diary with tabs (Pappa 🍝, Nanna 😴, Attività 🎨, Igiene 🧼).",
+        "Colorful drawn illustrations and floating SVG footprint trail along scroll.",
+        "Trust Badges: 'Conforme GDPR 100%' • 'Crittografia AES-256' • 'Made in Italy'."
+      ],
+      "cta": [
+        "Primary CTA: 'Richiedi informazioni' / 'Contattaci' scrolling smoothly to contact form/CTA section.",
+        "Secondary CTA: 'Esplora le funzionalità' scrolling to #features."
+      ]
+    },
+
+    "features_bento": {
+      "section_id": "features",
+      "title": "Tutto ciò di cui la tua scuola ha bisogno",
+      "subtitle": "Progettato insieme alle educatrici per azzerare la burocrazia e connettere le famiglie.",
+      "cards": [
+        { "title": "Diario Giornaliero a Colori", "desc": "Pappa, nanna, attività e cambi in un tap. Aggiornamenti istantanei per i genitori.", "bg": "bg-cat-attivita/40" },
+        { "title": "Foto Cifrate & Sicure AES-256", "desc": "I ricordi dei bimbi protetti da crittografia end-to-end e consultabili solo dai genitori autorizzati.", "bg": "bg-brand-light/50" },
+        { "title": "Mensa & Menu Personalizzati", "desc": "Gestione allergie, intolleranze e menù del giorno con notifiche chiare.", "bg": "bg-cat-pappa/50" },
+        { "title": "Rilevazione Presenze & Orari", "desc": "Check-in e check-out veloci per entrate e uscite in totale controllo.", "bg": "bg-cat-presenze/50" },
+        { "title": "Comunicazioni & Bacheca", "desc": "Avvisi, circolari e conferme di lettura per non perdere nessun aggiornamento.", "bg": "bg-cat-igiene/50" },
+        { "title": "Calendario & Compleanni", "desc": "Eventi, gite e compleanni festeggiati insieme con promemoria automatici.", "bg": "bg-cat-nanna/40" }
+      ]
+    },
+
+    "target_audience_section": {
+      "section_id": "per-chi",
+      "title": "Pensato per chi vive la scuola ogni giorno",
+      "tabs": ["Scuole & Nidi", "Maestre & Educatrici", "Genitori & Famiglie"],
+      "interactive_element": "Dynamic tab switching with tailored benefits, illustrations, and quotes."
+    },
+
+    "security_and_privacy": {
+      "section_id": "security",
+      "title": "Sicurezza e Privacy senza compromessi",
+      "features": ["Crittografia AES-256", "Server Italiani ed Europei compliant GDPR", "Accessi profilati per ruolo", "Nessun tracciamento o pubblicità ai minori"]
+    },
+
+    "about_section": {
+      "section_id": "chi-siamo",
+      "title": "Chi Siamo - Eligesoft S.r.l.",
+      "content": "Eligesoft nasce con l'obiettivo di semplificare la gestione educativa e portare innovazione gentile nelle scuole dell'infanzia italiane."
+    },
+
+    "faq_section": {
+      "section_id": "faq",
+      "title": "Domande Frequenti",
+      "component": "Interactive Accordion using Radix/Shadcn UI with preserved JSON-LD schema for SEO."
+    },
+
+    "final_cta": {
+      "section_id": "contatti",
+      "title": "Pronto a trasformare la gestione del tuo nido?",
+      "action_email": "info@eligesoft.com",
+      "cta_button": "Invia una richiesta email"
     }
   },
-  "testing": {
-    "attributes_required": true,
-    "instructions": "All interactive elements (buttons, links, inputs, quick-action chips) MUST include a 'data-testid' attribute in kebab-case, role-based format (e.g., data-testid='login-staff-button', data-testid='activity-cacca-toggle', data-testid='student-select-card')."
+
+  "motion_and_animations": {
+    "library": "framer-motion",
+    "scroll_reveal": "Staggered fade-up entrances with viewport={{ once: true, margin: '-100px' }}.",
+    "hover_effects": "Micro-lift hover: scale(1.02), translateY(-2px), shadow expansion, spring physics duration: 0.25s.",
+    "footprint_trail": "Animated SVG footprint trail that lights up along scroll sequence.",
+    "accessibility": "MUST wrap motion elements or respect `@media (prefers-reduced-motion: reduce)` by disabling aggressive transforms."
   },
+
+  "image_urls": {
+    "drawing_artwork": "https://images.unsplash.com/photo-1560130958-0ea787c275de?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "paint_palette": "https://images.unsplash.com/photo-1564429097439-e400382dc893?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "preschool_children_playing": "https://images.unsplash.com/photo-1777056481869-feac70afe522?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "children_toys_classroom": "https://images.unsplash.com/photo-1761208663763-c4d30657c910?crop=entropy&cs=srgb&fm=jpg&q=85"
+  },
+
+  "testing_attributes": {
+    "data_testid_convention": "kebab-case role-based attributes on all key interactive elements.",
+    "required_test_ids": [
+      "cookie-banner",
+      "cookie-accept-button",
+      "cookie-reject-button",
+      "cookie-policy-link",
+      "navbar-logo",
+      "navbar-login-button",
+      "hero-primary-cta",
+      "hero-secondary-cta",
+      "diary-preview-tab-pappa",
+      "diary-preview-tab-nanna",
+      "diary-preview-tab-attivita",
+      "audience-tab-scuole",
+      "audience-tab-maestre",
+      "audience-tab-genitori",
+      "faq-accordion-item-1",
+      "cta-email-button"
+    ]
+  },
+
   "instructions_to_main_agent": [
-    "Use JavaScript (.js/.jsx) for all React components, NOT TypeScript (.tsx).",
-    "Install and use 'framer-motion' for all entry and state transitions.",
-    "Install and use 'lucide-react' for icons.",
-    "Do NOT build generic HTML inputs. Customize Shadcn UI primitives to match the 'surfaces' and 'components' specifications (e.g., overriding rounded-md with rounded-2xl/rounded-3xl).",
-    "Build a separate layout wrapper for 'Staff' and 'Parent' views. The Parent view should look like a consumer app (bottom nav, max-width mobile column). The Staff view needs to accommodate dense tablet usage (side nav or bento grid).",
-    "Ensure the 'Daily Activities' tracking interface for staff uses large, tap-friendly buttons or bottom-sheet drawers to allow one-handed data entry (didattica, motoria, pappa, pipì, cacca).",
-    "Implement a wizard-like flow or drag-and-drop/list-selector for the 'Move students between classes' feature.",
-    "Never use generic placeholder image URLs (like via.placeholder.com); use the provided Unsplash URLs or the AI-generated empty state."
+    "1. Build or update `/app/frontend/src/components/CookieBanner.jsx` with the exact choices ('Accetta tutti' / 'Rifiuta' + link '/privacy#cookie', saved in localStorage).",
+    "2. Render `<CookieBanner />` inside `App.js` or `Landing.jsx` so it is present across all public views.",
+    "3. Redesign `/app/frontend/src/pages/Landing.jsx` to deliver a top-tier 2026 UX/UI experience with vibrant interactive micro-widgets, colorful illustrations, smooth framer-motion reveals, and responsive bento grids.",
+    "4. Keep all existing text content, SEO structure (h1, h2, semantic structure), FAQ schema (JSON-LD), and Eligesoft S.r.l. details.",
+    "5. Ensure strict compliance with WCAG AA accessibility, prefers-reduced-motion, and responsive design (mobile-first)."
   ]
 }

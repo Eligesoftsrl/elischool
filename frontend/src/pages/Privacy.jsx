@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { resetConsent } from "@/lib/consent";
 import { Link, useLocation } from "react-router-dom";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { TiptiiBadge } from "@/components/TiptiiLogo";
@@ -141,7 +142,7 @@ export default function Privacy() {
               <li><b>Railway Corporation</b> (USA) — hosting del server applicativo e del database.</li>
               <li><b>Vercel Inc.</b> (USA) — hosting e distribuzione delle pagine del sito.</li>
               <li><b>Brevo / Sendinblue SAS</b> (Francia) — invio delle email di servizio.</li>
-              <li><b>Google LLC</b> (USA) — fornitura dei caratteri tipografici del sito (Google Fonts), che comporta la trasmissione dell'indirizzo IP.</li>
+              <li><b>Google LLC</b> (USA) — fornitura dei caratteri tipografici del sito (Google Fonts), che comporta la trasmissione dell'indirizzo IP, solo se accetti nel banner cookie.</li>
               <li>
                 <b>Fornitore di intelligenza artificiale</b> (OpenAI, tramite la piattaforma Emergent) — solo se la scuola attiva la funzione
                 di report giornaliero automatico: il testo del diario della giornata viene elaborato per generare un riassunto per la famiglia.
@@ -206,6 +207,16 @@ export default function Privacy() {
               sessione (<code>access_token</code>, durata 12 ore, e <code>refresh_token</code>, durata 14 giorni) e un token di autenticazione
               conservato nella memoria locale del browser. Non richiedono consenso e vengono eliminati quando esci dall'account o alla loro scadenza.
             </p>
+            <p>
+              Solo se premi <b>Accetta</b> nel banner carichiamo i caratteri tipografici di Google Fonts, che ricevono il tuo indirizzo IP.
+              Se premi <b>Rifiuta</b> il sito funziona normalmente con i caratteri del tuo dispositivo. La scelta viene salvata solo nel tuo browser
+              e puoi cambiarla in qualsiasi momento.
+            </p>
+            <button type="button" onClick={resetConsent}
+              className="not-prose mt-2 inline-flex items-center h-11 px-5 rounded-full bg-brand hover:bg-brand-hover text-white text-sm font-bold transition-colors"
+              data-testid="privacy-cookie-preferences-button">
+              Modifica preferenze cookie
+            </button>
           </section>
 
           <section>

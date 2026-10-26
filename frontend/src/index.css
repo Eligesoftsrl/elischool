@@ -3,7 +3,6 @@
 @tailwind utilities;
 
 /* Fonts — Outfit (display) + Manrope (body) sono rounded sans-serif coerenti col wordmark Tiptii */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Manrope:wght@300;400;500;600;700&display=swap');
 
 /* ---------------------------------------------------------------------------
    Tiptii Design Tokens (coerenti con la guida colori ufficiale)
@@ -156,6 +155,16 @@ h1, h2, h3, h4, h5, h6, .font-display {
     50%      { box-shadow: 0 0 0 8px rgba(47, 125, 109, 0); }
 }
 .pulse-dot { animation: pulseDot 1.8s infinite; }
+
+@keyframes floatSlow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.float-slow { animation: floatSlow 6s ease-in-out infinite; }
+@keyframes blobDrift { 0%, 100% { transform: translate(0, 0) scale(1); } 33% { transform: translate(30px, -20px) scale(1.06); } 66% { transform: translate(-20px, 25px) scale(0.96); } }
+.blob-drift { animation: blobDrift 18s ease-in-out infinite; }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.marquee { animation: marquee 36s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .float-slow, .blob-drift, .marquee, .pulse-dot { animation: none; }
+}
 
 .card-action { container-type: inline-size; }
 @container (max-width: 44px) {

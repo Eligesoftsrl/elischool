@@ -45,6 +45,7 @@ import ParentMenuPage from "@/pages/parent/Menu";
 import ParentNews from "@/pages/parent/News";
 import ParentClass from "@/pages/parent/Class";
 import ParentCalendar from "@/pages/parent/Calendar";
+import { CookieBanner } from "@/components/CookieBanner";
 
 function Protected({ roles, children }) {
   const { user, bootDone } = useAuth();
@@ -77,6 +78,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <CookieBanner />
         <Toaster
           position="top-center"
           toastOptions={{
