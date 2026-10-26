@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"student_id":{"$numberInt":"1"},"school_year_id":{"$numberInt":"1"}},"name":"student_id_1_school_year_id_1"}],"uuid":"460d33016e1a45eeade4ba5ef590b3ab","collectionName":"enrollments","type":"collection"}
