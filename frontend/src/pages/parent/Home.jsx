@@ -5,6 +5,9 @@ import { Sparkles, RefreshCw, Smile, BookOpen, Activity, UtensilsCrossed, Bed, H
 import api, { apiErrorMessage } from "@/lib/api";
 import { Card, EmptyState, Pill, SectionLabel } from "@/components/Primitives";
 
+// Paid add-on: set REACT_APP_AI_REPORTS_ENABLED=true (and AI_REPORTS_ENABLED=true on backend) to show it.
+const AI_REPORTS_ENABLED = process.env.REACT_APP_AI_REPORTS_ENABLED === "true";
+
 export default function ParentHome() {
   const [children, setChildren] = useState([]);
   const [active, setActive] = useState(null);
@@ -29,8 +32,7 @@ export default function ParentHome() {
         const { data } = await api.get(`/parent/child/${active.id}/day`);
         setDay(data);
       } catch (e) { toast.error(apiErrorMessage(e)); }
-      // AI report
-      loadReport(false);
+      if (AI_REPORTS_ENABLED) loadReport(false);
     })();
     // eslint-disable-next-line
   }, [active?.id]);
@@ -89,7 +91,7 @@ export default function ParentHome() {
         )}
       </motion.div>
 
-      {/* AI Report */}
+      {AI_REPORTS_ENABLED && (
       <motion.div
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
         className="relative rounded-[2rem] p-6 bg-gradient-to-br from-indigo-50 via-violet-50 to-rose-50 border border-indigo-100 overflow-hidden"
@@ -115,6 +117,7 @@ export default function ParentHome() {
           <p className="text-stone-800 leading-relaxed" data-testid="ai-report-text">{report.report}</p>
         )}
       </motion.div>
+      )}
 
       {/* Day blocks */}
       {a ? (

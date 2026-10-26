@@ -1442,6 +1442,8 @@ async def child_timeline(sid: str, days: int = 14, user=Depends(require_role("pa
 # ----------------------------- AI DAILY REPORT -----------------------------
 @api.get("/ai/daily-report/{sid}")
 async def ai_daily_report(sid: str, date_str: Optional[str] = None, user=Depends(get_current_user)):
+    if os.environ.get("AI_REPORTS_ENABLED", "").lower() != "true":
+        raise HTTPException(404, "Servizio report non attivo")
     # Permissions: parent must own child, teacher/admin OK
     if user["role"] == "parent":
         link = await db.parent_links.find_one({"parent_id": user["id"], "student_id": sid})
@@ -2994,9 +2996,12 @@ async def seed():
 # ----------------------------- App wiring -----------------------------
 app.include_router(api)
 
+_cors_env = os.environ.get("CORS_ORIGINS", "*").strip()
+CORS_ORIGINS = ["*"] if _cors_env in ("", "*") else [o.strip().rstrip("/") for o in _cors_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=False,  # using Bearer token in localStorage for simplicity & cross-origin support
     allow_methods=["*"],
     allow_headers=["*"],

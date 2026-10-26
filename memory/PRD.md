@@ -237,3 +237,5 @@ Aggiunte le 3 ultime feature per parità 100% con Flask/MySQL legacy:
 - Diario: stati selezionati di Didattica e Pranzo ora arancioni (#F2A65A) come Motoria.
 - Anagrafiche (Alunni, Maestre, Genitori, Sezioni, Anni): pulsanti azione unificati con CardActions/CardAction (Primitives.jsx), icona+etichetta, h-14, sempre in fondo alla card.
 - Compleanni (/api/birthdays): solo alunni non ritirati con sezione assegnata nell'anno attivo (esclusa "Non Assegnato"); risposta include classroom_name.
+- Deploy config: backend/railway.json, .python-version, .env.example (placeholder), frontend/vercel.json; CORS da env CORS_ORIGINS (default *); requirements con --extra-index-url.
+- Report AI disattivato (servizio a pagamento futuro): backend AI_REPORTS_ENABLED=true / frontend REACT_APP_AI_REPORTS_ENABLED=true per riattivarlo; codice mantenuto; rimossi riferimenti AI dalla landing; ai_reports svuotata.

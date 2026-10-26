@@ -4,7 +4,7 @@ import {
   ArrowRight, Sparkles, Camera, MessageCircle, CalendarDays, UtensilsCrossed,
   Bed, Bath, BookOpen, Activity, HeartHandshake, ShieldCheck, Lock, Smartphone,
   Cloud, Users, GraduationCap, LineChart, CheckCircle2, Mail, Bell,
-  FileText, Zap, Globe, Baby,
+  FileText, Globe, Baby,
 } from "lucide-react";
 import { TiptiiBadge, TiptiiLogo } from "@/components/TiptiiLogo";
 
@@ -71,7 +71,6 @@ export default function Landing() {
               <TrustItem icon={<ShieldCheck className="h-4 w-4" />} label="Foto cifrate AES-256" />
               <TrustItem icon={<Globe className="h-4 w-4" />} label="100% italiano" />
               <TrustItem icon={<Smartphone className="h-4 w-4" />} label="PWA installabile" />
-              <TrustItem icon={<Zap className="h-4 w-4" />} label="Report AI quotidiano" />
             </div>
           </motion.div>
         </div>
@@ -102,7 +101,7 @@ export default function Landing() {
             { icon: <Camera />,       text: "Foto e momenti del tuo bambino, in tempo reale" },
             { icon: <MessageCircle />,text: "Comunicazioni dirette con le maestre, senza chat caotiche" },
             { icon: <CalendarDays />, text: "Calendario eventi, gite, laboratori sempre a portata" },
-            { icon: <Sparkles />,     text: "Report AI giornaliero: come è andata la giornata del tuo bambino" },
+            { icon: <Sparkles />,     text: "Diario quotidiano: pappa, nanna, attività e note delle maestre" },
           ]} />
 
           <PillarCard id="maestre" accent="bg-[#F2A65A]" accentText="text-[#2B2F33]" title="Per le maestre" icon={<GraduationCap className="h-5 w-5" />} items={[
